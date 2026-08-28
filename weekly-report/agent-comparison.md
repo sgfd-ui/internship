@@ -1,177 +1,99 @@
 # 推荐效果分析 Agent 方案对比
 
-## 0. 本周工作概览
+## 0. 本周工作
 
-本周工作重点是对 **Mentor 方案** 与 **当前方案** 的整体设计进行系统对比，并整理成可用于周汇报的材料。两套方案面向的是同一类推荐效果分析问题，但在 Agent 编排方式、职责划分、确定性执行边界和结果展示方式上采用了不同设计。
+| 工作 | 本周产出 |
+| --- | --- |
+| 对比 Mentor 与当前 Agent 方案 | 梳理两套多 Agent 架构、执行方式和职责边界 |
+| 优化 Agent 编排链路 | 将 Router、Planning、Plan Validator、参数绑定、执行调度拆成独立阶段 |
+| 完善分析 Tool | 继续收敛指标查询、周期比较、A/B、时序、流量等 Tool 的计算与输出规则 |
+| 优化结果输出 | 将业务结果、表格/图表选择、渲染和渠道适配拆开 |
 
-| 本周工作 | Mentor 方案 | 当前方案 | 本周产出 |
-| --- | --- | --- | --- |
-| Agent 架构梳理 | 单 Agent + 多 Tool | 分层编排 + Direct Tool + Professional Agent | 统一架构对比图 |
-| 执行链路梳理 | Agent 直接理解请求并选择 Tool | Router / Planner / Binder / Normalizer / Executor 分层执行 | 执行流程对比 |
-| Tool 与计算边界整理 | 主要通过 Tool 承载查询与分析能力 | Tool 负责确定性计算，复杂调查交给专业 Agent | 能力边界对比 |
-| 输出链路整理 | Agent 解释 Tool 结果并输出文本/图表 | TaskResult → Presentation Rule Engine → Text / Table / Chart | 输出能力对比 |
-| 典型问题验证 | 汇总、周期对比、A/B、异常等场景 | 在相同场景上进一步支持任务拆解、组合执行和专业调查 | 后续案例对比 |
-
-### 本周对比重点
-
-两套方案的主要差异不是“Tool 数量多少”，而是 **Agent 本身承担多少职责，以及不确定性在什么位置被收敛**。
-
-- **Mentor 方案**：采用单 Agent + 多 Tool，Agent 负责理解问题、选择 Tool、补充信息和结果解释，整体链路更直接。
-- **当前方案**：把请求理解、任务规划、参数绑定、确定性校验、任务执行和结果展示拆成独立阶段；简单请求尽量走规则 Fast Path，复杂分析再进入 Planner 或 Professional Agent。
-- **核心变化**：从“一个 Agent 负责理解并调用 Tool”变成“先形成可校验的执行计划，再由确定性节点和专业 Agent 分工执行”。
+本周的重点不是重新设计一套完全不同的 Agent，而是**对比 Mentor 方案和现有方案后，将两者可取部分结合，再把执行确定性和职责边界进一步收敛**。
 
 ---
 
 ## 1. Agent 架构对比
 
-### 1.1 整体架构
+### 1.1 Mentor 方案
 
 ```mermaid
-flowchart LR
+flowchart TD
+    U[用户问题] --> O[分析编排 Agent]
+    O --> P[生成标准任务 / 依赖 / 调度计划]
 
-    subgraph M["Mentor 方案：单 Agent + 多 Tool"]
-        direction TB
-        M1["用户请求"]
-        M2["rec-effect-agent"]
-        M3["System Prompt<br/>意图理解 / 参数识别<br/>Tool 选择 / 多轮追问"]
-        M4["业务 Tool"]
-        M5["数据源<br/>ES / 实验元数据等"]
-        M6["结果解释与展示<br/>Text / Chart"]
+    P --> D[Direct Tool]
+    P --> E[实验分析 Agent]
+    P --> M[指标变化分析 Agent]
 
-        M1 --> M2
-        M2 --> M3
-        M3 --> M4
-        M4 --> M5
-        M4 --> M3
-        M3 --> M6
-    end
+    E --> T[业务 Tool / 数据源]
+    M --> T
+    D --> R[任务结果]
+    T --> R
 
-    subgraph C["当前方案：分层编排 + 确定性执行"]
-        direction TB
-        C1["用户请求"]
-        C2["Context Builder"]
-        C3["Strict Rule Router"]
-        C4["Fast Path / Planning LLM"]
-        C5["Plan Validator"]
-        C6["Task Parameter Binder"]
-        C7["Unified Normalizer<br/>Clarify / Unsupported / Execute"]
-        C8["Task Executor"]
-        C9["Direct Tool<br/>确定性查询与计算"]
-        C10["Professional Agent<br/>复杂原因调查"]
-        C11["TaskResult Collector"]
-        C12["Presentation Rule Engine"]
-        C13["Final Result LLM"]
-        C14["Presentation Spec Builder<br/>TableSpec / ChartSpec"]
-        C15["Channel Adapter<br/>Dify / Internal Platform / WeCom"]
-        C16["最终回答"]
-
-        C1 --> C2
-        C2 --> C3
-        C3 --> C4
-        C4 --> C5
-        C5 --> C6
-        C6 --> C7
-        C7 --> C8
-        C8 --> C9
-        C8 --> C10
-        C9 --> C11
-        C10 --> C11
-        C11 --> C12
-        C12 --> C13
-        C12 --> C14
-        C13 --> C15
-        C14 --> C15
-        C15 --> C16
-    end
+    R --> A[结果 Agent]
+    A --> C[按需调用 rec_build_chart]
+    A --> F[最终回答]
+    C --> F
 ```
 
-从整体结构上看，Mentor 方案强调 **单 Agent 内完成理解、选择和解释**；当前方案强调 **把 Agent 编排过程拆成多个职责明确、可以独立校验的阶段**。
+Mentor 方案本身就是多 Agent：**分析编排 Agent 负责规划和调度，实验分析 Agent / 指标变化分析 Agent负责专业调查，结果 Agent 负责统一汇总和输出。**
 
-### 1.2 架构职责对比
+### 1.2 当前方案
 
-| 架构维度 | Mentor 方案 | 当前方案 | 主要差异 |
-| --- | --- | --- | --- |
-| 总体模式 | 单 Agent + 多 Tool | 分层编排 + Direct Tool + Professional Agent | 从单 Agent 主导变为分层协作 |
-| 请求理解 | System Prompt 统一理解用户问题 | Context Builder + Strict Rule Router | 明确信息先由确定性规则识别 |
-| 任务选择 | Agent 根据问题选择 Tool | Router 锁定 Contract；无法确定时进入 Planning LLM | Tool 选择前增加任务契约层 |
-| 任务拆解 | 主要由 Agent 在调用过程中处理 | Planning LLM 输出结构化 TaskShell / 依赖关系 | 多任务请求显式形成执行计划 |
-| 参数识别 | Agent 根据 Prompt 直接生成 Tool 参数 | Task Parameter Binder 独立绑定参数 | 任务选择与参数理解解耦 |
-| 执行前校验 | 主要依赖 Tool 参数 Schema 和 Agent 自身判断 | Plan Validator + Unified Normalizer | LLM 结果不能直接进入执行 |
-| 简单请求 | 仍经过 Agent 推理选择 Tool | Router 全部锁定时可走 Fast Path | 简单问题减少不必要 LLM 推理 |
-| 数据查询与计算 | Tool 承载查询和分析计算 | Direct Tool 承载确定性查询、聚合和计算 | 两者都依赖 Tool，但当前方案进一步固定计算边界 |
-| 复杂原因分析 | Agent 组合多个 Tool 结果进行解释 | Professional Agent 在独立节点内执行 ReAct 调查 | 复杂调查从主编排链路中隔离 |
-| 多任务执行 | Agent 按推理过程连续调用 Tool | 独立任务走 Iteration，依赖任务走 Loop | 调度关系显式化 |
-| 结果汇总 | Agent 读取 Tool 结果后直接生成回答 | TaskResult Collector 统一收敛任务结果 | 执行结果先标准化，再进入展示 |
-| 图表与表格 | Agent 根据结果决定文本或图表 | Presentation Rule Engine 决定展示形式，Spec Builder 生成 TableSpec / ChartSpec | 展示决策与业务计算解耦 |
-| 最终回答 | Agent 同时负责数据理解和表达 | Final Result LLM 只基于标准化 TaskResult 组织正文 | 降低结果生成阶段重新解释业务数据的空间 |
-| 渠道适配 | 复用现有输出结构 | Channel Adapter 统一适配 Dify、内部平台、企业微信 | 展示内容与渠道格式分离 |
+```mermaid
+flowchart TD
+    U[用户问题] --> C[Context Builder / Explicit Mention]
+    C --> R[Strict Rule Router]
 
-### 1.3 核心架构差异
+    R --> G{Planning Gate}
+    G -->|可确定| F[Fast Plan Builder]
+    G -->|需理解| P[Planning LLM]
+    P --> V[Plan Validator]
+    V --> PF[Plan Finalizer]
+    F --> PF
 
-#### 1. Agent 职责从“集中”变为“拆分”
+    PF --> B[Parameter Binder]
+    B --> N[Unified Normalizer / Request Decision]
+    N --> E[Task Executor]
 
-Mentor 方案中，主要的自然语言理解职责集中在 `rec-effect-agent`：Agent 根据 System Prompt 理解用户问题、识别参数、选择 Tool，并在 Tool 返回后继续解释结果。
+    E --> D[Direct Tool]
+    E --> PA[Professional ReAct Agent]
 
-当前方案把这一过程拆为：
+    D --> TR[TaskResult Collector]
+    PA --> TR
 
-```text
-请求理解
-→ 任务匹配
-→ 必要时规划
-→ 参数绑定
-→ 确定性校验
-→ 任务执行
-→ 结果展示
+    TR --> PR[Presentation Rule Engine]
+    PR --> L[Final Result LLM]
+    PR --> S[Presentation Spec Builder]
+    L --> A[Channel Adapter / Response Composer]
+    S --> A
+    A --> O[最终回答]
 ```
 
-这样每个阶段只处理一种不确定性，避免一个 Prompt 同时承担任务识别、参数生成、任务依赖和输出组织。
+当前方案仍然保留多 Agent，但把**主链路编排从一个自治 Agent 拆成“确定性 Code + 必要 LLM”**：简单任务直接进入 Direct Tool，只有复杂原因调查才进入 Professional Agent。当前正式链路也明确将 TaskResult、Presentation Rule Engine、Final Result LLM 和 Spec Builder 分开。
 
-#### 2. LLM 从“执行中心”变为“必要时参与”
+### 1.3 架构差异
 
-Mentor 方案的主链路以 Agent 推理为中心；当前方案则优先判断哪些内容可以由 Code 或规则直接确定：
-
-```text
-能够百分之百确定
-→ Strict Rule Router / Fast Path
-→ 跳过 Planning LLM
-
-存在任务歧义或复杂拆解
-→ Planning LLM
-
-参数作用域无法确定
-→ Parameter Binder LLM
-
-复杂原因调查
-→ Professional Agent
-```
-
-因此，LLM 主要处理真正需要语义判断的部分，确定性的 Contract、参数范围、任务依赖和 Tool 执行由代码约束。
-
-#### 3. 数据结果与最终展示进一步解耦
-
-Mentor 方案中，Agent 在获取 Tool 结果后直接完成结果解释和图表输出。
-
-当前方案增加统一的 `TaskResult` 和展示层：
-
-```text
-Tool / Professional Agent
-→ TaskResult
-→ Presentation Rule Engine
-├── Final Result LLM → answer_text
-└── Presentation Spec Builder → TableSpec / ChartSpec
-→ Channel Adapter
-```
-
-业务 Tool 只负责返回正确的数据事实和分析结果，不为了图表展示反向调整查询结果；展示层再根据结果类型决定使用文本、表格还是图表。
-
-### 1.4 架构对比结论
-
-| 对比结论 | Mentor 方案 | 当前方案 |
+| 对比点 | Mentor 方案 | 当前方案 |
 | --- | --- | --- |
-| 设计重点 | 快速形成可运行的单 Agent 分析链路 | 建立可校验、可扩展的分析编排链路 |
-| Agent 定位 | Agent 是主要理解、选择和解释中心 | Agent / LLM 是编排体系中的语义判断组件 |
-| 确定性边界 | Tool 内部保证数据计算确定性 | 从任务匹配、参数校验到 Tool 计算和展示投影均建立确定性边界 |
-| 复杂问题处理 | 依赖主 Agent 自主组合 Tool | 任务计划 + 显式依赖 + Professional Agent |
-| 输出方式 | Agent 直接组织回答和图表 | 业务结果与 Presentation / Channel 分离 |
+| 编排核心 | 分析编排 Agent 负责理解、规划和调度 | Router + Planning LLM + Validator + Binder 分阶段完成 |
+| 简单查询 | 统一进入任务规划和调度体系 | 可通过 Fast Path 直接形成任务并调用 Direct Tool |
+| 复杂分析 | 实验分析 Agent、指标变化分析 Agent | 保留专业 Agent，只用于需要多步调查的问题 |
+| 执行约束 | 依赖标准任务和 Agent Prompt 控制 | Plan、参数、依赖、运行时绑定均有确定性校验 |
+| 结果处理 | 独立结果 Agent 汇总结果、决定图表和回答 | TaskResult 后拆成 Presentation Rule、Final Result LLM、Spec Builder |
+| 特点 | 结构清楚、Agent 分工直观 | 链路更复杂，但执行边界更明确、可复现性更高 |
 
-**整体上，两套方案解决的是同一类业务问题。Mentor 方案更偏向“单 Agent 驱动多个 Tool 的直接分析链路”，当前方案则进一步把任务理解、执行和展示拆开，目标是提高复杂问题下的可控性、可验证性和后续扩展能力。**
+### 1.4 判断与本周优化
+
+**不建议直接照搬其中任意一套，当前方案本质上是在 Mentor 多 Agent 思路上做了一次收敛和组合优化。**
+
+Mentor 方案的优势是 Agent 分工清楚，尤其是“编排 Agent + 专业 Agent + 结果 Agent”的分层很适合复杂分析；问题是编排 Agent 和结果 Agent 承担的职责仍然比较多，很多本可以确定性完成的工作仍交给 Agent 判断。
+
+当前方案保留了 Mentor 的两个核心设计：**复杂问题交给专业 Agent、执行结果统一收敛后再输出**；同时主要做了三点优化：
+
+1. **编排确定性化**：Router、Validator、Binder、Normalizer 用 Code 约束，Planning LLM 只处理无法确定的任务语义。
+2. **简单请求短路**：明确查询、周期比较、A/B、时序等任务可以直接走 Direct Tool，不必全部经过专业 Agent。
+3. **结果与展示解耦**：业务结果统一为 TaskResult，文字、表格、图表和渠道格式在后续展示层决定。
+
+因此，如果目标是当前推荐效果分析项目的正式落地，**当前组合后的方案更合适**：不是因为 Agent 更多，而是因为保留了多 Agent 的专业分工，同时减少了不必要的 Agent 自主决策。
