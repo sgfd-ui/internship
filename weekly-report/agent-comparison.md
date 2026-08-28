@@ -83,7 +83,7 @@ flowchart LR
     subgraph E[执行层（可并行）]
         direction TB
         E1[工作流<br/>组合型确定性分析]
-        E2[直接工具<br/>查询 / 周期比较 / 实验对比 / 时序 / 流量]
+        E2[直接工具<br/>查询 / 周期比较 / 时序]
         E3[原因分析智能体<br/>复杂原因调查]
     end
 
@@ -100,7 +100,6 @@ flowchart LR
         direction TB
         D1[推荐效果数据]
         D2[推荐流量数据]
-        D3[推荐配置数据]
     end
 
     U --> Q1 --> P1
