@@ -57,7 +57,7 @@ sequenceDiagram
 
 ---
 
-## 三、总体方案
+## 三、整体架构
 
 ```mermaid
 flowchart LR
