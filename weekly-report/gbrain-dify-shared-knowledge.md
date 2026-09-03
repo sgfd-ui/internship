@@ -146,9 +146,7 @@ flowchart LR
 
 ## 五、公司 DevOps 容器部署方案
 
-公司申请到的资源是**应用容器**，因此部署不再按物理机 / VM 的方式安装 systemd、UFW、Nginx 和本机 PostgreSQL。GBrain 容器只负责运行 GBrain 服务，数据库使用公司独立的 PostgreSQL / Supabase 持久化服务。
-
-以下以当前 **Ubuntu 22.04.1 LTS** 基础容器为例。PostgreSQL 版本可由公司数据库服务统一提供，本方案以 **PostgreSQL 16 + pgvector** 为部署基线。
+以下部署以公司 **Ubuntu 22.04.1 LTS** 基础容器为例。
 
 ```text
 公司 DevOps
