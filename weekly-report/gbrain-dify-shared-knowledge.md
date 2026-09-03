@@ -141,7 +141,7 @@ flowchart LR
 
 ## 五、独立服务器部署方案
 
-以下部署步骤以 **Ubuntu 22.04.1 LTS（Jammy Jellyfish）** 环境为例，并采用 **PostgreSQL 16 + pgvector** 作为示例部署基线。GBrain 本身不强制 PostgreSQL 16，这里选择 16 主要是为了统一部署和运维版本，同时 Ubuntu 22.04 可通过 PostgreSQL 官方 PGDG APT 仓库直接安装 `postgresql-16` 与 `postgresql-16-pgvector`，便于按统一步骤完成安装和维护。
+以下部署以 **Ubuntu 22.04.1 LTS（Jammy Jellyfish）** 为例，数据库使用 **PostgreSQL 16 + pgvector**。GBrain 并不限定 PostgreSQL 版本；这里选择 PostgreSQL 16，主要是为了统一部署与运维，并且 Ubuntu 22.04 可以通过 PostgreSQL 官方 PGDG APT 仓库直接安装对应版本的 PostgreSQL 和 pgvector。
 
 ```text
 Dify Server
