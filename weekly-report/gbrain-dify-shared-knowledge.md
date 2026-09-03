@@ -141,7 +141,7 @@ flowchart LR
 
 ## 五、独立服务器部署方案
 
-默认环境固定为 **Ubuntu 22.04.1 LTS（Jammy Jellyfish）**。
+以下部署步骤以 **Ubuntu 22.04.1 LTS（Jammy Jellyfish）** 环境为例，并采用 **PostgreSQL 16 + pgvector** 作为示例部署基线。GBrain 本身不强制 PostgreSQL 16，这里选择 16 主要是为了统一部署和运维版本，同时 Ubuntu 22.04 可通过 PostgreSQL 官方 PGDG APT 仓库直接安装 `postgresql-16` 与 `postgresql-16-pgvector`，便于按统一步骤完成安装和维护。
 
 ```text
 Dify Server
@@ -203,7 +203,7 @@ sudo apt install -y curl git openssl ca-certificates postgresql-common
 
 ### 5.3 配置 PostgreSQL 官方 APT 仓库
 
-本方案统一采用 **PostgreSQL 16 + pgvector** 作为部署基线。GBrain 本身不强制 PostgreSQL 16，这里固定 16 主要是为了统一部署和运维版本，并直接使用 Ubuntu 22.04 上 PGDG 提供的 `postgresql-16`、`postgresql-16-pgvector` 软件包，因此先接入 PostgreSQL 官方 PGDG APT 仓库。
+为安装上述 PostgreSQL 16 和 pgvector 软件包，先接入 PostgreSQL 官方 PGDG APT 仓库。
 
 执行：
 
