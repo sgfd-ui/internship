@@ -59,6 +59,8 @@ sequenceDiagram
 
 ## 三、整体架构
 
+### 3.1 架构图
+
 ```mermaid
 flowchart LR
     U[用户请求]
@@ -87,7 +89,7 @@ flowchart LR
     API --> GT --> A
 ```
 
-### 3.1 模块职责
+### 3.2 模块职责
 
 | 模块 | 主要职责 | 输出 |
 | --- | --- | --- |
