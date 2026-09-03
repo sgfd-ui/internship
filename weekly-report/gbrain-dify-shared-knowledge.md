@@ -100,132 +100,110 @@ flowchart LR
 
 ## 四、GBrain 知识组织
 
-本期只沉淀与推荐效果分析直接相关的 **业务背景和历史分析 Case**。
+本期共享知识只保存两类内容：**业务背景**和**历史分析 Case**。完整内容统一以 Page 保存，GBrain 再基于 Page 生成用于检索的 Chunk、Fact 和关联信息。
 
-### 4.1 知识内容
+```mermaid
+flowchart LR
+    A[业务背景 / 历史分析结果]
+    --> B[整理为完整 Page]
+    --> C[GBrain 写入]
 
-| 内容 | 具体信息 | 主要用途 |
-| --- | --- | --- |
-| 问题范围 | 问题描述、日期、站点、页面、指标、相关实验 | 约束检索范围 |
-| 业务背景 | 大促、节假日、平台活动、维护、临时操作 | 补充历史背景 |
-| 分析证据 | 效果变化、维度贡献、实验变化、流量变化 | 支撑历史结论 |
-| 排查过程 | 已调查方向、查询结果、排除项 | 复用排查方法 |
-| 分析结论 | 主要原因、未解释部分、后续结论 | 提供历史 Case |
-| 来源信息 | 原始会话 / 报告、写入时间、写入主体 | 来源回溯 |
+    C --> D[(Page 正文)]
+    C --> E[Chunk / Embedding]
+    C --> F[Fact]
+    C --> G[Link / Timeline]
 
-### 4.2 GBrain 对象使用
+    E --> H[语义与关键词检索]
+    F --> H
+    G --> H
+    H --> I[命中 Page]
+    I --> J[读取完整背景 / 证据 / 排查过程 / 结论]
+```
 
-| GBrain 对象 | 本方案用途 |
-| --- | --- |
-| `Source` | 区分团队或业务知识范围 |
-| `Page` | 保存一条完整业务背景或历史分析 Case |
-| `Chunk` | Page 切分后的检索单元 |
-| `Fact` | 从内容中提取的短事实，用于辅助查询 |
-| `Link / Graph` | 关联页面、指标、实验、事件和其他 Case |
-| `Timeline` | 保存同一 Page 相关的时间变化信息 |
+一条历史 Case 主要包含：问题范围、业务背景、分析证据、已完成的排查过程、最终结论和来源信息。例如一次“购物车页 GMV 上涨”分析，会保存对应站点、页面和时间范围，大促背景，流量与转化证据，已排除的配置因素，以及最终原因结论。
 
-**核心原则：完整 Case 保存在 Page，检索命中后回到完整经验内容。**
-
-### 4.3 历史 Case 示例结构
-
-| 组成 | 示例 |
-| --- | --- |
-| 问题 | 购物车页推荐引导 GMV 异常上涨 |
-| 范围 | EC20 / scene=5 / 2026-11-01～2026-11-07 |
-| 背景 | 双 11 大促 |
-| 证据 | 推荐流量上涨；CTR、CTCVR 无明显变化 |
-| 排查 | 对比活动前后流量和转化效率；检查同期配置变化 |
-| 结论 | GMV 上涨主要由活动流量驱动 |
-| 来源 | 当前分析任务及对应 Tool Evidence |
+**完整 Case 以 Page 为复用单位，Chunk、Fact、Link 和 Timeline 只负责帮助找到对应 Page。**
 
 ---
 
 ## 五、Dify 接入与使用流程
 
-### 5.1 GBrain Tool 能力
+Dify 不直接维护第二套共享知识，而是通过 GBrain Tool 调用 GBrain HTTP 服务。专业 Agent 在需要历史背景或相似 Case 时主动查询；本次分析完成后，再将值得复用的结果写回 GBrain。
 
-| Dify 调用场景 | GBrain 能力 | 使用方式 |
-| --- | --- | --- |
-| 相似历史经验检索 | `Search` | 默认使用 `balanced` 混合检索 |
-| 更复杂的历史条件查询 | `Query` | 按时间、关系等继续扩展 |
-| 已知经验精确读取 | `Page` | 根据 Source + Slug 获取完整 Page |
-| 结构化事实查询 | `Fact` | 按属性或文本条件查询事实 |
-| 关联经验扩展 | `Graph` | 从命中 Page 扩展相关历史 Case |
-| 历史经验写入 | Page 写入 | 将完整分析经验写入 GBrain |
-
-### 5.2 读写主链路
+### 5.1 历史经验读取
 
 ```mermaid
 flowchart LR
-    subgraph R[读取]
-        R1[用户问题] --> R2[Agent 查询 GBrain]
-        R2 --> R3[Search balanced]
-        R3 --> R4[返回历史 Case]
-        R4 --> R5[查询当前 DataSrc]
-        R5 --> R6[当前数据验证]
-        R6 --> R7[输出本次结论]
-    end
+    A[用户问题]
+    --> B[专业 Agent]
+    --> C[GBrain Search]
+    --> D[返回相似历史 Case]
+    --> E[提取历史背景 / 排查线索]
 
-    subgraph W[写入]
-        W1[分析完成] --> W2[整理背景 / 证据 / 排查 / 结论]
-        W2 --> W3[形成完整 Page]
-        W3 --> W4[写入 GBrain]
-        W4 --> W5[生成 Chunk / Embedding / 关联索引]
-    end
+    B --> F[查询当前 DataSrc]
+    F --> G[当前数据证据]
+
+    E --> H[结合当前数据验证]
+    G --> H
+    H --> I[输出本次结论]
 ```
 
-### 5.3 使用边界
+默认使用 GBrain `Search balanced` 检索相似经验；如果已知具体 Page，则直接读取完整 Page。历史经验只作为背景和排查线索，最终原因仍以本次 DataSrc 查询结果为准。
 
-| 信息 | 使用方式 |
-| --- | --- |
-| 当前指标与效果数据 | 以本次 DataSrc 查询为准 |
-| 历史业务背景 | 作为当前分析背景 |
-| 历史分析 Case | 作为排查方向和历史参考 |
-| 历史结论 | 需要结合本次数据重新验证 |
+### 5.2 历史经验写入
+
+```mermaid
+flowchart LR
+    A[本次分析完成]
+    --> B[提取可复用内容]
+    --> C[整理问题范围 / 背景 / 证据 / 排查 / 结论]
+    --> D[形成完整 Page]
+    --> E[GBrain 写入]
+    --> F[生成检索索引]
+    --> G[后续新对话可检索]
+```
+
+普通一次性指标查询不沉淀；只有包含明确业务背景、有效排查过程或可复用分析结论的结果进入共享知识库。
 
 ---
 
 ## 六、部署方案
 
-### 6.1 部署关系
+GBrain 作为独立的团队共享知识服务部署，Dify 只通过 GBrain Tool 访问，不直接连接底层数据库。正式环境使用 PostgreSQL + pgvector 保存 Page、Chunk 和向量索引，并保留 Markdown / Git 作为可审查、可版本化的知识内容。
 
-| 组件 | 部署方式 | 作用 |
-| --- | --- | --- |
-| Dify | 现有 Agent / Workflow 环境 | 用户交互、规划和分析执行 |
-| GBrain Tool | Dify Tool / Plugin | 封装 GBrain HTTP 查询和写入 |
-| GBrain | 独立长期服务 | 团队共享知识服务 |
-| PostgreSQL + pgvector | 独立数据库 | 共享数据、全文和向量索引 |
-| Markdown / Git | 独立知识仓库 | Page 内容和版本管理 |
-| Embedding Provider | GBrain 配置 | 语义检索向量生成 |
-| LLM Provider | GBrain 按需配置 | Fact 抽取、综合查询和后台加工 |
+```mermaid
+flowchart LR
+    subgraph D[Dify 环境]
+        A[推荐效果分析 Agent]
+        T[GBrain Tool]
+    end
 
-### 6.2 环境配置
+    subgraph G[GBrain 服务]
+        API[GBrain HTTP Service]
+        M[Embedding / LLM Provider]
+    end
 
-| 环境 | GBrain | 数据 |
-| --- | --- | --- |
-| 本地开发 | PGLite | 脱敏测试数据 |
-| 联调 / 测试 | PostgreSQL + pgvector | 测试 Source / Case |
-| 团队部署 | PostgreSQL + pgvector + Markdown / Git | 正式共享经验 |
+    subgraph S[共享存储]
+        DB[(PostgreSQL + pgvector)]
+        Git[Markdown / Git]
+    end
+
+    A --> T --> API
+    API --> DB
+    API --> Git
+    API --> M
+```
+
+本地开发可继续使用 PGLite；联调和正式部署切换到 PostgreSQL + pgvector。GBrain Service 与数据库独立于 Dify 部署，后续其他 Agent 也可以复用同一套共享知识服务。
 
 ---
 
 ## 七、实施计划
 
-| 阶段 | 工作内容 | 产出 |
+| 时间 | 工作内容 | 产出 |
 | --- | --- | --- |
-| 第 1 阶段：服务部署 | 部署 PostgreSQL、GBrain 和模型 Provider | GBrain 团队服务可用 |
-| 第 2 阶段：Dify 接入 | 实现 GBrain Tool，接入 Search / Page 查询 | Dify 可读取历史经验 |
-| 第 3 阶段：经验复用 | 原因分析 Agent 接入历史 Case，并与 DataSrc 联合验证 | 新对话可复用历史排查经验 |
-| 第 4 阶段：经验沉淀 | 将分析背景、证据、排查过程和结论写入 Page | 形成读取—分析—沉淀闭环 |
-| 第 5 阶段：质量验证 | 使用调研中的统一测试方法持续评测检索质量与性能 | 共享知识检索质量可持续验证 |
-
-### 7.1 验收内容
-
-| 验收项 | 验收结果要求 |
-| --- | --- |
-| 跨对话复用 | 新对话能够主动命中历史业务背景和 Case |
-| 多用户共享 | 不同用户能够访问同一团队共享经验 |
-| 当前数据验证 | 历史 Case 不替代当前 DataSrc 查询 |
-| 经验完整性 | 能回到完整背景、证据、排查过程、结论和来源 |
-| 检索质量 | 使用固定测试集持续统计 Top1、Top5、MRR 和延迟 |
-| 写入闭环 | 新分析 Case 可以沉淀并被后续新对话检索 |
+| 9.7—9.8 | 部署 PostgreSQL + pgvector、GBrain Service，完成模型 Provider 配置 | GBrain 团队服务可用 |
+| 9.9—9.10 | 在 Dify 实现 GBrain Tool，接入 Search 和 Page 查询 | Dify 可读取历史经验 |
+| 9.11—9.13 | 原因分析 Agent 接入历史 Case，与当前 DataSrc 联合验证 | 跨对话历史经验可参与分析 |
+| 9.14—9.15 | 接入经验写入，整理 Page 写入内容和沉淀条件 | 分析结果可写回 GBrain |
+| 9.16—9.18 | 完成端到端联调、检索质量验证和问题修正 | 形成可上线的共享知识闭环 |
