@@ -64,8 +64,7 @@ flowchart LR
     U[用户请求]
 
     subgraph D[Dify]
-        P[Planner / Workflow]
-        A[专业分析 Agent]
+        A[推荐效果分析 Agent]
         GT[GBrain Tool]
     end
 
@@ -79,7 +78,7 @@ flowchart LR
         MD[Markdown / Git]
     end
 
-    U --> P --> A
+    U --> A
     A --> DS
     A --> GT --> API
     API --> DB
@@ -92,8 +91,7 @@ flowchart LR
 
 | 模块 | 主要职责 | 输出 |
 | --- | --- | --- |
-| Dify Planner / Workflow | 判断分析目标并组织执行 | 分析任务 |
-| 专业分析 Agent | 综合当前数据和历史经验进行分析 | 本次结论 |
+| 推荐效果分析 Agent | 理解用户问题、组织分析，并结合当前数据和历史经验完成判断 | 本次分析结论 |
 | DataSrc / 数据 Tool | 查询当前时间、页面、实验和指标数据 | 当前事实与证据 |
 | GBrain Tool | 在 Dify 与 GBrain HTTP API 之间完成查询和写入 | 历史经验 / 写入结果 |
 | GBrain | 保存、索引和检索团队共享经验 | Page、Chunk、Fact、Graph 等 |
