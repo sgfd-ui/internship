@@ -141,21 +141,23 @@ flowchart LR
 
 ## 五、独立服务器部署方案
 
+默认环境固定为 **Ubuntu 22.04.1 LTS（Jammy Jellyfish）**。
+
 ```text
 Dify Server
     │
     │ 内网 HTTP :3131
     ▼
-GBrain Server
+GBrain Server（Ubuntu 22.04.1 LTS）
 ├── GBrain HTTP MCP Server :3131
-├── PostgreSQL + pgvector :5432（仅本机）
-└── 日志 / 运维
+├── PostgreSQL 16 + pgvector :5432（仅本机）
+└── systemd / 日志 / 运维
 ```
 
 ### 5.1 部署前准备
 
 ```text
-1. 一台独立 Linux 服务器
+1. Ubuntu 22.04.1 LTS 独立服务器
 2. sudo / root 权限
 3. GBrain 服务器固定内网 IP
 4. Dify 服务器内网 IP
@@ -163,55 +165,109 @@ GBrain Server
 6. 如需 Fact 抽取 / Query Expansion，再准备 LLM Provider Key
 ```
 
-本文命令按 **Ubuntu 22.04 / 24.04** 风格编写。
+先确认系统：
 
-### 5.2 创建系统用户和目录
+```bash
+cat /etc/os-release
+```
+
+应看到：
+
+```text
+PRETTY_NAME="Ubuntu 22.04.1 LTS"
+VERSION_CODENAME=jammy
+```
+
+### 5.2 创建 GBrain 系统用户和目录
+
+创建独立运行用户：
 
 ```bash
 sudo useradd --create-home --shell /bin/bash gbrain
+```
 
+创建目录：
+
+```bash
 sudo mkdir -p /srv/gbrain/knowledge
 sudo mkdir -p /srv/gbrain/logs
 sudo chown -R gbrain:gbrain /srv/gbrain
+```
 
+安装后续需要的基础工具：
+
+```bash
 sudo apt update
-sudo apt install -y curl git openssl ca-certificates
+sudo apt install -y curl git openssl ca-certificates postgresql-common
 ```
 
-### 5.3 安装 Docker
+### 5.3 配置 PostgreSQL 官方 APT 仓库
 
-如果服务器已经安装 Docker，可直接检查版本；否则安装：
+Ubuntu 22.04 系统仓库默认提供的 PostgreSQL 版本不是本方案固定的 PostgreSQL 16，因此先接入 PostgreSQL 官方 PGDG APT 仓库。
+
+执行：
 
 ```bash
-sudo apt install -y docker.io docker-compose-v2
-sudo systemctl enable --now docker
+sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
 ```
 
-检查：
+脚本会根据当前系统自动配置 `jammy-pgdg` 软件源。
+
+完成后更新软件索引：
 
 ```bash
-docker --version
-docker compose version
-sudo systemctl status docker
+sudo apt update
 ```
 
-如果当前 Ubuntu 镜像没有 `docker-compose-v2` 包，则安装 Docker Engine 和 Compose Plugin 后再继续。
-
-### 5.4 下载并部署 PostgreSQL + pgvector
-
-本方案使用 `pgvector/pgvector:pg16` 镜像，该镜像已经包含 PostgreSQL 16 和 pgvector，不需要再单独下载 PostgreSQL。
-
-先拉取镜像：
+确认 PostgreSQL 16 软件包可用：
 
 ```bash
-sudo docker pull pgvector/pgvector:pg16
+apt-cache policy postgresql-16
 ```
 
-确认镜像已经下载：
+输出中应能看到可安装版本。
+
+### 5.4 安装 PostgreSQL 16 和 pgvector
+
+安装 PostgreSQL 16、客户端和对应 pgvector 扩展包：
 
 ```bash
-sudo docker images | grep pgvector
+sudo apt install -y \
+  postgresql-16 \
+  postgresql-client-16 \
+  postgresql-16-pgvector
 ```
+
+检查 PostgreSQL 客户端版本：
+
+```bash
+psql --version
+```
+
+应显示 PostgreSQL 16.x。
+
+查看数据库 Cluster：
+
+```bash
+sudo pg_lsclusters
+```
+
+正常情况下会看到类似：
+
+```text
+Ver Cluster Port Status Owner    Data directory              Log file
+16  main    5432 online postgres /var/lib/postgresql/16/main /var/log/postgresql/postgresql-16-main.log
+```
+
+如果 `Status` 不是 `online`，启动并设为开机自启：
+
+```bash
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
+sudo pg_lsclusters
+```
+
+### 5.5 创建 GBrain 数据库和账号
 
 生成数据库密码：
 
@@ -219,104 +275,100 @@ sudo docker images | grep pgvector
 openssl rand -hex 24
 ```
 
-将输出保存为 `<GBRAIN_DB_PASSWORD>`。
-
-创建部署目录：
-
-```bash
-sudo mkdir -p /opt/gbrain
-sudo chown -R $USER:$USER /opt/gbrain
-cd /opt/gbrain
-```
-
-创建 `.env`：
-
-```bash
-cat > .env <<'EOF'
-GBRAIN_DB_PASSWORD=<替换成刚才生成的密码>
-EOF
-chmod 600 .env
-```
-
-创建 `docker-compose.yml`：
-
-```yaml
-services:
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: gbrain-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: gbrain
-      POSTGRES_PASSWORD: ${GBRAIN_DB_PASSWORD}
-      POSTGRES_DB: gbrain
-    ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - gbrain_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gbrain -d gbrain"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-volumes:
-  gbrain_pgdata:
-```
-
-PostgreSQL 只绑定本机：
+保存输出，后文记为：
 
 ```text
-127.0.0.1:5432:5432
+<GBRAIN_DB_PASSWORD>
 ```
 
-Dify 不直接连接 PostgreSQL。
-
-启动数据库：
+进入 PostgreSQL：
 
 ```bash
-cd /opt/gbrain
-sudo docker compose up -d
+sudo -u postgres psql
 ```
 
-检查容器状态：
+依次执行：
+
+```sql
+CREATE ROLE gbrain LOGIN PASSWORD '<GBRAIN_DB_PASSWORD>';
+CREATE DATABASE gbrain OWNER gbrain;
+\c gbrain
+CREATE EXTENSION IF NOT EXISTS vector;
+SELECT extversion FROM pg_extension WHERE extname = 'vector';
+\q
+```
+
+`SELECT extversion ...` 能返回 pgvector 版本号即可。
+
+验证 GBrain 账号能够从本机连接：
 
 ```bash
-sudo docker compose ps
-sudo docker logs gbrain-postgres --tail 50
+PGPASSWORD='<GBRAIN_DB_PASSWORD>' \
+psql -h 127.0.0.1 -U gbrain -d gbrain \
+-c "SELECT current_database(), current_user;"
 ```
 
-启用 pgvector：
+应返回：
+
+```text
+current_database | current_user
+-----------------+-------------
+gbrain           | gbrain
+```
+
+### 5.6 确认 PostgreSQL 只供本机访问
+
+GBrain 和 PostgreSQL 部署在同一台服务器，因此 PostgreSQL 不需要向 Dify 开放。
+
+检查监听地址：
 
 ```bash
-sudo docker exec -it gbrain-postgres \
-  psql -U gbrain -d gbrain \
-  -c "CREATE EXTENSION IF NOT EXISTS vector;"
+sudo ss -lntp | grep 5432
 ```
 
-确认扩展：
+数据库只需要监听本机地址。Dify 只访问 GBrain 的 `3131`，不直接访问 `5432`。
 
-```bash
-sudo docker exec -it gbrain-postgres \
-  psql -U gbrain -d gbrain \
-  -c "SELECT extversion FROM pg_extension WHERE extname = 'vector';"
+如果服务器 PostgreSQL 被配置为对外监听，应检查：
+
+```text
+/etc/postgresql/16/main/postgresql.conf
+/etc/postgresql/16/main/pg_hba.conf
 ```
 
-返回版本号后继续。
+本方案不需要为 Dify 增加任何 PostgreSQL 网络访问规则。
 
-### 5.5 安装 Bun
+### 5.7 安装 Bun
+
+切换到 GBrain 用户：
 
 ```bash
 sudo -iu gbrain
+```
+
+安装 Bun：
+
+```bash
 curl -fsSL https://bun.sh/install | bash
 source ~/.bashrc
+```
+
+检查：
+
+```bash
 bun --version
 ```
 
-### 5.6 安装 GBrain
+### 5.8 安装 GBrain
+
+安装稳定版本：
 
 ```bash
 bun install -g github:garrytan/gbrain#latest-stable
+```
+
+检查：
+
+```bash
 gbrain --version
 ```
 
@@ -330,20 +382,36 @@ bun link
 gbrain --version
 ```
 
-### 5.7 让 GBrain 连接 PostgreSQL
+### 5.9 让 GBrain 连接 PostgreSQL
+
+仍然在 `gbrain` 用户下执行：
 
 ```bash
 export DATABASE_URL='postgresql://gbrain:<GBRAIN_DB_PASSWORD>@127.0.0.1:5432/gbrain'
+```
 
+初始化 GBrain：
+
+```bash
 gbrain init --url "$DATABASE_URL"
+```
+
+检查数据库 Engine：
+
+```bash
 gbrain engine status --probe
+```
+
+再执行：
+
+```bash
 gbrain doctor
 gbrain stats
 ```
 
-`gbrain engine status --probe` 应显示 PostgreSQL Engine，`gbrain doctor` 无阻断错误后继续。
+`engine status --probe` 应确认使用 PostgreSQL，`doctor` 无阻断错误后继续。
 
-### 5.8 配置 Embedding / LLM Provider
+### 5.10 配置 Embedding / LLM Provider
 
 至少配置一个 Embedding Provider，例如：
 
@@ -370,17 +438,30 @@ gbrain models
 gbrain models doctor
 ```
 
-### 5.9 创建正式环境变量文件
+### 5.11 创建正式环境变量文件
+
+先退出 `gbrain` Shell：
 
 ```bash
 exit
+```
+
+创建环境变量目录和文件：
+
+```bash
 sudo mkdir -p /etc/gbrain
 sudo touch /etc/gbrain/gbrain.env
 sudo chown root:gbrain /etc/gbrain/gbrain.env
 sudo chmod 640 /etc/gbrain/gbrain.env
 ```
 
-编辑 `/etc/gbrain/gbrain.env`：
+编辑：
+
+```bash
+sudo nano /etc/gbrain/gbrain.env
+```
+
+填写：
 
 ```text
 DATABASE_URL=postgresql://gbrain:<GBRAIN_DB_PASSWORD>@127.0.0.1:5432/gbrain
@@ -391,9 +472,9 @@ VOYAGE_API_KEY=<your-key>
 
 实际使用哪种 Provider，就保留对应 Key。该文件不提交 Git。
 
-### 5.10 配置 systemd 并直接开放 GBrain 端口
+### 5.12 配置 systemd 并开放 GBrain 端口
 
-先确认 GBrain 路径：
+先确认 GBrain 可执行文件路径：
 
 ```bash
 sudo -iu gbrain which gbrain
@@ -405,14 +486,19 @@ sudo -iu gbrain which gbrain
 /home/gbrain/.bun/bin/gbrain
 ```
 
-创建 `/etc/systemd/system/gbrain.service`：
+创建：
+
+```bash
+sudo nano /etc/systemd/system/gbrain.service
+```
+
+填写：
 
 ```ini
 [Unit]
 Description=GBrain HTTP MCP Server
-After=network-online.target docker.service
-Wants=network-online.target
-Requires=docker.service
+After=network-online.target postgresql.service
+Wants=network-online.target postgresql.service
 
 [Service]
 Type=simple
@@ -428,9 +514,9 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-`<GBRAIN_SERVER_IP>` 替换成 GBrain 服务器真实内网 IP。如果 `which gbrain` 返回路径不同，`ExecStart` 使用实际路径。
+将 `<GBRAIN_SERVER_IP>` 替换为 GBrain 服务器真实内网 IP。如果 `which gbrain` 返回其他路径，则同步修改 `ExecStart`。
 
-启动：
+加载并启动：
 
 ```bash
 sudo systemctl daemon-reload
@@ -464,7 +550,7 @@ curl http://<GBRAIN_SERVER_IP>:3131/health
 
 即可直接使用 GBrain HTTP MCP，不需要 Nginx。
 
-### 5.11 配置防火墙 / ACL
+### 5.13 配置防火墙 / ACL
 
 只允许 Dify 服务器访问 GBrain 的 `3131`：
 
@@ -491,11 +577,11 @@ sudo ufw enable
 sudo ufw status
 ```
 
-### 5.12 可选：使用 Nginx / Gateway 提供 HTTPS
+### 5.14 可选：使用 Nginx / Gateway 提供 HTTPS
 
 Nginx 不是 GBrain MCP 的必需组件。只有需要统一域名、TLS 证书或公司 Gateway 管理时才增加这一层。
 
-此时可以将 GBrain 改为只监听本机：
+此时将 GBrain 改为只监听本机：
 
 ```text
 127.0.0.1:3131
@@ -538,7 +624,7 @@ server {
 
 如果采用 HTTPS 代理，需要同步把 GBrain `--public-url` 和 Dify MCP URL 改为对应 HTTPS 地址。
 
-### 5.13 创建 Dify Token 并验收服务端
+### 5.15 创建 Dify Token 并验收服务端
 
 ```bash
 sudo -iu gbrain
@@ -548,7 +634,7 @@ gbrain auth list
 
 保存创建时返回的 Token。
 
-直接端口模式测试：
+测试：
 
 ```bash
 gbrain auth test \
@@ -556,13 +642,13 @@ gbrain auth test \
   --token <GBRAIN_TOKEN>
 ```
 
-如果启用了 Nginx HTTPS，则测试对应 HTTPS URL。
+如果启用了 Nginx / Gateway，则测试对应 HTTPS URL。
 
-### 5.14 完整部署验收顺序
+### 5.16 完整部署验收顺序
 
 ```text
-① docker compose ps
-   PostgreSQL healthy
+① sudo pg_lsclusters
+   PostgreSQL 16 main 为 online
         ↓
 ② SELECT extversion ...
    pgvector 正常
@@ -592,13 +678,19 @@ gbrain auth test \
    端到端闭环正常
 ```
 
-### 5.15 数据备份
+### 5.17 数据备份
 
-GBrain 通过 `put_page` 写入的 Page、Chunk、Fact 等数据保存在 PostgreSQL 中。Docker Volume 只能保证容器重建后数据仍在，不能防止磁盘损坏、误删除或升级失败，因此生产环境仍需要数据库或磁盘级备份。
+GBrain 的 Page、Chunk、Fact 等共享知识数据保存在 PostgreSQL 中。生产环境应将 `gbrain` 数据库纳入公司现有 PostgreSQL、磁盘快照或服务器备份机制。
 
-如果公司已经有 PostgreSQL 备份、云盘快照或服务器备份机制，直接把 GBrain 数据库纳入现有机制即可，不需要额外再写一套 cron 备份脚本。
+数据库原生数据目录默认位于：
 
-### 5.16 日志和审计
+```text
+/var/lib/postgresql/16/main
+```
+
+不要直接复制正在运行中的数据库目录作为逻辑备份；具体备份方式按公司现有 PostgreSQL 运维规范执行。
+
+### 5.18 日志和审计
 
 GBrain 服务日志：
 
@@ -606,10 +698,16 @@ GBrain 服务日志：
 sudo journalctl -u gbrain -f
 ```
 
-PostgreSQL：
+PostgreSQL 日志：
 
 ```bash
-sudo docker logs -f gbrain-postgres
+sudo journalctl -u postgresql@16-main -f
+```
+
+也可以查看：
+
+```bash
+sudo tail -f /var/log/postgresql/postgresql-16-main.log
 ```
 
 如果启用了 Nginx，再查看：
@@ -619,9 +717,9 @@ sudo tail -f /var/log/nginx/access.log
 sudo tail -f /var/log/nginx/error.log
 ```
 
-### 5.17 升级流程
+### 5.19 升级流程
 
-升级前先按现有备份机制完成数据保护，再执行：
+升级 GBrain 前先按现有备份机制完成数据保护，再执行：
 
 ```bash
 sudo systemctl stop gbrain
@@ -945,7 +1043,7 @@ gbrain models
 gbrain models doctor
 ```
 
-检查数据库、Embedding Provider 和索引。
+检查 PostgreSQL、Embedding Provider 和索引。
 
 **出现 429：**
 
@@ -961,7 +1059,7 @@ gbrain models doctor
 
 | 时间 | 工作内容 | 产出 |
 | --- | --- | --- |
-| 9.7—9.8 | 准备 GBrain 独立服务器；完成 Docker、PostgreSQL + pgvector、Bun、GBrain 和 Provider 安装；跑通 `doctor` | GBrain 独立服务基础环境可用 |
+| 9.7—9.8 | 准备 Ubuntu 22.04.1 LTS GBrain 独立服务器；原生安装 PostgreSQL 16 + pgvector、Bun、GBrain 和 Provider；跑通 `doctor` | GBrain 独立服务基础环境可用 |
 | 9.9 | 配置 systemd、3131 内网访问和网络 ACL；创建 scoped Bearer Token；完成 `/health` 和 `auth test` | GBrain HTTP MCP 可被 Dify 访问 |
 | 9.10—9.11 | 在 Dify 注册 MCP Server，挂载 `search / query / get_page`；完成历史 Case 读取与当前 DataSrc 联合验证 | 历史经验可参与新对话分析 |
 | 9.14—9.15 | 挂载 `put_page`；确定 Page / Slug 规范、写入条件和测试 Case；完成跨对话写入—检索闭环 | 有效分析结果可沉淀到 GBrain |
