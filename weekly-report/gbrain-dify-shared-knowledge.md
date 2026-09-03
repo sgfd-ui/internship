@@ -65,7 +65,7 @@ sequenceDiagram
 flowchart LR
     U[用户请求]
 
-    subgraph D[Dify]
+    subgraph D[Dify 服务器]
         A[推荐效果分析 Agent]
         MC[MCP Client\nDify 内置]
     end
@@ -74,25 +74,29 @@ flowchart LR
         DS[DataSrc / 数据 Tool]
     end
 
-    subgraph G[GBrain 共享知识服务]
+    subgraph G[GBrain 独立服务器]
         MS[GBrain HTTP MCP Server\n/mcp]
         DB[(PostgreSQL + pgvector)]
-        M[Embedding / LLM Provider]
+        W[GBrain 后台维护任务]
     end
+
+    M[Embedding / LLM Provider]
 
     U --> A
     A --> DS
     DS --> A
 
     A --> MC
-    MC --> MS
+    MC -->|内部 HTTPS / MCP| MS
     MS --> DB
+    W --> DB
     MS --> M
+    W --> M
     MS --> MC
     MC --> A
 ```
 
-Dify 不再额外开发一层 GBrain Tool。推荐效果分析 Agent 直接使用 Dify 原生 MCP Client 连接 GBrain 暴露的 HTTP MCP Server，GBrain 负责共享知识的存储、检索和写入。
+Dify 与 GBrain 物理分离部署。推荐效果分析 Agent 使用 Dify 原生 MCP Client，通过内网 HTTPS 连接 GBrain 独立服务器上的 MCP Server；GBrain 服务器独立负责共享知识的存储、检索、写入和后台维护。
 
 ### 3.2 模块职责
 
@@ -141,34 +145,28 @@ GBrain 原生提供 MCP Server，Dify 也已支持直接连接 HTTP MCP Server�
 
 ### 5.1 MCP 接入实现
 
-GBrain 在服务端以长期进程启动 HTTP MCP：
+GBrain 在独立服务器上以长期进程启动 HTTP MCP：
 
 ```bash
 gbrain serve --http --port 3131
 ```
 
-启动后，GBrain 对外提供 `/mcp` 入口。Dify 在 **Tools → MCP → Add MCP Server** 中配置该地址，例如同机 Docker 网络下使用：
-
-```text
-http://gbrain:3131/mcp
-```
-
-如果后续 GBrain 独立到其他服务器，则只需要把地址替换为内部 HTTPS 地址：
+GBrain MCP 进程只监听服务器内部端口 `3131`，前面通过 Nginx / Gateway 提供内网 HTTPS 入口，例如：
 
 ```text
 https://gbrain.internal.example.com/mcp
 ```
 
-Dify 连接后会自动发现 GBrain 暴露的 MCP 能力，推荐效果分析 Agent 只挂载本期需要的读写能力，不需要手工重新定义每个 Tool Schema。
+Dify 在 **Tools → MCP → Add MCP Server** 中配置该内部地址。Dify 与 GBrain 之间只通过这一条 MCP 网络入口通信，不直接访问 GBrain 数据库，也不需要手工重新定义每个 Tool Schema。
 
 ```mermaid
 flowchart LR
-    A[GBrain 启动 HTTP MCP Server]
-    --> B[创建 Dify 专用访问凭据]
-    --> C[Dify 添加 MCP Server URL]
-    --> D[Dify 发现 GBrain MCP Tools]
-    --> E[选择 Search / Query / Page 读写能力]
-    --> F[挂载到推荐效果分析 Agent]
+    A[GBrain 独立服务器启动 MCP]
+    --> B[配置内部 HTTPS 入口]
+    --> C[创建 Dify 专用访问凭据]
+    --> D[Dify 添加 MCP Server URL]
+    --> E[Dify 发现 GBrain MCP Tools]
+    --> F[挂载 Search / Query / Page 读写能力]
     --> G[完成联通测试]
 ```
 
@@ -180,7 +178,7 @@ gbrain auth register-client dify-rec-agent \
   --scopes "read write"
 ```
 
-数据库连接、Embedding Key、LLM Key 均只保存在 GBrain 服务端；Dify 只保存访问 MCP 所需的凭据，不持有 GBrain 数据库和模型密钥。
+数据库连接、Embedding Key、LLM Key 均只保存在 GBrain 独立服务器；Dify 只保存访问 MCP 所需的地址和客户端凭据。
 
 ### 5.2 历史经验读取
 
@@ -227,9 +225,9 @@ flowchart LR
 
 ### 5.4 MCP 与后台任务边界
 
-Dify 只通过 MCP 调用在线知识能力，例如 `search`、`query`、`get_page`、`put_page`。`sync`、`embed`、`extract`、`dream`、`enrich` 等需要本地引擎或文件系统的维护能力不由 Dify 远程调用，而是在 GBrain 服务所在机器上按需执行或调度。
+Dify 只通过 MCP 调用在线知识能力，例如 `search`、`query`、`get_page`、`put_page`。`sync`、`embed`、`extract`、`dream`、`enrich` 等需要本地引擎或文件系统的维护能力不由 Dify 远程调用，而是在 GBrain 独立服务器上按需执行或调度。
 
-因此运行时边界保持为：**Dify 负责使用知识，GBrain 服务负责管理知识。**
+因此运行时边界保持为：**Dify 负责使用知识，GBrain 独立服务器负责管理知识。**
 
 ---
 
@@ -237,103 +235,116 @@ Dify 只通过 MCP 调用在线知识能力，例如 `search`、`query`、`get_p
 
 ### 6.1 部署原则
 
-GBrain **逻辑上独立成服务，物理上前期可以与 Dify 共用同一台服务器**。这样既不把共享知识能力嵌入某个 Dify 应用，又不需要当前阶段额外增加机器；后续需要扩容时，只迁移 GBrain 服务并修改 MCP 地址即可。
+GBrain 与 Dify **直接采用物理分离部署**。Dify 保持现有服务器不变，新增一台 GBrain 独立服务器，专门承载共享知识服务、数据库和后台维护任务，两侧仅通过内网 MCP 接口通信。
 
-生产数据使用 PostgreSQL + pgvector。可以与 Dify 共用 PostgreSQL 实例，但应为 GBrain 建立独立的数据库和数据库账号，避免与 Dify 自身表结构、权限和升级生命周期耦合。
+正式环境统一使用 PostgreSQL + pgvector，不与 Dify 共用数据库实例。这样 GBrain 的服务生命周期、数据库升级、Embedding / LLM 任务和资源消耗都不会影响 Dify，后续其他 Agent 也可以直接复用同一套共享知识服务。
 
-### 6.2 初期部署拓扑
+### 6.2 部署拓扑
 
 ```mermaid
-flowchart TB
-    subgraph H[同一台服务器 / 同一内网]
-        subgraph D[Dify Stack]
-            A[推荐效果分析 Agent]
-            MC[Dify MCP Client]
-        end
+flowchart LR
+    subgraph D[Dify 服务器]
+        A[推荐效果分析 Agent]
+        MC[Dify MCP Client]
+    end
 
-        subgraph G[GBrain Stack]
-            MS[GBrain HTTP MCP Server\n:3131 /mcp]
-            W[GBrain 后台维护任务\n按需]
-        end
-
-        subgraph P[PostgreSQL 实例]
-            DDB[(Dify Database)]
-            GDB[(GBrain Database\npgvector)]
-        end
+    subgraph G[GBrain 独立服务器]
+        GW[Nginx / Internal Gateway\nHTTPS :443]
+        MS[GBrain HTTP MCP Server\nlocalhost:3131]
+        W[GBrain Maintenance\ncron / worker]
+        DB[(PostgreSQL + pgvector)]
+        LOG[日志 / 审计 / 备份]
     end
 
     MP[Embedding / LLM Provider]
 
     A --> MC
-    MC -->|内部 HTTP MCP| MS
-    MS --> GDB
-    W --> GDB
+    MC -->|HTTPS / MCP| GW
+    GW --> MS
+    MS --> DB
+    W --> DB
     MS --> MP
     W --> MP
-
-    D -.独立数据库.-> DDB
+    MS --> LOG
+    DB --> LOG
 ```
 
-这里的“共机”只是共享服务器资源，不代表把 GBrain 代码放进 Dify 容器。建议分别运行独立 Container / Service：
+部署关系固定为：
 
 ```text
-Server
-├── Dify Stack
-│   ├── api / worker / web / plugin-daemon ...
-│   └── MCP Client
-│
-├── GBrain Stack
-│   ├── gbrain serve --http --port 3131
-│   └── maintenance worker / cron（按需）
-│
-└── PostgreSQL
-    ├── dify database
-    └── gbrain database + pgvector
+Dify Server
+└── 推荐效果分析 Agent
+    └── Dify MCP Client
+             │
+             │ 内网 HTTPS / MCP
+             ▼
+GBrain Server
+├── Nginx / Internal Gateway :443
+│   └── GBrain MCP Server :3131
+├── GBrain Maintenance Worker / Cron
+├── PostgreSQL + pgvector
+└── Log / Audit / Backup
 ```
+
+GBrain 的 `3131` 不直接对 Dify 或公网开放，只监听本机或容器内部网络；Dify 统一访问内部 HTTPS 地址 `https://gbrain.internal.example.com/mcp`。
 
 ### 6.3 服务部署步骤
 
-**第一步：准备 GBrain 数据库。** 在现有 PostgreSQL 实例中创建独立 `gbrain` Database 和独立账号，启用 pgvector；Dify 与 GBrain 不共用业务表。
+**第一步：准备独立服务器。** 为 GBrain 分配独立主机，并配置固定内网地址 / 内部域名。网络 ACL 只允许 Dify 服务器访问 GBrain 的 HTTPS 入口，不开放 PostgreSQL 端口给 Dify。
 
-**第二步：部署 GBrain Service。** 使用 Bun 安装或 GBrain 编译二进制，在独立容器 / systemd Service 中配置 `DATABASE_URL`、Embedding Provider 和需要的 LLM Provider，然后执行 `gbrain doctor` 完成连接和 Schema 检查。
+**第二步：部署 PostgreSQL + pgvector。** PostgreSQL 部署在 GBrain 服务器上，创建独立 `gbrain` Database 和账号并启用 pgvector。数据库只监听本机或 GBrain 内部容器网络。
 
-**第三步：启动远程 MCP。** 长期运行：
+**第三步：部署 GBrain Service。** 使用 Bun 安装或 GBrain 编译二进制，配置 `DATABASE_URL`、Embedding Provider 和需要的 LLM Provider，执行 `gbrain doctor` 检查数据库、Schema 和模型连接。
+
+**第四步：启动 MCP Service。** 长期运行：
 
 ```bash
 gbrain serve --http --port 3131
 ```
 
-服务启动后由进程守护机制负责自动拉起。初期只在 Dify 与 GBrain 所在内部网络开放 `3131`，不直接暴露公网。
+通过 systemd / Docker restart policy 保证进程异常后自动拉起。
 
-**第四步：创建 Dify 专用 MCP 身份。** 在 GBrain 侧创建 `read + write` 的 OAuth Client，凭据只配置给 Dify；数据库密码和模型 Key 不进入 Dify。
+**第五步：配置内部 HTTPS。** 使用 Nginx / Internal Gateway 将内部域名的 `/mcp` 转发到 `127.0.0.1:3131/mcp`，TLS 证书使用公司内部证书体系；外部只暴露 HTTPS 入口，不直接暴露 GBrain 原始端口。
 
-**第五步：Dify 接入。** 在 Dify 的 MCP 配置中添加 `http://gbrain:3131/mcp`，完成授权并确认能够发现 `search`、`query`、`get_page`、`put_page` 等能力，然后挂载到推荐效果分析 Agent。
+**第六步：创建 Dify 专用 MCP 身份。** 在 GBrain 侧创建 `read + write` OAuth Client，不授予 `admin`。客户端凭据只保存在 Dify MCP 配置中。
 
-**第六步：联调读写闭环。** 先验证“写入一个测试 Page → 新会话 Search 命中 → get_page 读取完整内容”，再接入实际推荐效果分析链路。
-
-### 6.4 网络、权限与运行维护
-
-运行时只有一条跨系统入口：`Dify MCP Client → GBrain /mcp`。PostgreSQL 不对 Dify Agent 暴露，GBrain 的模型 Key 也不下发到 Dify。
-
-权限按最小范围配置：Dify 仅需要共享知识的 `read + write`；`admin`、数据库迁移和后台维护命令只允许 GBrain 运维侧使用。GBrain 的 MCP 调用统一记录审计日志，便于后续定位谁在何时读取或写入了知识。
-
-PostgreSQL 是在线知识主存储，需要纳入现有备份策略。Markdown / Git 如需保留，可作为定期导出、人工审查和版本归档手段，不放在在线查询主链路中。
-
-### 6.5 后续独立机器扩容
-
-如果后续知识量、Embedding 任务或并发提高，再将 GBrain Stack 和 GBrain Database 迁到独立服务器。Dify 侧不需要修改 Agent 逻辑，只将 MCP Server 地址从：
-
-```text
-http://gbrain:3131/mcp
-```
-
-切换为：
+**第七步：Dify 接入。** 在 Dify 添加：
 
 ```text
 https://gbrain.internal.example.com/mcp
 ```
 
-即可完成物理拆分。
+完成授权后确认能够发现 `search`、`query`、`get_page`、`put_page`，再挂载到推荐效果分析 Agent。
+
+**第八步：联调读写闭环。** 验证“写入测试 Page → 新会话 Search 命中 → get_page 读取完整内容 → 与当前 Data Tool 联合分析”的完整链路。
+
+### 6.4 网络与权限
+
+系统之间只保留一条业务访问链路：
+
+```text
+Dify Server
+    ↓ HTTPS / MCP
+GBrain Gateway
+    ↓ localhost
+GBrain MCP Server
+    ↓
+PostgreSQL + pgvector
+```
+
+Dify 无权直接访问 PostgreSQL，也不持有数据库密码、Embedding Key 或 LLM Key。GBrain 数据库、模型密钥和后台维护权限全部留在独立服务器内部。
+
+权限按最小范围配置：Dify 仅授予 `read + write`；`admin`、数据库迁移、后台索引和知识维护命令仅允许 GBrain 运维侧执行。网络侧只允许 Dify 服务器访问 GBrain HTTPS 入口，PostgreSQL 端口不跨机器开放。
+
+### 6.5 运行维护
+
+GBrain 独立服务器统一承担三类运行职责：
+
+1. **在线服务：** MCP 查询与写入，保证 Dify 能稳定读取和沉淀知识。
+2. **后台加工：** `sync`、`embed`、`extract`、`dream`、`enrich` 等任务按需由本机 cron / worker 执行，避免占用 Dify 资源。
+3. **数据维护：** PostgreSQL 定期备份，MCP 调用记录审计日志，并对数据库容量、磁盘、CPU、内存和服务存活状态做监控。
+
+Markdown / Git 如需保留，可用于知识导出、人工审查和版本归档，不放在在线 MCP 查询主链路中。
 
 ---
 
@@ -341,8 +352,8 @@ https://gbrain.internal.example.com/mcp
 
 | 时间 | 工作内容 | 产出 |
 | --- | --- | --- |
-| 9.7—9.8 | 创建 GBrain 独立数据库，部署 GBrain Service，完成 Provider 与 `gbrain doctor` 检查 | GBrain 服务与存储可用 |
-| 9.9 | 启动 HTTP MCP、创建 Dify 专用 OAuth Client，并在 Dify 完成 MCP Server 连接 | Dify 能发现 GBrain MCP 能力 |
-| 9.10—9.11 | 接入 `search / query / get_page`，完成历史 Case 读取与当前 DataSrc 联合验证 | 历史经验可参与新对话分析 |
+| 9.7—9.8 | 准备 GBrain 独立服务器，部署 PostgreSQL + pgvector、GBrain Service 和 Provider | GBrain 独立服务与存储可用 |
+| 9.9 | 配置内部 HTTPS、启动 HTTP MCP、创建 Dify 专用 OAuth Client | GBrain MCP 可被 Dify 安全访问 |
+| 9.10—9.11 | Dify 接入 MCP，接入 `search / query / get_page`，完成历史 Case 读取与当前 DataSrc 联合验证 | 历史经验可参与新对话分析 |
 | 9.14—9.15 | 接入 `put_page`，实现 Case 整理、写入条件和写入闭环 | 有效分析结果可沉淀到 GBrain |
-| 9.16—9.18 | 完成端到端联调、权限审计、备份和异常场景验证 | 形成可上线的共享知识闭环 |
+| 9.16—9.18 | 完成端到端联调、权限审计、备份、监控和异常场景验证 | 形成可上线的共享知识闭环 |
