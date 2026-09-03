@@ -1,487 +1,265 @@
 # GBrain 共享知识库 × Dify 接入方案
 
-## 1. 建设目标
+## 一、背景与目标
 
-当前推荐效果分析 Agent 的业务背景、排查过程和分析结论主要停留在单次会话内。本方案使用 **GBrain 作为共享知识层，Dify 作为 Agent 编排与业务执行层**，让不同用户、不同会话能够复用已经形成的业务知识和历史分析经验。
+目前推荐效果分析 Agent 的上下文主要保存在单次对话中。对话结束后，用户补充的业务背景、已完成的排查过程和分析结论，无法在其他新对话中被主动发现和复用。
 
-| 目标 | 当前方式 | 建设后 |
+| 当前问题 | 具体表现 | 建设目标 |
 | --- | --- | --- |
-| 业务知识复用 | 分散在文档和个人经验中 | 统一进入 GBrain |
-| 历史经验复用 | 新会话重新排查 | 检索相似历史经验后验证当前数据 |
-| 多 Agent 共享 | 各自维护上下文 | 多 Agent 访问同一 Brain |
-| 知识更新 | 人工零散维护 | 文档同步 + 分析经验沉淀 |
-| Dify 接入 | 无统一共享知识入口 | External Knowledge + MCP |
+| 业务背景重复提供 | 大促、活动、改版等背景需要不同同事反复补充 | 跨用户共享已确认业务背景 |
+| 相似问题重复排查 | 已分析过的异常在新对话中仍从零开始 | 复用历史分析 Case 和排查方向 |
+| 排查经验随会话结束流失 | 已验证证据、排除项和结论没有统一沉淀 | 将完整分析经验持续写入共享知识库 |
+| 历史经验无法主动发现 | 新对话只能依赖当前上下文 | Agent 分析时主动检索相似历史经验 |
+
+### 1.1 预期效果
 
 ```mermaid
-flowchart LR
-    A[业务文档] --> G[GBrain Shared Brain]
-    B[历史分析经验] --> G
-    C[Agent 系统知识] --> G
+sequenceDiagram
+    actor A as 同事甲（当前对话）
+    participant Agent as 推荐效果分析 Agent
+    participant Data as 当前分析数据
+    participant Brain as GBrain 共享知识库
+    actor B as 同事乙（新对话）
 
-    G --> D[Dify 推荐效果分析 Agent]
-    G --> E[其他 Agent]
-    G --> F[其他 MCP Client]
+    A->>Agent: 购物车页 GMV 最近异常上涨，为什么？
+    Agent->>Data: 查询当前效果与流量
+    Data-->>Agent: GMV 上涨，流量明显增加
+    A-->>Agent: 补充背景：双 11 大促
+    Agent-->>A: 本次结论：活动流量驱动
+    Agent->>Brain: 沉淀背景、证据、排查过程和结论
+
+    Note over B,Agent: 一周后发起全新对话
+
+    B->>Agent: 详情页 GMV 这几天也在涨，是什么原因？
+    Agent->>Brain: 检索相似历史经验
+    Brain-->>Agent: 返回双 11 历史 Case
+    Agent->>Data: 查询本次实际数据并验证
+    Data-->>Agent: 返回当前证据
+    Agent-->>B: 输出本次结论和历史经验参考
 ```
 
 ---
 
-## 2. 共享知识方案调研与选型
+## 二、共享知识方案调研与选型
 
-### 2.1 接入方式对比
+本次使用同一批 100 条知识和统一问题集，对 GBrain、RAGFlow、OpenViking、SAG、LightRAG、Mem0 进行检索质量、查询耗时和模型成本对比。
 
-| 方案 | 知识存储 | Dify 读取 | 知识写入 | 适用性 |
-| --- | --- | --- | --- | --- |
-| Dify 内置知识库 | Dify | 原生 Knowledge Retrieval | 导入 / API | 知识会形成 Dify 独立副本 |
-| GBrain MCP 直连 | GBrain | Agent 主动调用 MCP Tool | MCP | 适合主动检索、写入和高级操作 |
-| **GBrain + External Knowledge Adapter** | **GBrain** | **Dify Knowledge Retrieval** | MCP | **适合作为统一共享知识层** |
+### 2.1 实验设置
 
-### 2.2 最终方案
+| 项目 | 设置 |
+| --- | --- |
+| 知识规模 | 100 条独立原始文本 |
+| 目标知识 | 30 条：14 条业务背景 + 16 条历史分析 Case |
+| 干扰知识 | 70 条相似或无关内容 |
+| 正式问题 | 3 类：直接背景、约束检索、关联经验 |
+| 返回数量 | Top 5 |
+| 质量指标 | 首位命中率、Top5 命中率、MRR、上下文召回率、上下文相关性 |
+| 性能指标 | P50、P95、模型 Token、模型调用次数、索引耗时、内存和磁盘占用 |
 
-```mermaid
-flowchart LR
-    subgraph K[共享知识层]
-        G[GBrain]
-        DB[(PostgreSQL / Supabase)]
-        G --- DB
-    end
+### 2.2 实验结果
 
-    subgraph A[接入层]
-        R[Retrieval Adapter<br/>Dify External Knowledge API]
-        M[GBrain HTTP MCP]
-    end
+| 项目 | MRR | P95 | 单次查询平均 Token | 查询模式 | 结果 |
+| --- | ---: | ---: | ---: | --- | --- |
+| **GBrain** | **1.000** | **2.850 s** | **38.7** | `search:balanced` | **三题均排第一** |
+| RAGFlow | 0.667 | 3.294 s | 38.7 | `vector` | 两题排第一，一题未进入前五 |
+| OpenViking | 0.667 | 4.531 s | 38.7 | `find` | 两题排第一，一题未进入前五 |
+| SAG | 1.000 | 7.769 s | 625.3 | `vector` | 三题均排第一，但查询成本最高 |
+| LightRAG | 0.833 | 3.500 s | 67.0 | `local` | 三题均进入前五 |
+| Mem0 | 0.333 | 2.817 s | 38.7 | `native` | 查询快，但正式题排序效果较弱 |
 
-    subgraph D[Dify]
-        KR[Knowledge Retrieval]
-        AG[专业 Agent / Workflow]
-        WR[经验沉淀流程]
-    end
+| GBrain 额外结果 | 实验结果 |
+| --- | --- |
+| 首位命中率 | `1.00` |
+| Top5 命中率 | `1.00` |
+| MRR | `1.00` |
+| 100 条知识写入与索引模型调用 | `271` 次，六个项目最低 |
+| 索引磁盘增量 | `3.55 MB`，六个项目最低 |
 
-    KR --> R --> G
-    AG --> KR
-    WR --> M --> G
-```
+### 2.3 选型结论
 
-| 场景 | 接入方式 | 原因 |
-| --- | --- | --- |
-| 普通知识检索 | External Knowledge Adapter | 作为标准检索上下文进入 Dify |
-| 历史经验检索 | External Knowledge Adapter | 按问题统一召回相似经验 |
-| 写入分析经验 | GBrain MCP | 使用 `put_page` 等写操作 |
-| 页面查询 / 图谱 / 高级操作 | GBrain MCP | 直接使用 GBrain 原生能力 |
-
-**原则：GBrain 保存唯一知识副本，Dify 只负责使用知识。**
+| 选择 | 原因 |
+| --- | --- |
+| **GBrain** | 检索准确性最高，同时查询速度和模型成本较低 |
+| 默认查询 | `search:balanced`，同时利用关键词和向量结果 |
+| 经验载体 | 完整历史 Case 使用 `Page` 保存，Chunk、Embedding 和 Graph 用于检索 |
+| 团队部署 | 独立 GBrain Service + PostgreSQL / pgvector + Markdown / Git |
+| Dify 接入 | 通过 GBrain HTTP API Tool 调用查询和写入能力 |
 
 ---
 
-## 3. 总体架构
+## 三、总体方案
 
 ```mermaid
 flowchart LR
     U[用户请求]
 
-    subgraph D[Dify Agent 层]
-        P[Planner]
-        E[效果分析]
-        R[原因分析 Agent]
-        C[配置分析]
-        K[Knowledge Retrieval]
-        O[结果生成]
-        W[经验沉淀]
-    end
-
-    subgraph T[业务数据能力]
-        T1[效果 Tool]
-        T2[流量 Tool]
-        T3[实验 / 配置 Tool]
-    end
-
-    subgraph A[GBrain 接入层]
-        A1[Retrieval Adapter]
-        A2[HTTP MCP]
-    end
-
-    subgraph B[共享知识层]
-        G[GBrain]
-        DB[(PostgreSQL / Supabase)]
-    end
-
-    U --> P
-    P --> E
-    P --> R
-    P --> C
-
-    E --> T1
-    R --> T1
-    R --> T2
-    R --> T3
-    C --> T3
-
-    R --> K
-    E --> K
-    K --> A1 --> G
-
-    E --> O
-    R --> O
-    C --> O
-    O --> W
-    W --> A2 --> G
-
-    G --- DB
-```
-
-### 3.1 职责边界
-
-| 模块 | 职责 |
-| --- | --- |
-| Dify Planner | 理解用户目标、拆分任务、选择分析能力 |
-| 专业 Agent / Workflow | 查询当前数据、执行分析、使用历史经验 |
-| Knowledge Retrieval | 发起标准知识检索 |
-| Retrieval Adapter | 将 Dify 检索协议转换为 GBrain 查询 |
-| GBrain MCP | 提供经验写入和高级知识操作 |
-| GBrain | 统一存储、索引、检索和维护共享知识 |
-
----
-
-## 4. GBrain 知识组织
-
-GBrain 使用一个共享 Brain，通过 Source 区分不同知识域。
-
-```mermaid
-flowchart TB
-    G[GBrain Shared Brain]
-
-    G --> S1[rec-domain<br/>推荐业务知识]
-    G --> S2[rec-experience<br/>历史分析经验]
-    G --> S3[rec-agent<br/>Agent 系统知识]
-
-    S1 --> A1[指标口径]
-    S1 --> A2[页面 / 场景]
-    S1 --> A3[实验 / 配置规则]
-
-    S2 --> B1[指标变化案例]
-    S2 --> B2[实验异常案例]
-    S2 --> B3[流量 / 配置关联案例]
-
-    S3 --> C1[Tool 能力]
-    S3 --> C2[Workflow]
-    S3 --> C3[架构与运行规则]
-```
-
-### 4.1 Source 设计
-
-| Source | 内容 | 主要使用方 | 更新方式 |
-| --- | --- | --- | --- |
-| `rec-domain` | 指标、页面、实验、业务定义 | Planner / 专业 Agent | 文档同步 |
-| `rec-experience` | 历史分析背景、证据和结论 | 原因分析 Agent | 分析结束后沉淀 |
-| `rec-agent` | Tool、Workflow、Agent 架构和能力说明 | Planner / 开发排查 | Git 同步 |
-
-### 4.2 历史经验结构
-
-| 字段 | 内容示例 | 用途 |
-| --- | --- | --- |
-| `knowledge_type` | `metric_change_case` | 经验类型 |
-| `site` | `EC20` | 站点过滤 |
-| `scene` | `5` | 页面范围 |
-| `merchant_id` | `merchant_1001` | 店铺范围 |
-| `metrics` | `rec_gmv, rec_ctr` | 涉及指标 |
-| `start_day / end_day` | `20261101 / 20261107` | 事件时间 |
-| `background` | 双 11 大促 | 业务背景 |
-| `evidence` | 流量上涨、转化稳定 | 已验证证据 |
-| `conclusion` | 大促流量驱动 GMV 上涨 | 历史结论 |
-| `source_refs` | Tool Result / 文档来源 | 证据来源 |
-| `created_at` | `2026-11-08` | 经验形成时间 |
-
-推荐页面组织：
-
-```text
-rec-experience/
-├── metric-change/
-│   └── EC20/2026/20261108-cart-gmv-promotion.md
-├── experiment/
-│   └── EC10/2026/...
-└── traffic-config/
-    └── EC20/2026/...
-```
-
----
-
-## 5. Dify 读取链路
-
-### 5.1 External Knowledge Adapter
-
-Dify External Knowledge 使用固定 `/retrieval` 协议；Adapter 负责参数映射和结果转换。
-
-| Dify 输入 | Adapter 处理 | GBrain |
-| --- | --- | --- |
-| `knowledge_id` | 映射 Source / 检索域 | `rec-domain` / `rec-experience` / `rec-agent` |
-| `query` | 生成 GBrain 检索请求 | `search / query` |
-| `top_k` | 控制召回数量 | TopK |
-| `score_threshold` | 过滤低相关结果 | Score Filter |
-| `metadata_condition` | 转换业务范围过滤 | site / scene / metric / time 等 |
-
-返回统一映射：
-
-| Dify `records` | GBrain 内容 |
-| --- | --- |
-| `content` | 命中的知识正文 / chunk |
-| `score` | 检索相关度 |
-| `title` | page title / slug |
-| `metadata` | source、site、scene、时间、来源等 |
-
-```mermaid
-sequenceDiagram
-    participant Agent as Dify Agent
-    participant KR as Knowledge Retrieval
-    participant Adapter as Retrieval Adapter
-    participant Brain as GBrain
-
-    Agent->>KR: 检索历史经验
-    KR->>Adapter: POST /retrieval
-    Adapter->>Brain: search / query
-    Brain-->>Adapter: TopK pages / chunks
-    Adapter-->>KR: records[]
-    KR-->>Agent: Historical Evidence
-```
-
-### 5.2 Agent 使用位置
-
-| Agent 环节 | 是否检索 | 主要知识 |
-| --- | --- | --- |
-| Planner | 按需 | 业务定义、能力知识 |
-| 普通指标查询 | 默认不检索 | 当前数据直接回答 |
-| 效果综合分析 | 按需 | 业务口径、历史背景 |
-| 原因分析 | 默认检索 | 相似异常、历史事件、已知配置背景 |
-| 配置查询 | 按需 | 配置定义和关联规则 |
-
----
-
-## 6. 历史经验复用流程
-
-```mermaid
-sequenceDiagram
-    actor U as 用户
-    participant P as Dify Planner
-    participant A as 原因分析 Agent
-    participant K as GBrain
-    participant T as 当前数据 Tool
-
-    U->>P: 详情页 GMV 最近上涨，为什么？
-    P->>A: 原因分析任务
-
-    par 历史经验
-        A->>K: 检索相似时间 / 页面 / 指标经验
-        K-->>A: 返回历史事件、证据和结论
-    and 当前数据
-        A->>T: 查询当前效果、流量、配置
-        T-->>A: 返回当前证据
-    end
-
-    A->>A: 历史经验作为线索，使用当前数据验证
-    A-->>U: 当前结论 + 历史经验参考
-```
-
-### 6.1 经验参与方式
-
-```mermaid
-flowchart LR
-    Q[当前问题] --> H[历史经验检索]
-    Q --> D[当前数据分析]
-
-    H --> C[候选原因 / 已知背景]
-    D --> V[当前证据]
-
-    C --> J[联合判断]
-    V --> J
-    J --> O[本次分析结论]
-```
-
----
-
-## 7. 历史经验写入流程
-
-分析结果先形成结构化经验，再写入 `rec-experience`。
-
-```mermaid
-flowchart LR
-    A[分析任务完成]
-    --> B[提取经验候选]
-    --> C[结构化<br/>范围 / 背景 / 证据 / 结论]
-    --> D{是否满足沉淀条件}
-
-    D -->|是| E[GBrain MCP<br/>put_page]
-    D -->|否| F[仅保留当前会话结果]
-
-    E --> G[rec-experience]
-```
-
-### 7.1 沉淀内容
-
-| 内容 | 是否进入经验 | 示例 |
-| --- | --- | --- |
-| 用户补充的关键业务背景 | 是 | 大促、改版、运营活动 |
-| Tool 验证后的关键证据 | 是 | 流量上涨 35%、CTCVR 稳定 |
-| 最终原因结论 | 是 | GMV 上涨主要由流量增长驱动 |
-| 查询中间过程 | 否 | 每一次 Tool 调用参数 |
-| 普通一次性指标查询 | 否 | 昨天 CTR 是多少 |
-| 未验证猜测 | 否 | 可能是某策略调整 |
-
-### 7.2 写入结构
-
-```text
-标题：EC20 购物车页 GMV 双11期间上涨
-
-分析范围
-- site: EC20
-- scene: 5
-- period: 2026-11-01 ~ 2026-11-07
-- metrics: rec_gmv, rec_ctr, rec_ctcvr
-
-业务背景
-- 双11活动期间
-
-证据
-- 推荐流量明显上涨
-- CTR / CTCVR 无明显变化
-
-结论
-- 本次 GMV 上涨主要由活动期间流量增长驱动
-
-来源
-- 当前分析 Tool Result
-- 用户确认的业务背景
-```
-
----
-
-## 8. 权限与访问
-
-GBrain 统一对外提供 HTTP MCP，通过 OAuth Client 和 Source Scope 控制读写范围。
-
-```mermaid
-flowchart LR
     subgraph D[Dify]
-        R[Retrieval Adapter]
-        W[Experience Writer]
+        P[Planner / Workflow]
+        A[专业分析 Agent]
+        GT[GBrain Tool]
     end
 
-    subgraph O[OAuth]
-        RO[Read Client]
-        RW[Write Client]
+    subgraph B[业务数据]
+        DS[DataSrc / 数据 Tool]
     end
 
-    subgraph G[GBrain]
-        S1[rec-domain]
-        S2[rec-experience]
-        S3[rec-agent]
+    subgraph G[GBrain 共享知识服务]
+        API[GBrain HTTP Service]
+        DB[(PostgreSQL + pgvector)]
+        MD[Markdown / Git]
     end
 
-    R --> RO
-    W --> RW
-
-    RO --> S1
-    RO --> S2
-    RO --> S3
-
-    RW --> S2
+    U --> P --> A
+    A --> DS
+    A --> GT --> API
+    API --> DB
+    API --> MD
+    DS --> A
+    API --> GT --> A
 ```
 
-| Client | Scope | 用途 |
+### 3.1 模块职责
+
+| 模块 | 主要职责 | 输出 |
 | --- | --- | --- |
-| Retrieval Adapter | `read` | 查询共享知识 |
-| Experience Writer | `read,write` | 写入历史分析经验 |
-| 运维 / 管理 | `admin` | Source、客户端和知识治理 |
+| Dify Planner / Workflow | 判断分析目标并组织执行 | 分析任务 |
+| 专业分析 Agent | 综合当前数据和历史经验进行分析 | 本次结论 |
+| DataSrc / 数据 Tool | 查询当前时间、页面、实验和指标数据 | 当前事实与证据 |
+| GBrain Tool | 在 Dify 与 GBrain HTTP API 之间完成查询和写入 | 历史经验 / 写入结果 |
+| GBrain | 保存、索引和检索团队共享经验 | Page、Chunk、Fact、Graph 等 |
+| PostgreSQL + pgvector | 团队共享存储和检索索引 | Page、Chunk、Embedding、运行状态 |
+| Markdown / Git | 保存可审查、可版本化的知识内容 | 经验真源与版本记录 |
 
 ---
 
-## 9. 部署方案
+## 四、GBrain 知识组织
 
-共享部署使用 PostgreSQL / Supabase，GBrain 以长期 HTTP 服务运行。
+本期只沉淀与推荐效果分析直接相关的 **业务背景和历史分析 Case**。
+
+### 4.1 知识内容
+
+| 内容 | 具体信息 | 主要用途 |
+| --- | --- | --- |
+| 问题范围 | 问题描述、日期、站点、页面、指标、相关实验 | 约束检索范围 |
+| 业务背景 | 大促、节假日、平台活动、维护、临时操作 | 补充历史背景 |
+| 分析证据 | 效果变化、维度贡献、实验变化、流量变化 | 支撑历史结论 |
+| 排查过程 | 已调查方向、查询结果、排除项 | 复用排查方法 |
+| 分析结论 | 主要原因、未解释部分、后续结论 | 提供历史 Case |
+| 来源信息 | 原始会话 / 报告、写入时间、写入主体 | 来源回溯 |
+
+### 4.2 GBrain 对象使用
+
+| GBrain 对象 | 本方案用途 |
+| --- | --- |
+| `Source` | 区分团队或业务知识范围 |
+| `Page` | 保存一条完整业务背景或历史分析 Case |
+| `Chunk` | Page 切分后的检索单元 |
+| `Fact` | 从内容中提取的短事实，用于辅助查询 |
+| `Link / Graph` | 关联页面、指标、实验、事件和其他 Case |
+| `Timeline` | 保存同一 Page 相关的时间变化信息 |
+
+**核心原则：完整 Case 保存在 Page，检索命中后回到完整经验内容。**
+
+### 4.3 历史 Case 示例结构
+
+| 组成 | 示例 |
+| --- | --- |
+| 问题 | 购物车页推荐引导 GMV 异常上涨 |
+| 范围 | EC20 / scene=5 / 2026-11-01～2026-11-07 |
+| 背景 | 双 11 大促 |
+| 证据 | 推荐流量上涨；CTR、CTCVR 无明显变化 |
+| 排查 | 对比活动前后流量和转化效率；检查同期配置变化 |
+| 结论 | GMV 上涨主要由活动流量驱动 |
+| 来源 | 当前分析任务及对应 Tool Evidence |
+
+---
+
+## 五、Dify 接入与使用流程
+
+### 5.1 GBrain Tool 能力
+
+| Dify 调用场景 | GBrain 能力 | 使用方式 |
+| --- | --- | --- |
+| 相似历史经验检索 | `Search` | 默认使用 `balanced` 混合检索 |
+| 更复杂的历史条件查询 | `Query` | 按时间、关系等继续扩展 |
+| 已知经验精确读取 | `Page` | 根据 Source + Slug 获取完整 Page |
+| 结构化事实查询 | `Fact` | 按属性或文本条件查询事实 |
+| 关联经验扩展 | `Graph` | 从命中 Page 扩展相关历史 Case |
+| 历史经验写入 | Page 写入 | 将完整分析经验写入 GBrain |
+
+### 5.2 读写主链路
 
 ```mermaid
 flowchart LR
-    subgraph D[Dify 环境]
-        A[Dify API / Worker]
-        K[Knowledge Retrieval]
-        W[Agent / Workflow]
+    subgraph R[读取]
+        R1[用户问题] --> R2[Agent 查询 GBrain]
+        R2 --> R3[Search balanced]
+        R3 --> R4[返回历史 Case]
+        R4 --> R5[查询当前 DataSrc]
+        R5 --> R6[当前数据验证]
+        R6 --> R7[输出本次结论]
     end
 
-    subgraph S[Shared Knowledge Service]
-        AD[Retrieval Adapter]
-        GB[GBrain HTTP Service<br/>gbrain serve --http]
-        DB[(PostgreSQL / Supabase<br/>pgvector)]
+    subgraph W[写入]
+        W1[分析完成] --> W2[整理背景 / 证据 / 排查 / 结论]
+        W2 --> W3[形成完整 Page]
+        W3 --> W4[写入 GBrain]
+        W4 --> W5[生成 Chunk / Embedding / 关联索引]
     end
-
-    A --> K
-    A --> W
-    K --> AD
-    AD --> GB
-    W --> GB
-    GB --> DB
 ```
 
-### 9.1 部署组件
+### 5.3 使用边界
 
-| 组件 | 部署内容 | 作用 |
-| --- | --- | --- |
-| GBrain | 独立 Service / Container | 共享知识核心服务 |
-| PostgreSQL / Supabase | 持久化数据库 | Page、Chunk、Embedding、Index |
-| Retrieval Adapter | FastAPI / 轻量 HTTP Service | 适配 Dify External Knowledge API |
-| Dify | 现有部署 | Agent、Workflow、Knowledge Retrieval |
-| Git Sync / Import | 定时任务 | 同步业务文档和 Agent 文档 |
-
----
-
-## 10. 实施计划
-
-| 阶段 | 工作 | 产出 |
-| --- | --- | --- |
-| Phase 1：知识可读 | 部署 GBrain + PostgreSQL；创建 Source；完成 Retrieval Adapter | Dify 能检索 GBrain |
-| Phase 2：经验复用 | 建立 `rec-experience` 结构；原因分析接入历史经验 | 新会话可复用历史案例 |
-| Phase 3：经验沉淀 | 接入 MCP 写入；形成经验候选和写入规则 | 分析结果自动沉淀 |
-| Phase 4：持续治理 | Git 同步、权限、质量检查、过期与冲突处理 | 共享知识持续维护 |
-
-### 10.1 Phase 1 最小链路
-
-```mermaid
-flowchart LR
-    A[部署 PostgreSQL / Supabase]
-    --> B[部署 GBrain]
-    --> C[创建 rec-domain / rec-experience / rec-agent]
-    --> D[导入首批 Markdown]
-    --> E[实现 /retrieval Adapter]
-    --> F[Dify 注册 External Knowledge]
-    --> G[Knowledge Retrieval 联调]
-```
-
----
-
-## 11. 验收
-
-| 验收项 | 验收方式 |
+| 信息 | 使用方式 |
 | --- | --- |
-| 跨会话复用 | 新对话能够检索上一轮已沉淀经验 |
-| 多用户共享 | 不同 Dify 用户命中同一共享经验 |
-| Source 路由 | 业务知识、历史经验、Agent 知识能够按域检索 |
-| 检索相关性 | 相似站点 / 页面 / 指标案例优先返回 |
-| 当前数据验证 | 历史经验与当前 Tool 结果能够同时进入原因分析 |
-| 写入闭环 | 符合条件的分析结果可写入 `rec-experience` |
-| 权限 | 读取 Client 不能执行经验写入 |
+| 当前指标与效果数据 | 以本次 DataSrc 查询为准 |
+| 历史业务背景 | 作为当前分析背景 |
+| 历史分析 Case | 作为排查方向和历史参考 |
+| 历史结论 | 需要结合本次数据重新验证 |
 
 ---
 
-## 12. 设计依据
+## 六、部署方案
 
-| 能力 | 采用设计 |
+### 6.1 部署关系
+
+| 组件 | 部署方式 | 作用 |
+| --- | --- | --- |
+| Dify | 现有 Agent / Workflow 环境 | 用户交互、规划和分析执行 |
+| GBrain Tool | Dify Tool / Plugin | 封装 GBrain HTTP 查询和写入 |
+| GBrain | 独立长期服务 | 团队共享知识服务 |
+| PostgreSQL + pgvector | 独立数据库 | 共享数据、全文和向量索引 |
+| Markdown / Git | 独立知识仓库 | Page 内容和版本管理 |
+| Embedding Provider | GBrain 配置 | 语义检索向量生成 |
+| LLM Provider | GBrain 按需配置 | Fact 抽取、综合查询和后台加工 |
+
+### 6.2 环境配置
+
+| 环境 | GBrain | 数据 |
+| --- | --- | --- |
+| 本地开发 | PGLite | 脱敏测试数据 |
+| 联调 / 测试 | PostgreSQL + pgvector | 测试 Source / Case |
+| 团队部署 | PostgreSQL + pgvector + Markdown / Git | 正式共享经验 |
+
+---
+
+## 七、实施计划
+
+| 阶段 | 工作内容 | 产出 |
+| --- | --- | --- |
+| 第 1 阶段：服务部署 | 部署 PostgreSQL、GBrain 和模型 Provider | GBrain 团队服务可用 |
+| 第 2 阶段：Dify 接入 | 实现 GBrain Tool，接入 Search / Page 查询 | Dify 可读取历史经验 |
+| 第 3 阶段：经验复用 | 原因分析 Agent 接入历史 Case，并与 DataSrc 联合验证 | 新对话可复用历史排查经验 |
+| 第 4 阶段：经验沉淀 | 将分析背景、证据、排查过程和结论写入 Page | 形成读取—分析—沉淀闭环 |
+| 第 5 阶段：质量验证 | 使用调研中的统一测试方法持续评测检索质量与性能 | 共享知识检索质量可持续验证 |
+
+### 7.1 验收内容
+
+| 验收项 | 验收结果要求 |
 | --- | --- |
-| Dify 外部知识接入 | External Knowledge API：`POST /retrieval` |
-| GBrain 共享部署 | PostgreSQL / Supabase + HTTP MCP |
-| 多知识域 | 一个 Brain 下按 Source 管理 |
-| 多 Agent 访问 | HTTP MCP + OAuth Scope |
-| 知识读取 | External Knowledge Adapter |
-| 知识写入 | GBrain MCP |
-
-参考：
-
-- Dify External Knowledge API：https://docs.dify.ai/en/cloud/use-dify/knowledge/external-knowledge-api
-- GBrain Company Brain：https://github.com/garrytan/gbrain/blob/master/docs/tutorials/company-brain.md
-- GBrain Agent Access：https://github.com/garrytan/gbrain/blob/master/docs/guides/agent-to-gbrain.md
-- GBrain Brains and Sources：https://github.com/garrytan/gbrain/blob/master/docs/architecture/brains-and-sources.md
+| 跨对话复用 | 新对话能够主动命中历史业务背景和 Case |
+| 多用户共享 | 不同用户能够访问同一团队共享经验 |
+| 当前数据验证 | 历史 Case 不替代当前 DataSrc 查询 |
+| 经验完整性 | 能回到完整背景、证据、排查过程、结论和来源 |
+| 检索质量 | 使用固定测试集持续统计 Top1、Top5、MRR 和延迟 |
+| 写入闭环 | 新分析 Case 可以沉淀并被后续新对话检索 |
