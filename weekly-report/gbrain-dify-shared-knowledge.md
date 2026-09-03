@@ -203,7 +203,7 @@ sudo apt install -y curl git openssl ca-certificates postgresql-common
 
 ### 5.3 配置 PostgreSQL 官方 APT 仓库
 
-Ubuntu 22.04 系统仓库默认提供的 PostgreSQL 版本不是本方案固定的 PostgreSQL 16，因此先接入 PostgreSQL 官方 PGDG APT 仓库。
+本方案统一采用 **PostgreSQL 16 + pgvector** 作为部署基线。GBrain 本身不强制 PostgreSQL 16，这里固定 16 主要是为了统一部署和运维版本，并直接使用 Ubuntu 22.04 上 PGDG 提供的 `postgresql-16`、`postgresql-16-pgvector` 软件包，因此先接入 PostgreSQL 官方 PGDG APT 仓库。
 
 执行：
 
