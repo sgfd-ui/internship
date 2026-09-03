@@ -678,17 +678,82 @@ gbrain auth test \
    端到端闭环正常
 ```
 
-### 5.17 数据备份
+### 5.17 可选：数据备份
 
-GBrain 的 Page、Chunk、Fact 等共享知识数据保存在 PostgreSQL 中。生产环境应将 `gbrain` 数据库纳入公司现有 PostgreSQL、磁盘快照或服务器备份机制。
+GBrain 的 Page、Chunk、Fact 等共享知识数据保存在 PostgreSQL 中。测试环境可以暂不单独配置备份；正式环境如果公司已经有 PostgreSQL、磁盘快照或服务器备份机制，直接将 `gbrain` 数据库纳入现有机制即可。
 
-数据库原生数据目录默认位于：
+如果没有现成备份机制，可以使用 PostgreSQL 自带的 `pg_dump` 做最小可用备份。实现链路如下：
 
 ```text
-/var/lib/postgresql/16/main
+定时任务 / 人工触发
+→ pg_dump 导出 gbrain 数据库
+→ 生成 .dump 备份文件
+→ 校验备份文件可读取
+→ 复制到公司备份盘 / 对象存储
+→ 按保留周期清理旧备份
+
+发生故障时
+→ 新建空数据库
+→ pg_restore 恢复 .dump
+→ gbrain doctor 验证
+→ 恢复 GBrain 服务
 ```
 
-不要直接复制正在运行中的数据库目录作为逻辑备份；具体备份方式按公司现有 PostgreSQL 运维规范执行。
+创建备份目录：
+
+```bash
+sudo mkdir -p /srv/gbrain/backup
+sudo chown postgres:postgres /srv/gbrain/backup
+```
+
+手工备份一次：
+
+```bash
+sudo -u postgres pg_dump \
+  -d gbrain \
+  -Fc \
+  -f /srv/gbrain/backup/gbrain_$(date +%F_%H%M).dump
+```
+
+确认文件已经生成：
+
+```bash
+ls -lh /srv/gbrain/backup
+```
+
+再用 `pg_restore --list` 检查备份文件能够正常读取：
+
+```bash
+sudo -u postgres pg_restore \
+  --list /srv/gbrain/backup/<备份文件名>.dump \
+  | head
+```
+
+需要自动备份时，可由公司统一调度平台调用上面的 `pg_dump`；没有统一平台时，再配置 cron / systemd timer 定时执行。备份文件不要只保存在 GBrain 服务器本机，应继续同步到独立备份盘或对象存储，否则服务器磁盘整体损坏时备份会一起丢失。
+
+恢复时先停止 GBrain 写入：
+
+```bash
+sudo systemctl stop gbrain
+```
+
+确认目标数据库为空后执行：
+
+```bash
+sudo -u postgres pg_restore \
+  -d gbrain \
+  /srv/gbrain/backup/<备份文件名>.dump
+```
+
+恢复完成后检查：
+
+```bash
+sudo -iu gbrain gbrain doctor
+sudo systemctl start gbrain
+sudo systemctl status gbrain
+```
+
+PostgreSQL 原生数据目录默认位于 `/var/lib/postgresql/16/main`，但不要直接复制正在运行中的数据库目录来替代上述逻辑备份。
 
 ### 5.18 日志和审计
 
@@ -719,7 +784,7 @@ sudo tail -f /var/log/nginx/error.log
 
 ### 5.19 升级流程
 
-升级 GBrain 前先按现有备份机制完成数据保护，再执行：
+如果启用了 5.17 的备份机制，升级 GBrain 前先完成一次备份；然后执行：
 
 ```bash
 sudo systemctl stop gbrain
