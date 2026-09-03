@@ -139,398 +139,7 @@ flowchart LR
 
 ---
 
-## 五、MCP 接入实现
-
-本期固定采用一条最简单、最容易排障的链路：**Dify HTTP MCP Client → 内网 HTTPS → GBrain HTTP MCP Server**。GBrain 本身已经提供 HTTP MCP，不再额外开发 GBrain Tool / Plugin；Dify 只负责把 GBrain 暴露的 MCP 能力导入为 Agent 可调用工具。
-
-Dify 当前只支持 HTTP Transport 的 MCP Server；GBrain 的 `gbrain serve --http` 正好提供 HTTP MCP。因此两侧可以直接对接，不需要自己再定义 Tool Schema。
-
-### 5.1 本期认证方式
-
-本期只有一个受信任调用方——推荐效果分析 Dify，因此第一版不引入 Dynamic Client Registration（DCR）和浏览器 OAuth 跳转，直接使用 **GBrain scoped Bearer Token**。
-
-```text
-Dify MCP Client
-    │
-    │ Authorization: Bearer <GBRAIN_TOKEN>
-    │ HTTPS
-    ▼
-GBrain /mcp
-    │
-    └── token scope = read + write
-```
-
-GBrain Token 只授予 `read + write`，不授予 `admin`。这样 Dify 可以查询和写入共享知识，但不能管理 OAuth Client、执行管理操作或获取数据库权限。
-
-后续如果共享知识服务需要同时开放给多个系统，并且要求每个系统使用独立身份、独立 Source 权限，再升级为 GBrain OAuth 2.1；当前不把 OAuth 的 DCR、redirect URI、PKCE 等复杂度引入第一版。
-
-### 5.2 GBrain MCP 服务准备
-
-以下操作都在 **GBrain 独立服务器** 上执行。第六章完成安装后，先确认 GBrain 和 PostgreSQL 正常：
-
-```bash
-sudo -iu gbrain
-
-gbrain engine status --probe
-gbrain doctor
-gbrain stats
-```
-
-预期结果：
-
-- Engine 为 PostgreSQL；
-- `gbrain doctor` 不存在阻断性错误；
-- `gbrain stats` 能正常读取 Page / Chunk 统计；
-- HTTP MCP 正式部署不使用 PGLite。
-
-然后创建 Dify 专用 Token：
-
-```bash
-gbrain auth create "dify-rec-agent" --scopes read,write
-```
-
-命令会打印一段明文 Token。**该 Token 只显示一次，立即保存到公司的 Secret 管理位置，不要写入 Git、Markdown、聊天记录或普通配置文件。**
-
-查看已创建 Token：
-
-```bash
-gbrain auth list
-```
-
-如果 Token 泄露，立即撤销：
-
-```bash
-gbrain auth revoke "dify-rec-agent"
-```
-
-然后重新创建一个新的 Token，并更新 Dify 配置。
-
-### 5.3 启动并验证 GBrain HTTP MCP
-
-正式环境由 systemd 常驻运行，第六章会给出完整配置。部署完成后先检查服务状态：
-
-```bash
-sudo systemctl status gbrain
-```
-
-查看最近日志：
-
-```bash
-sudo journalctl -u gbrain -n 100 --no-pager
-```
-
-本机检查 GBrain 原始服务：
-
-```bash
-curl http://127.0.0.1:3131/health
-```
-
-应返回类似：
-
-```json
-{"status":"ok"}
-```
-
-再从 Dify 所在服务器或同一内网机器检查正式 HTTPS 地址：
-
-```bash
-curl https://gbrain.internal.example.com/health
-```
-
-最后直接验证 MCP 鉴权：
-
-```bash
-gbrain auth test \
-  https://gbrain.internal.example.com/mcp \
-  --token <刚才生成的Token>
-```
-
-只有这三层都成功，才进入 Dify 配置：
-
-```text
-127.0.0.1:3131 /health 成功
-        ↓
-内部 HTTPS /health 成功
-        ↓
-/mcp + Token 鉴权成功
-        ↓
-再配置 Dify
-```
-
-这样出现问题时能明确判断是 GBrain、Nginx / 网络、认证还是 Dify 配置问题。
-
-### 5.4 在 Dify 中添加 GBrain MCP Server
-
-进入 Dify 工作区：
-
-```text
-Integrations
-→ Tools
-→ MCP
-→ Add MCP Server
-```
-
-填写：
-
-```text
-Name: GBrain Shared Knowledge
-Server Identifier: gbrain-shared
-URL: https://gbrain.internal.example.com/mcp
-```
-
-`Server Identifier` 一旦被应用引用后不要随意修改。Dify 应用是按 Identifier 引用 MCP Server 的，后续改 Identifier 会导致已经挂载的工具失效。
-
-本期不使用自动 OAuth 注册。如果界面显示 **Dynamic Client Registration**，关闭它。
-
-然后进入 **Advanced Options → Custom Headers**，增加：
-
-```text
-Header Name: Authorization
-Header Value: Bearer <GBRAIN_TOKEN>
-```
-
-其中 `<GBRAIN_TOKEN>` 使用 5.2 创建的 `dify-rec-agent` Token。
-
-保存后，Dify 会连接 GBrain MCP Server 并导入 Server 暴露的工具。如果 GBrain 后续升级新增或删除 MCP Tool，需要在 Dify MCP Server 页面执行工具列表刷新；生产环境升级前先检查 Tool 变化，避免已上线 Agent 引用的 Tool 被删除或重命名。
-
-### 5.5 在推荐效果分析 Agent 中挂载能力
-
-GBrain HTTP MCP 可以暴露较多操作，但本期不要把所有操作都开放给推荐效果分析 Agent。只挂载当前业务真正需要的能力：
-
-```text
-读取：
-search
-query
-get_page
-
-写入：
-put_page
-```
-
-其中：
-
-- `search`：默认入口，根据用户问题检索相关历史 Case 和业务背景；
-- `query`：需要更复杂条件、时间或关系检索时使用；
-- `get_page`：命中候选后读取完整 Page；
-- `put_page`：将最终确认的业务背景或历史分析 Case 写入共享知识库。
-
-推荐效果分析 Agent 的使用规则固定为：
-
-1. 当前问题存在“为什么、原因、异常、发生了什么”等调查诉求时，先检索 GBrain 获取历史背景和类似 Case；
-2. 历史 Case 只能作为调查线索，当前指标结论仍必须通过 Data Tool 查询；
-3. Search 命中候选后，需要完整证据或排查过程时再调用 `get_page`；
-4. 普通一次性指标查询不写入；
-5. 只有形成明确背景、有证据的排查过程或可复用结论时才调用 `put_page`。
-
-### 5.6 读取链路
-
-```mermaid
-sequenceDiagram
-    participant U as 用户
-    participant A as 推荐效果分析 Agent
-    participant G as GBrain MCP
-    participant D as Data Tool
-
-    U->>A: 为什么购物车页 GMV 最近上涨？
-    A->>G: search / query
-    G-->>A: 返回相关历史 Case
-    A->>G: get_page
-    G-->>A: 返回完整背景、证据、排查和结论
-    A->>D: 查询本次实际数据
-    D-->>A: 返回当前证据
-    A->>A: 历史线索 + 当前证据重新验证
-    A-->>U: 输出本次结论
-```
-
-默认链路为：
-
-```text
-search / query
-→ 找到候选 Page
-→ get_page
-→ 获取完整历史经验
-→ 当前 Data Tool 验证
-→ 本次结论
-```
-
-历史结论不能直接复制为当前结论。例如历史 Case 认为 GMV 上涨由大促流量驱动，本次仍需要查询当前流量、CTR（点击率）、CTCVR（点击转化率）等数据重新确认。
-
-### 5.7 写入链路与 Page 规范
-
-本期写入两种 Page：
-
-```text
-业务背景
-历史分析 Case
-```
-
-建议统一 Slug 约定：
-
-```text
-背景：background/<日期>/<事件名称>
-Case：cases/<日期>/<站点>-<页面>-<问题关键词>
-```
-
-例如：
-
-```text
-background/2026-11-01/double11-promotion
-cases/2026-11-07/ec20-cart-gmv-rise
-```
-
-历史 Case 的 Page 内容统一整理成：
-
-```markdown
----
-type: rec_analysis_case
-site: EC20
-scene: 5
-start_date: 2026-11-01
-end_date: 2026-11-07
-metric: rec_gmv
-status: confirmed
-source: dify
----
-
-# 问题
-购物车页推荐引导 GMV 最近为什么上涨？
-
-## 业务背景
-双 11 大促开始。
-
-## 关键证据
-- 推荐请求量明显增加
-- CTR 基本稳定
-- CTCVR 基本稳定
-
-## 排查过程
-1. 对比活动前后推荐流量
-2. 检查转化效率
-3. 检查同期配置变化
-
-## 排除项
-未发现同期推荐策略切换。
-
-## 结论
-本次 GMV 上涨主要由活动带来的流量增长驱动。
-
-## 来源
-对应 Dify 分析任务及 Tool Evidence。
-```
-
-这里的 Front Matter 是本项目自己的知识组织约定，不要求 GBrain 理解每一个业务字段；它的作用是让 Page 有稳定、可读、可检索的业务结构。
-
-写入流程：
-
-```text
-本次分析完成
-→ 判断是否具有复用价值
-→ 整理为标准 Page
-→ MCP put_page
-→ GBrain 保存并进入后续检索
-```
-
-禁止写入：
-
-- 一次性指标查询；
-- 未经数据验证的猜测；
-- LLM 中间思考过程；
-- Tool 原始参数和执行日志；
-- 密钥、Token、数据库连接串等敏感配置。
-
-### 5.8 Dify 端联调验收
-
-第一轮不要直接拿真实业务 Case 测试，先做一个最小闭环。
-
-**步骤 1：写入测试 Page。**
-
-在推荐效果分析 Agent 中临时发起一条测试任务，让 Agent 调用 `put_page` 写入：
-
-```text
-slug: cases/mcp-smoke-test
-content: 这是一条 GBrain MCP 联通测试知识。
-```
-
-**步骤 2：新开一个完全新的对话。**
-
-询问：
-
-```text
-有没有 MCP 联通测试相关的历史知识？
-```
-
-Agent 应调用 `search` 并命中该 Page。
-
-**步骤 3：读取完整 Page。**
-
-让 Agent 继续读取详情，应调用 `get_page` 返回刚才写入的完整内容。
-
-**步骤 4：删除测试数据。**
-
-测试完成后由运维侧清理该测试 Page，避免测试数据进入正式知识。
-
-真正验收标准不是“Dify 显示 Connected”，而是：
-
-```text
-Dify 能发现 Tool
-→ Agent 能调用 search
-→ Agent 能调用 get_page
-→ Agent 能调用 put_page
-→ 新对话能重新检索刚写入内容
-```
-
-### 5.9 MCP 常见问题排查
-
-**Dify 显示连接失败：**
-
-依次执行：
-
-```bash
-curl http://127.0.0.1:3131/health
-curl https://gbrain.internal.example.com/health
-gbrain auth test https://gbrain.internal.example.com/mcp --token <TOKEN>
-```
-
-第一条失败：查 GBrain Service；第二条失败：查 Nginx、证书和防火墙；前两条成功但第三条失败：查 Token；三条都成功再检查 Dify。
-
-**返回 401 / 403：**
-
-```bash
-gbrain auth list
-```
-
-确认 Token 仍存在，并且包含 `read`、`write` scope；确认 Dify Custom Header 是：
-
-```text
-Authorization: Bearer <TOKEN>
-```
-
-**Dify 能连接但工具列表为空：**
-
-确认 URL 是 `/mcp`，不是 `/health` 或服务器根路径；确认 Dify 使用的是 HTTP MCP；在 Dify MCP Server 页面刷新 Tool 列表。
-
-**Search 能调用但检索不到内容：**
-
-```bash
-gbrain doctor
-gbrain stats
-gbrain models
-gbrain models doctor
-```
-
-重点检查数据库、Embedding Provider 和索引是否正常。
-
-**出现 429：**
-
-GBrain HTTP MCP 自带 IP 和 Token 级 Rate Limit。先判断是否出现短时间大量 Agent 调用，再决定是否调整 GBrain 的 Rate Limit；不要一开始直接取消限制。
-
-**长查询超时：**
-
-先确认 GBrain 本身响应耗时，再调整 Dify MCP 的 request timeout / SSE read timeout，以及 Nginx 的 `proxy_read_timeout`，不要只在 Dify 端无限加大超时。
-
----
-
-## 六、独立服务器部署方案
+## 五、独立服务器部署方案
 
 本章按一台全新的 Linux 服务器从零开始，目标是让没有参与设计的人也可以按步骤完成部署。
 
@@ -549,7 +158,7 @@ GBrain Server
 └── 日志 / 备份
 ```
 
-### 6.1 部署前需要准备什么
+### 5.1 部署前需要准备什么
 
 开始前准备以下信息：
 
@@ -566,7 +175,7 @@ GBrain Server
 
 本文命令按 **Ubuntu 22.04 / 24.04** 风格编写。公司已有统一服务器初始化、Docker、Nginx、证书管理规范时，以公司规范为准，下面命令用于说明最终必须得到的运行状态。
 
-### 6.2 创建系统用户和目录
+### 5.2 创建系统用户和目录
 
 不要使用 root 长期运行 GBrain。
 
@@ -591,7 +200,7 @@ sudo apt update
 sudo apt install -y curl git nginx openssl ca-certificates
 ```
 
-### 6.3 安装 Docker
+### 5.3 安装 Docker
 
 如果服务器已经按公司基线安装 Docker，可直接跳过本节。
 
@@ -614,7 +223,7 @@ sudo systemctl status docker
 
 如果当前 Ubuntu 镜像没有 `docker-compose-v2` 包，则按 Docker 官方 Ubuntu 安装文档安装 Docker Engine 和 Compose Plugin，不使用已经停止维护的旧版 `docker-compose` Python 包。
 
-### 6.4 部署 PostgreSQL + pgvector
+### 5.4 部署 PostgreSQL + pgvector
 
 GBrain 的团队共享 / 远程 HTTP MCP 场景使用真正的 PostgreSQL。本方案使用 pgvector 官方 Docker Image，避免在宿主机手工编译 pgvector。
 
@@ -720,7 +329,7 @@ docker exec -it gbrain-postgres \
 
 能返回版本号即 pgvector 可用。
 
-### 6.5 安装 Bun
+### 5.5 安装 Bun
 
 切换到 GBrain 用户：
 
@@ -748,7 +357,7 @@ bun --version
 
 能输出版本号再继续。
 
-### 6.6 安装 GBrain
+### 5.6 安装 GBrain
 
 仍然使用 `gbrain` 用户：
 
@@ -777,7 +386,7 @@ bun link
 gbrain --version
 ```
 
-### 6.7 让 GBrain 连接 PostgreSQL
+### 5.7 让 GBrain 连接 PostgreSQL
 
 先从 `/opt/gbrain/.env` 取得数据库密码，然后以 `gbrain` 用户初始化。
 
@@ -810,7 +419,7 @@ gbrain stats
 
 这里必须先处理完 `doctor` 的阻断性问题，再继续部署 MCP。
 
-### 6.8 配置 Embedding / LLM Provider
+### 5.8 配置 Embedding / LLM Provider
 
 GBrain 的关键词检索可以独立存在，但要获得语义检索能力，需要配置 Embedding Provider。
 
@@ -841,7 +450,7 @@ gbrain models doctor
 
 `models doctor` 会实际探测已配置模型。至少保证本期要使用的 Embedding 路径正常。
 
-### 6.9 创建正式环境变量文件
+### 5.9 创建正式环境变量文件
 
 退出临时 Shell 后，systemd 不会读取你的 `.bashrc`，因此数据库和 Provider 配置必须写进专用 EnvironmentFile。
 
@@ -877,7 +486,7 @@ GBRAIN_ADMIN_BOOTSTRAP_TOKEN=<刚才生成的随机值>
 
 这里禁止放进 Git。
 
-### 6.10 配置 systemd 常驻运行 GBrain
+### 5.10 配置 systemd 常驻运行 GBrain
 
 先确认 GBrain 可执行文件位置：
 
@@ -944,7 +553,7 @@ curl http://127.0.0.1:3131/health
 
 才继续配 Nginx。
 
-### 6.11 配置 Nginx 内网 HTTPS
+### 5.11 配置 Nginx 内网 HTTPS
 
 GBrain 原始 `3131` 只绑定 `127.0.0.1`，不直接跨机器访问。Nginx 负责对 Dify 提供 HTTPS。
 
@@ -1005,7 +614,7 @@ sudo systemctl reload nginx
 curl https://gbrain.internal.example.com/health
 ```
 
-### 6.12 配置防火墙 / ACL
+### 5.12 配置防火墙 / ACL
 
 正式环境只需要：
 
@@ -1035,7 +644,7 @@ sudo ufw status
 
 公司使用安全组 / ACL 时，在公司网络层实现同样规则即可。
 
-### 6.13 创建 Dify Token 并做服务端验收
+### 5.13 创建 Dify Token 并做服务端验收
 
 进入 GBrain 用户：
 
@@ -1065,9 +674,9 @@ gbrain auth test \
   --token <GBRAIN_TOKEN>
 ```
 
-这一条成功后，服务器侧部署才算完成，然后按第 5.4 节配置 Dify。
+这一条成功后，服务器侧部署才算完成，然后按第 6.4 节配置 Dify。
 
-### 6.14 完整部署验收顺序
+### 5.14 完整部署验收顺序
 
 不要跳着验收，严格按下面顺序：
 
@@ -1105,7 +714,7 @@ gbrain auth test \
 
 任何一步失败，都只排查当前这一层，不要直接去改后面的 Agent Prompt。
 
-### 6.15 数据备份
+### 5.15 数据备份
 
 至少每天备份 PostgreSQL。
 
@@ -1126,7 +735,7 @@ ls -lh /srv/gbrain/backup
 
 恢复前先停止 GBrain 写入，并在测试环境验证恢复流程。不要等真正故障时第一次尝试 `pg_restore`。
 
-### 6.16 日志和审计
+### 5.16 日志和审计
 
 GBrain MCP 请求会记录审计信息。服务日志通过 systemd 查看：
 
@@ -1159,7 +768,7 @@ Dify 调用错误
 
 不要把所有故障都归因到 Agent。
 
-### 6.17 升级流程
+### 5.17 升级流程
 
 正式升级前：
 
@@ -1204,7 +813,7 @@ curl https://gbrain.internal.example.com/health
 
 并在 Dify MCP 页面刷新 Tool Catalog，确认线上使用的 `search`、`query`、`get_page`、`put_page` 没有发生不兼容变化。
 
-### 6.18 官方参考文档
+### 5.18 官方参考文档
 
 本部署方案主要对照以下官方文档整理，真正实施时以对应版本官方文档为最终准则：
 
@@ -1215,6 +824,393 @@ curl https://gbrain.internal.example.com/health
 - Dify MCP Tool 接入：`https://github.com/langgenius/dify-docs/blob/main/en/self-host/use-dify/workspace/tools.mdx`
 - pgvector：`https://github.com/pgvector/pgvector`
 - Bun：`https://bun.sh/`
+
+---
+
+## 六、MCP 接入实现
+
+### 6.1 本期认证方式
+
+本期只有一个受信任调用方——推荐效果分析 Dify，因此第一版不引入 Dynamic Client Registration（DCR）和浏览器 OAuth 跳转，直接使用 **GBrain scoped Bearer Token**。
+
+```text
+Dify MCP Client
+    │
+    │ Authorization: Bearer <GBRAIN_TOKEN>
+    │ HTTPS
+    ▼
+GBrain /mcp
+    │
+    └── token scope = read + write
+```
+
+GBrain Token 只授予 `read + write`，不授予 `admin`。这样 Dify 可以查询和写入共享知识，但不能管理 OAuth Client、执行管理操作或获取数据库权限。
+
+后续如果共享知识服务需要同时开放给多个系统，并且要求每个系统使用独立身份、独立 Source 权限，再升级为 GBrain OAuth 2.1；当前不把 OAuth 的 DCR、redirect URI、PKCE 等复杂度引入第一版。
+
+### 6.2 GBrain MCP 服务准备
+
+以下操作都在 **GBrain 独立服务器** 上执行。第五章完成安装后，先确认 GBrain 和 PostgreSQL 正常：
+
+```bash
+sudo -iu gbrain
+
+gbrain engine status --probe
+gbrain doctor
+gbrain stats
+```
+
+预期结果：
+
+- Engine 为 PostgreSQL；
+- `gbrain doctor` 不存在阻断性错误；
+- `gbrain stats` 能正常读取 Page / Chunk 统计；
+- HTTP MCP 正式部署不使用 PGLite。
+
+然后创建 Dify 专用 Token：
+
+```bash
+gbrain auth create "dify-rec-agent" --scopes read,write
+```
+
+命令会打印一段明文 Token。**该 Token 只显示一次，立即保存到公司的 Secret 管理位置，不要写入 Git、Markdown、聊天记录或普通配置文件。**
+
+查看已创建 Token：
+
+```bash
+gbrain auth list
+```
+
+如果 Token 泄露，立即撤销：
+
+```bash
+gbrain auth revoke "dify-rec-agent"
+```
+
+然后重新创建一个新的 Token，并更新 Dify 配置。
+
+### 6.3 启动并验证 GBrain HTTP MCP
+
+正式环境由 systemd 常驻运行，第五章已经给出完整配置。部署完成后先检查服务状态：
+
+```bash
+sudo systemctl status gbrain
+```
+
+查看最近日志：
+
+```bash
+sudo journalctl -u gbrain -n 100 --no-pager
+```
+
+本机检查 GBrain 原始服务：
+
+```bash
+curl http://127.0.0.1:3131/health
+```
+
+应返回类似：
+
+```json
+{"status":"ok"}
+```
+
+再从 Dify 所在服务器或同一内网机器检查正式 HTTPS 地址：
+
+```bash
+curl https://gbrain.internal.example.com/health
+```
+
+最后直接验证 MCP 鉴权：
+
+```bash
+gbrain auth test \
+  https://gbrain.internal.example.com/mcp \
+  --token <刚才生成的Token>
+```
+
+只有这三层都成功，才进入 Dify 配置：
+
+```text
+127.0.0.1:3131 /health 成功
+        ↓
+内部 HTTPS /health 成功
+        ↓
+/mcp + Token 鉴权成功
+        ↓
+再配置 Dify
+```
+
+这样出现问题时能明确判断是 GBrain、Nginx / 网络、认证还是 Dify 配置问题。
+
+### 6.4 在 Dify 中添加 GBrain MCP Server
+
+进入 Dify 工作区：
+
+```text
+Integrations
+→ Tools
+→ MCP
+→ Add MCP Server
+```
+
+填写：
+
+```text
+Name: GBrain Shared Knowledge
+Server Identifier: gbrain-shared
+URL: https://gbrain.internal.example.com/mcp
+```
+
+`Server Identifier` 一旦被应用引用后不要随意修改。Dify 应用是按 Identifier 引用 MCP Server 的，后续改 Identifier 会导致已经挂载的工具失效。
+
+本期不使用自动 OAuth 注册。如果界面显示 **Dynamic Client Registration**，关闭它。
+
+然后进入 **Advanced Options → Custom Headers**，增加：
+
+```text
+Header Name: Authorization
+Header Value: Bearer <GBRAIN_TOKEN>
+```
+
+其中 `<GBRAIN_TOKEN>` 使用 6.2 创建的 `dify-rec-agent` Token。
+
+保存后，Dify 会连接 GBrain MCP Server 并导入 Server 暴露的工具。如果 GBrain 后续升级新增或删除 MCP Tool，需要在 Dify MCP Server 页面执行工具列表刷新；生产环境升级前先检查 Tool 变化，避免已上线 Agent 引用的 Tool 被删除或重命名。
+
+### 6.5 在推荐效果分析 Agent 中挂载能力
+
+GBrain HTTP MCP 可以暴露较多操作，但本期不要把所有操作都开放给推荐效果分析 Agent。只挂载当前业务真正需要的能力：
+
+```text
+读取：
+search
+query
+get_page
+
+写入：
+put_page
+```
+
+其中：
+
+- `search`：默认入口，根据用户问题检索相关历史 Case 和业务背景；
+- `query`：需要更复杂条件、时间或关系检索时使用；
+- `get_page`：命中候选后读取完整 Page；
+- `put_page`：将最终确认的业务背景或历史分析 Case 写入共享知识库。
+
+推荐效果分析 Agent 的使用规则固定为：
+
+1. 当前问题存在“为什么、原因、异常、发生了什么”等调查诉求时，先检索 GBrain 获取历史背景和类似 Case；
+2. 历史 Case 只能作为调查线索，当前指标结论仍必须通过 Data Tool 查询；
+3. Search 命中候选后，需要完整证据或排查过程时再调用 `get_page`；
+4. 普通一次性指标查询不写入；
+5. 只有形成明确背景、有证据的排查过程或可复用结论时才调用 `put_page`。
+
+### 6.6 读取链路
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant A as 推荐效果分析 Agent
+    participant G as GBrain MCP
+    participant D as Data Tool
+
+    U->>A: 为什么购物车页 GMV 最近上涨？
+    A->>G: search / query
+    G-->>A: 返回相关历史 Case
+    A->>G: get_page
+    G-->>A: 返回完整背景、证据、排查和结论
+    A->>D: 查询本次实际数据
+    D-->>A: 返回当前证据
+    A->>A: 历史线索 + 当前证据重新验证
+    A-->>U: 输出本次结论
+```
+
+默认链路为：
+
+```text
+search / query
+→ 找到候选 Page
+→ get_page
+→ 获取完整历史经验
+→ 当前 Data Tool 验证
+→ 本次结论
+```
+
+历史结论不能直接复制为当前结论。例如历史 Case 认为 GMV 上涨由大促流量驱动，本次仍需要查询当前流量、CTR（点击率）、CTCVR（点击转化率）等数据重新确认。
+
+### 6.7 写入链路与 Page 规范
+
+本期写入两种 Page：
+
+```text
+业务背景
+历史分析 Case
+```
+
+建议统一 Slug 约定：
+
+```text
+背景：background/<日期>/<事件名称>
+Case：cases/<日期>/<站点>-<页面>-<问题关键词>
+```
+
+例如：
+
+```text
+background/2026-11-01/double11-promotion
+cases/2026-11-07/ec20-cart-gmv-rise
+```
+
+历史 Case 的 Page 内容统一整理成：
+
+```markdown
+---
+type: rec_analysis_case
+site: EC20
+scene: 5
+start_date: 2026-11-01
+end_date: 2026-11-07
+metric: rec_gmv
+status: confirmed
+source: dify
+---
+
+# 问题
+购物车页推荐引导 GMV 最近为什么上涨？
+
+## 业务背景
+双 11 大促开始。
+
+## 关键证据
+- 推荐请求量明显增加
+- CTR 基本稳定
+- CTCVR 基本稳定
+
+## 排查过程
+1. 对比活动前后推荐流量
+2. 检查转化效率
+3. 检查同期配置变化
+
+## 排除项
+未发现同期推荐策略切换。
+
+## 结论
+本次 GMV 上涨主要由活动带来的流量增长驱动。
+
+## 来源
+对应 Dify 分析任务及 Tool Evidence。
+```
+
+这里的 Front Matter 是本项目自己的知识组织约定，不要求 GBrain 理解每一个业务字段；它的作用是让 Page 有稳定、可读、可检索的业务结构。
+
+写入流程：
+
+```text
+本次分析完成
+→ 判断是否具有复用价值
+→ 整理为标准 Page
+→ MCP put_page
+→ GBrain 保存并进入后续检索
+```
+
+禁止写入：
+
+- 一次性指标查询；
+- 未经数据验证的猜测；
+- LLM 中间思考过程；
+- Tool 原始参数和执行日志；
+- 密钥、Token、数据库连接串等敏感配置。
+
+### 6.8 Dify 端联调验收
+
+第一轮不要直接拿真实业务 Case 测试，先做一个最小闭环。
+
+**步骤 1：写入测试 Page。**
+
+在推荐效果分析 Agent 中临时发起一条测试任务，让 Agent 调用 `put_page` 写入：
+
+```text
+slug: cases/mcp-smoke-test
+content: 这是一条 GBrain MCP 联通测试知识。
+```
+
+**步骤 2：新开一个完全新的对话。**
+
+询问：
+
+```text
+有没有 MCP 联通测试相关的历史知识？
+```
+
+Agent 应调用 `search` 并命中该 Page。
+
+**步骤 3：读取完整 Page。**
+
+让 Agent 继续读取详情，应调用 `get_page` 返回刚才写入的完整内容。
+
+**步骤 4：删除测试数据。**
+
+测试完成后由运维侧清理该测试 Page，避免测试数据进入正式知识。
+
+真正验收标准不是“Dify 显示 Connected”，而是：
+
+```text
+Dify 能发现 Tool
+→ Agent 能调用 search
+→ Agent 能调用 get_page
+→ Agent 能调用 put_page
+→ 新对话能重新检索刚写入内容
+```
+
+### 6.9 MCP 常见问题排查
+
+**Dify 显示连接失败：**
+
+依次执行：
+
+```bash
+curl http://127.0.0.1:3131/health
+curl https://gbrain.internal.example.com/health
+gbrain auth test https://gbrain.internal.example.com/mcp --token <TOKEN>
+```
+
+第一条失败：查 GBrain Service；第二条失败：查 Nginx、证书和防火墙；前两条成功但第三条失败：查 Token；三条都成功再检查 Dify。
+
+**返回 401 / 403：**
+
+```bash
+gbrain auth list
+```
+
+确认 Token 仍存在，并且包含 `read`、`write` scope；确认 Dify Custom Header 是：
+
+```text
+Authorization: Bearer <TOKEN>
+```
+
+**Dify 能连接但工具列表为空：**
+
+确认 URL 是 `/mcp`，不是 `/health` 或服务器根路径；确认 Dify 使用的是 HTTP MCP；在 Dify MCP Server 页面刷新 Tool 列表。
+
+**Search 能调用但检索不到内容：**
+
+```bash
+gbrain doctor
+gbrain stats
+gbrain models
+gbrain models doctor
+```
+
+重点检查数据库、Embedding Provider 和索引是否正常。
+
+**出现 429：**
+
+GBrain HTTP MCP 自带 IP 和 Token 级 Rate Limit。先判断是否出现短时间大量 Agent 调用，再决定是否调整 GBrain 的 Rate Limit；不要一开始直接取消限制。
+
+**长查询超时：**
+
+先确认 GBrain 本身响应耗时，再调整 Dify MCP 的 request timeout / SSE read timeout，以及 Nginx 的 `proxy_read_timeout`，不要只在 Dify 端无限加大超时。
 
 ---
 
