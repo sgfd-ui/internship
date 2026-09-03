@@ -1,4 +1,4 @@
-# GBrain 共享知识库 × Dify 接入方案
+# GBrain 共享知识库 × Dify MCP 接入方案
 
 ## 一、背景
 
@@ -67,7 +67,7 @@ flowchart LR
 
     subgraph D[Dify]
         A[推荐效果分析 Agent]
-        GT[GBrain Tool]
+        MC[MCP Client\nDify 内置]
     end
 
     subgraph B[业务数据]
@@ -75,36 +75,41 @@ flowchart LR
     end
 
     subgraph G[GBrain 共享知识服务]
-        API[GBrain HTTP Service]
+        MS[GBrain HTTP MCP Server\n/mcp]
         DB[(PostgreSQL + pgvector)]
-        MD[Markdown / Git]
+        M[Embedding / LLM Provider]
     end
 
     U --> A
     A --> DS
-    A --> GT --> API
-    API --> DB
-    API --> MD
     DS --> A
-    API --> GT --> A
+
+    A --> MC
+    MC --> MS
+    MS --> DB
+    MS --> M
+    MS --> MC
+    MC --> A
 ```
+
+Dify 不再额外开发一层 GBrain Tool。推荐效果分析 Agent 直接使用 Dify 原生 MCP Client 连接 GBrain 暴露的 HTTP MCP Server，GBrain 负责共享知识的存储、检索和写入。
 
 ### 3.2 模块职责
 
 | 模块 | 主要职责 | 输出 |
 | --- | --- | --- |
-| 推荐效果分析 Agent | 理解用户问题、组织分析，并结合当前数据和历史经验完成判断 | 本次分析结论 |
+| 推荐效果分析 Agent | 理解用户问题，组织当前数据查询，并决定何时读取或写入历史经验 | 本次分析结论 |
 | DataSrc / 数据 Tool | 查询当前时间、页面、实验和指标数据 | 当前事实与证据 |
-| GBrain Tool | 在 Dify 与 GBrain HTTP API 之间完成查询和写入 | 历史经验 / 写入结果 |
-| GBrain | 保存、索引和检索团队共享经验 | Page、Chunk、Fact、Graph 等 |
-| PostgreSQL + pgvector | 团队共享存储和检索索引 | Page、Chunk、Embedding、运行状态 |
-| Markdown / Git | 保存可审查、可版本化的知识内容 | 经验真源与版本记录 |
+| Dify MCP Client | 连接 GBrain MCP Server，发现并调用 GBrain 暴露的标准 MCP 能力 | MCP 调用结果 |
+| GBrain HTTP MCP Server | 对外提供 `search`、`query`、`get_page`、`put_page` 等共享知识能力，并负责鉴权与调用审计 | 历史经验 / 写入结果 |
+| PostgreSQL + pgvector | 保存 Page、Chunk、Fact、关系和向量索引 | 团队共享知识数据 |
+| Embedding / LLM Provider | 为语义检索、抽取和后台知识加工提供模型能力 | 向量及加工结果 |
 
 ---
 
 ## 四、GBrain 知识组织
 
-本期共享知识只保存两类内容：**业务背景**和**历史分析 Case**。完整内容统一以 Page 保存，GBrain 再基于 Page 生成用于检索的 Chunk、Fact 和关联信息。
+本期共享知识只保存两类内容：**业务背景**和**历史分析 Case**。完整内容统一以 Page 保存，GBrain 再基于 Page 组织用于检索的 Chunk、Fact 和关联信息。
 
 ```mermaid
 flowchart LR
@@ -126,79 +131,209 @@ flowchart LR
 
 一条历史 Case 主要包含：问题范围、业务背景、分析证据、已完成的排查过程、最终结论和来源信息。例如一次“购物车页 GMV 上涨”分析，会保存对应站点、页面和时间范围，大促背景，流量与转化证据，已排除的配置因素，以及最终原因结论。
 
-**完整 Case 以 Page 为复用单位，Chunk、Fact、Link 和 Timeline 只负责帮助找到对应 Page。**
+**完整 Case 以 Page 为复用单位，Chunk、Fact、Link 和 Timeline 主要负责帮助检索和关联到对应 Page。**
 
 ---
 
-## 五、Dify 接入与使用流程
+## 五、MCP 接入与使用流程
 
-Dify 不直接维护第二套共享知识，而是通过 GBrain Tool 调用 GBrain HTTP 服务。专业 Agent 在需要历史背景或相似 Case 时主动查询；本次分析完成后，再将值得复用的结果写回 GBrain。
+GBrain 原生提供 MCP Server，Dify 也已支持直接连接 HTTP MCP Server，因此本方案不再开发 GBrain Tool / Plugin，而是直接使用标准 MCP 链路。
 
-### 5.1 历史经验读取
+### 5.1 MCP 接入实现
+
+GBrain 在服务端以长期进程启动 HTTP MCP：
+
+```bash
+gbrain serve --http --port 3131
+```
+
+启动后，GBrain 对外提供 `/mcp` 入口。Dify 在 **Tools → MCP → Add MCP Server** 中配置该地址，例如同机 Docker 网络下使用：
+
+```text
+http://gbrain:3131/mcp
+```
+
+如果后续 GBrain 独立到其他服务器，则只需要把地址替换为内部 HTTPS 地址：
+
+```text
+https://gbrain.internal.example.com/mcp
+```
+
+Dify 连接后会自动发现 GBrain 暴露的 MCP 能力，推荐效果分析 Agent 只挂载本期需要的读写能力，不需要手工重新定义每个 Tool Schema。
+
+```mermaid
+flowchart LR
+    A[GBrain 启动 HTTP MCP Server]
+    --> B[创建 Dify 专用访问凭据]
+    --> C[Dify 添加 MCP Server URL]
+    --> D[Dify 发现 GBrain MCP Tools]
+    --> E[选择 Search / Query / Page 读写能力]
+    --> F[挂载到推荐效果分析 Agent]
+    --> G[完成联通测试]
+```
+
+GBrain 的远程 MCP 支持 OAuth 2.1 和 `read / write / admin` 权限划分。本期为 Dify 创建独立客户端，只授予 `read + write`，不授予 `admin`：
+
+```bash
+gbrain auth register-client dify-rec-agent \
+  --grant-types client_credentials \
+  --scopes "read write"
+```
+
+数据库连接、Embedding Key、LLM Key 均只保存在 GBrain 服务端；Dify 只保存访问 MCP 所需的凭据，不持有 GBrain 数据库和模型密钥。
+
+### 5.2 历史经验读取
+
+读取历史经验时，Agent 先通过 MCP 查询相关 Case，再结合当前业务 Tool 重新验证。历史 Case 只提供背景和排查方向，不直接替代当前数据。
 
 ```mermaid
 flowchart LR
     A[用户问题]
-    --> B[专业 Agent]
-    --> C[GBrain Search]
-    --> D[返回相似历史 Case]
-    --> E[提取历史背景 / 排查线索]
+    --> B[推荐效果分析 Agent]
 
-    B --> F[查询当前 DataSrc]
-    F --> G[当前数据证据]
+    B --> C[MCP: search / query]
+    C --> D[GBrain 返回候选 Page]
+    D --> E[MCP: get_page]
+    E --> F[完整历史背景 / 证据 / 排查 / 结论]
 
-    E --> H[结合当前数据验证]
-    G --> H
-    H --> I[输出本次结论]
+    B --> G[Data Tool 查询当前数据]
+    G --> H[当前事实与证据]
+
+    F --> I[结合历史经验验证]
+    H --> I
+    I --> J[输出本次结论]
 ```
 
-默认使用 GBrain `Search balanced` 检索相似经验；如果已知具体 Page，则直接读取完整 Page。历史经验只作为背景和排查线索，最终原因仍以本次 DataSrc 查询结果为准。
+默认路径是 `search / query → get_page`：先用关键词、语义和业务条件找到相关 Case，再读取完整 Page。对于已经知道 Page 标识的情况，可直接调用 `get_page`。
 
-### 5.2 历史经验写入
+### 5.3 历史经验写入
+
+写入不放在每一次普通查询后执行，而是在形成明确业务背景或完成一次有复用价值的分析后触发。
 
 ```mermaid
 flowchart LR
     A[本次分析完成]
-    --> B[提取可复用内容]
-    --> C[整理问题范围 / 背景 / 证据 / 排查 / 结论]
-    --> D[形成完整 Page]
-    --> E[GBrain 写入]
-    --> F[生成检索索引]
-    --> G[后续新对话可检索]
+    --> B{是否值得沉淀}
+
+    B -- 否 --> C[结束，不写入]
+    B -- 是 --> D[整理问题范围 / 背景 / 证据 / 排查 / 结论 / 来源]
+    D --> E[形成完整 Case Page]
+    E --> F[MCP: put_page]
+    F --> G[GBrain 保存 Page]
+    G --> H[后续检索可复用]
 ```
 
-普通一次性指标查询不沉淀；只有包含明确业务背景、有效排查过程或可复用分析结论的结果进入共享知识库。
+本期写入规则保持简单：一次性指标查询、未验证猜测和内部执行日志不进入共享知识库；已确认业务背景、有证据的排查过程和最终结论可以通过 `put_page` 写入。
+
+### 5.4 MCP 与后台任务边界
+
+Dify 只通过 MCP 调用在线知识能力，例如 `search`、`query`、`get_page`、`put_page`。`sync`、`embed`、`extract`、`dream`、`enrich` 等需要本地引擎或文件系统的维护能力不由 Dify 远程调用，而是在 GBrain 服务所在机器上按需执行或调度。
+
+因此运行时边界保持为：**Dify 负责使用知识，GBrain 服务负责管理知识。**
 
 ---
 
 ## 六、部署方案
 
-GBrain 作为独立的团队共享知识服务部署，Dify 只通过 GBrain Tool 访问，不直接连接底层数据库。正式环境使用 PostgreSQL + pgvector 保存 Page、Chunk 和向量索引，并保留 Markdown / Git 作为可审查、可版本化的知识内容。
+### 6.1 部署原则
+
+GBrain **逻辑上独立成服务，物理上前期可以与 Dify 共用同一台服务器**。这样既不把共享知识能力嵌入某个 Dify 应用，又不需要当前阶段额外增加机器；后续需要扩容时，只迁移 GBrain 服务并修改 MCP 地址即可。
+
+生产数据使用 PostgreSQL + pgvector。可以与 Dify 共用 PostgreSQL 实例，但应为 GBrain 建立独立的数据库和数据库账号，避免与 Dify 自身表结构、权限和升级生命周期耦合。
+
+### 6.2 初期部署拓扑
 
 ```mermaid
-flowchart LR
-    subgraph D[Dify 环境]
-        A[推荐效果分析 Agent]
-        T[GBrain Tool]
+flowchart TB
+    subgraph H[同一台服务器 / 同一内网]
+        subgraph D[Dify Stack]
+            A[推荐效果分析 Agent]
+            MC[Dify MCP Client]
+        end
+
+        subgraph G[GBrain Stack]
+            MS[GBrain HTTP MCP Server\n:3131 /mcp]
+            W[GBrain 后台维护任务\n按需]
+        end
+
+        subgraph P[PostgreSQL 实例]
+            DDB[(Dify Database)]
+            GDB[(GBrain Database\npgvector)]
+        end
     end
 
-    subgraph G[GBrain 服务]
-        API[GBrain HTTP Service]
-        M[Embedding / LLM Provider]
-    end
+    MP[Embedding / LLM Provider]
 
-    subgraph S[共享存储]
-        DB[(PostgreSQL + pgvector)]
-        Git[Markdown / Git]
-    end
+    A --> MC
+    MC -->|内部 HTTP MCP| MS
+    MS --> GDB
+    W --> GDB
+    MS --> MP
+    W --> MP
 
-    A --> T --> API
-    API --> DB
-    API --> Git
-    API --> M
+    D -.独立数据库.-> DDB
 ```
 
-本地开发可继续使用 PGLite；联调和正式部署切换到 PostgreSQL + pgvector。GBrain Service 与数据库独立于 Dify 部署，后续其他 Agent 也可以复用同一套共享知识服务。
+这里的“共机”只是共享服务器资源，不代表把 GBrain 代码放进 Dify 容器。建议分别运行独立 Container / Service：
+
+```text
+Server
+├── Dify Stack
+│   ├── api / worker / web / plugin-daemon ...
+│   └── MCP Client
+│
+├── GBrain Stack
+│   ├── gbrain serve --http --port 3131
+│   └── maintenance worker / cron（按需）
+│
+└── PostgreSQL
+    ├── dify database
+    └── gbrain database + pgvector
+```
+
+### 6.3 服务部署步骤
+
+**第一步：准备 GBrain 数据库。** 在现有 PostgreSQL 实例中创建独立 `gbrain` Database 和独立账号，启用 pgvector；Dify 与 GBrain 不共用业务表。
+
+**第二步：部署 GBrain Service。** 使用 Bun 安装或 GBrain 编译二进制，在独立容器 / systemd Service 中配置 `DATABASE_URL`、Embedding Provider 和需要的 LLM Provider，然后执行 `gbrain doctor` 完成连接和 Schema 检查。
+
+**第三步：启动远程 MCP。** 长期运行：
+
+```bash
+gbrain serve --http --port 3131
+```
+
+服务启动后由进程守护机制负责自动拉起。初期只在 Dify 与 GBrain 所在内部网络开放 `3131`，不直接暴露公网。
+
+**第四步：创建 Dify 专用 MCP 身份。** 在 GBrain 侧创建 `read + write` 的 OAuth Client，凭据只配置给 Dify；数据库密码和模型 Key 不进入 Dify。
+
+**第五步：Dify 接入。** 在 Dify 的 MCP 配置中添加 `http://gbrain:3131/mcp`，完成授权并确认能够发现 `search`、`query`、`get_page`、`put_page` 等能力，然后挂载到推荐效果分析 Agent。
+
+**第六步：联调读写闭环。** 先验证“写入一个测试 Page → 新会话 Search 命中 → get_page 读取完整内容”，再接入实际推荐效果分析链路。
+
+### 6.4 网络、权限与运行维护
+
+运行时只有一条跨系统入口：`Dify MCP Client → GBrain /mcp`。PostgreSQL 不对 Dify Agent 暴露，GBrain 的模型 Key 也不下发到 Dify。
+
+权限按最小范围配置：Dify 仅需要共享知识的 `read + write`；`admin`、数据库迁移和后台维护命令只允许 GBrain 运维侧使用。GBrain 的 MCP 调用统一记录审计日志，便于后续定位谁在何时读取或写入了知识。
+
+PostgreSQL 是在线知识主存储，需要纳入现有备份策略。Markdown / Git 如需保留，可作为定期导出、人工审查和版本归档手段，不放在在线查询主链路中。
+
+### 6.5 后续独立机器扩容
+
+如果后续知识量、Embedding 任务或并发提高，再将 GBrain Stack 和 GBrain Database 迁到独立服务器。Dify 侧不需要修改 Agent 逻辑，只将 MCP Server 地址从：
+
+```text
+http://gbrain:3131/mcp
+```
+
+切换为：
+
+```text
+https://gbrain.internal.example.com/mcp
+```
+
+即可完成物理拆分。
 
 ---
 
@@ -206,8 +341,8 @@ flowchart LR
 
 | 时间 | 工作内容 | 产出 |
 | --- | --- | --- |
-| 9.7—9.8 | 部署 PostgreSQL + pgvector、GBrain Service，完成模型 Provider 配置 | GBrain 团队服务可用 |
-| 9.9—9.10 | 在 Dify 实现 GBrain Tool，接入 Search 和 Page 查询 | Dify 可读取历史经验 |
-| 9.11—9.13 | 原因分析 Agent 接入历史 Case，与当前 DataSrc 联合验证 | 跨对话历史经验可参与分析 |
-| 9.14—9.15 | 接入经验写入，整理 Page 写入内容和沉淀条件 | 分析结果可写回 GBrain |
-| 9.16—9.18 | 完成端到端联调、检索质量验证和问题修正 | 形成可上线的共享知识闭环 |
+| 9.7—9.8 | 创建 GBrain 独立数据库，部署 GBrain Service，完成 Provider 与 `gbrain doctor` 检查 | GBrain 服务与存储可用 |
+| 9.9 | 启动 HTTP MCP、创建 Dify 专用 OAuth Client，并在 Dify 完成 MCP Server 连接 | Dify 能发现 GBrain MCP 能力 |
+| 9.10—9.11 | 接入 `search / query / get_page`，完成历史 Case 读取与当前 DataSrc 联合验证 | 历史经验可参与新对话分析 |
+| 9.14—9.15 | 接入 `put_page`，实现 Case 整理、写入条件和写入闭环 | 有效分析结果可沉淀到 GBrain |
+| 9.16—9.18 | 完成端到端联调、权限审计、备份和异常场景验证 | 形成可上线的共享知识闭环 |
