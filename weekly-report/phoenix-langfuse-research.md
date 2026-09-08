@@ -55,7 +55,6 @@
 | 主要语言 | Python |
 | 当前版本 | `arize-phoenix-v20.8.0`（2026-09-04 发布） |
 | License | Elastic License 2.0（ELv2） |
-| 核心能力 | Tracing、Evaluation、Dataset、Experiment、Prompt Management、Playground、Dashboard、Remote MCP |
 
 这里的 Phoenix 指 **Arize Phoenix**。`phoenixframework/phoenix` 是 Elixir Web Framework，与本次 LLM / Agent Observability 调研不是同一个项目。
 
@@ -96,7 +95,6 @@ Phoenix 以 OpenTelemetry 的 Trace / Span 作为基础调用链模型，并通�
 | 主要语言 | TypeScript |
 | 当前版本 | `v4.30.0`（2026-09-04 发布） |
 | License | Open Core：核心 MIT；`ee/`、`web/src/ee/`、`worker/src/ee/` 为 Enterprise License |
-| 核心能力 | Observability、Evaluation、Dataset、Experiment、Prompt Management、Playground、Custom Dashboard、API |
 
 Langfuse 的定位偏完整 LLM Engineering 平台。运行数据以 Trace / Observation 组织，同时围绕 User、Session、Score、Prompt、Dataset、Experiment 等对象提供开发和评估能力。
 
