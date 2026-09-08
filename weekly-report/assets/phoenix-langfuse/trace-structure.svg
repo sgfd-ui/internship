@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="300" viewBox="0 0 1000 300">
+<style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937}.t{font-size:17px;font-weight:700}.s{font-size:14px}.box{stroke:#8a94a6;stroke-width:1.4;rx:10}.line{stroke:#667085;stroke-width:1.5;fill:none;marker-end:url(#a)}</style>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker></defs>
+<rect x="35" y="105" width="150" height="80" class="box" fill="#EEF4FF"/><text x="110" y="138" text-anchor="middle" class="t">User Request</text><text x="110" y="163" text-anchor="middle" class="s">一次请求</text>
+<rect x="245" y="105" width="170" height="80" class="box" fill="#F3EEFF"/><text x="330" y="138" text-anchor="middle" class="t">Agent / Workflow</text><text x="330" y="163" text-anchor="middle" class="s">父节点</text>
+<rect x="500" y="35" width="150" height="65" class="box" fill="#EAF7F3"/><text x="575" y="75" text-anchor="middle" class="t">LLM</text>
+<rect x="500" y="117" width="150" height="65" class="box" fill="#EAF7F3"/><text x="575" y="157" text-anchor="middle" class="t">Tool</text>
+<rect x="500" y="199" width="150" height="65" class="box" fill="#EAF7F3"/><text x="575" y="239" text-anchor="middle" class="t">Retriever / Service</text>
+<rect x="760" y="105" width="180" height="80" class="box" fill="#FFF5E8"/><text x="850" y="138" text-anchor="middle" class="t">Output</text><text x="850" y="163" text-anchor="middle" class="s">结果与整体耗时</text>
+<path d="M185 145 H245" class="line"/><path d="M415 145 C455 145 460 68 500 68" class="line"/><path d="M415 145 H500" class="line"/><path d="M415 145 C455 145 460 232 500 232" class="line"/><path d="M650 68 C700 68 710 125 760 135" class="line"/><path d="M650 150 H760" class="line"/><path d="M650 232 C700 232 710 165 760 155" class="line"/>
+</svg>
