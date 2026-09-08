@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="300" viewBox="0 0 1100 300">
+<style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937}.t{font-size:18px;font-weight:700}.s{font-size:14px}.box{stroke:#8a94a6;stroke-width:1.4;rx:10}.line{stroke:#667085;stroke-width:1.6;fill:none;marker-end:url(#a)}</style>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker></defs>
+<rect x="35" y="95" width="205" height="110" class="box" fill="#EEF4FF"/><text x="138" y="130" text-anchor="middle" class="t">应用层</text><text x="138" y="158" text-anchor="middle" class="s">Agent · Workflow</text><text x="138" y="182" text-anchor="middle" class="s">Tool · LLM · RAG</text>
+<rect x="295" y="95" width="205" height="110" class="box" fill="#EAF7F3"/><text x="398" y="130" text-anchor="middle" class="t">采集层</text><text x="398" y="158" text-anchor="middle" class="s">OpenTelemetry / SDK</text><text x="398" y="182" text-anchor="middle" class="s">Dify Monitoring</text>
+<rect x="555" y="70" width="235" height="160" class="box" fill="#F3EEFF"/><text x="673" y="110" text-anchor="middle" class="t">Phoenix / Langfuse</text><text x="673" y="140" text-anchor="middle" class="s">Trace 与调试</text><text x="673" y="166" text-anchor="middle" class="s">Evaluation</text><text x="673" y="192" text-anchor="middle" class="s">Dataset / Experiment / Prompt</text>
+<rect x="845" y="95" width="220" height="110" class="box" fill="#FFF5E8"/><text x="955" y="130" text-anchor="middle" class="t">研发使用</text><text x="955" y="158" text-anchor="middle" class="s">定位问题 · 看运行质量</text><text x="955" y="182" text-anchor="middle" class="s">评估与版本验证</text>
+<path d="M240 150 H295" class="line"/><path d="M500 150 H555" class="line"/><path d="M790 150 H845" class="line"/>
+<text x="550" y="270" class="s" text-anchor="middle">逻辑位置：平台位于应用运行链路之后，不参与业务决策，只接收可观测数据并提供工程分析能力。</text>
+</svg>
