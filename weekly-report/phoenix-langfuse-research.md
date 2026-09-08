@@ -23,9 +23,23 @@
 
 ### 1.3 使用方式与效果
 
-接入 Phoenix 或 Langfuse 后，不改变 Agent 原有业务执行逻辑，平台主要从运行链路中采集 Trace，并围绕 Trace 提供调试、分析、评估和版本验证能力。
+接入 Phoenix 或 Langfuse 后，不改变 Agent 原有业务逻辑，平台主要采集运行 Trace，并把一次 Agent 请求转化为可查看、可分析、可评估的数据。
 
-![接入后的使用效果](./assets/phoenix-langfuse/usage-effect.png)
+```mermaid
+flowchart LR
+    A[Agent / Workflow 运行]
+    --> B[Phoenix / Langfuse]
+
+    B --> C[完整调用链]
+    B --> D[错误与慢节点]
+    B --> E[Token / Cost / Latency]
+    B --> F[质量评分]
+
+    F --> G[失败 / 典型 Case]
+    G --> H[Dataset]
+    H --> I[Experiment]
+    I --> J[版本效果对比]
+```
 
 | 使用场景 | 能直接看到什么 | 主要作用 |
 | --- | --- | --- |
@@ -36,7 +50,25 @@
 
 ### 1.4 整体架构
 
-![整体逻辑架构](./assets/phoenix-langfuse/overall-architecture.png)
+这里只展示两个平台在 Agent 系统中的逻辑位置，不展开具体部署组件。
+
+```mermaid
+flowchart LR
+    A[Agent / Workflow / Tool / LLM]
+    --> B[OpenTelemetry / SDK / Monitoring]
+    --> C[Phoenix / Langfuse]
+
+    C --> D[Trace / Debug]
+    C --> E[Evaluation]
+    C --> F[Dataset / Experiment]
+    C --> G[Prompt / Analytics]
+
+    U[研发人员]
+    U --> D
+    U --> E
+    U --> F
+    U --> G
+```
 
 ---
 
@@ -62,7 +94,17 @@ Phoenix 的核心设计建立在 **OpenTelemetry + OpenInference** 上。应用�
 
 #### 2.1.2 核心架构
 
-![Arize Phoenix 核心逻辑架构](./assets/phoenix-langfuse/phoenix-architecture.png)
+```mermaid
+flowchart LR
+    A[Agent / Application]
+    --> B[OpenTelemetry / OpenInference]
+    --> C[Phoenix]
+
+    C --> D[Trace / Span]
+    C --> E[Evaluation / Annotation]
+    C --> F[Dataset / Experiment]
+    C --> G[Prompt / Playground]
+```
 
 Phoenix 以 OpenTelemetry 的 Trace / Span 作为基础调用链模型，并通过 OpenInference 补充 Agent、LLM、Tool、Retriever 等 AI 语义。
 
@@ -100,7 +142,17 @@ Langfuse 的定位偏完整 LLM Engineering 平台。运行数据以 Trace / Obs
 
 #### 2.2.2 核心架构
 
-![Langfuse 核心逻辑架构](./assets/phoenix-langfuse/langfuse-architecture.png)
+```mermaid
+flowchart LR
+    A[Agent / Application]
+    --> B[SDK / OpenTelemetry]
+    --> C[Langfuse]
+
+    C --> D[Trace / Observation]
+    C --> E[Score / Evaluation]
+    C --> F[Dataset / Experiment]
+    C --> G[Prompt / Dashboard]
+```
 
 Langfuse 以 Trace 表示一次高层请求，Trace 内部再通过 Observation 表示 Generation、Span、Event、Tool、Agent 等具体执行节点，并使用 User / Session 等对象跨 Trace 聚合。
 
