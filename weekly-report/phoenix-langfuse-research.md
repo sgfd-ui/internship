@@ -1,7 +1,5 @@
 # Phoenix 与 Langfuse 调研
 
-> 资料快照时间：2026-09-08。本文整理公开资料、官方文档与 GitHub 代码能够确认的内容；实际测试结果和最终选型结论留到后续实测后补充。
-
 ## 一、调研介绍
 
 ### 1.1 背景
@@ -23,21 +21,72 @@
 - 自部署架构、资源和运维成本
 - 开源成熟度与二次开发能力
 
-### 1.3 预期效果
+### 1.3 使用方式与效果
+
+接入 Phoenix 或 Langfuse 后，不改变 Agent 原有业务执行逻辑，平台主要从运行链路中采集 Trace，并围绕 Trace 提供调试、分析、评估和版本验证能力。
 
 ```mermaid
 flowchart LR
-    A[Agent / Workflow / AI Application]
-    --> B[Telemetry / SDK]
-    --> C[Phoenix / Langfuse]
+    A[Agent / Workflow 运行]
+    --> B[Phoenix / Langfuse]
 
-    C --> D[Trace / Debug]
-    C --> E[Evaluation]
-    C --> F[Dataset / Experiment]
-    C --> G[Dashboard / Analytics]
+    B --> C[查看完整调用链]
+    B --> D[定位错误与慢节点]
+    B --> E[统计 Token / Cost / Latency]
+    B --> F[对运行结果做 Evaluation]
+
+    F --> G[失败 / 典型 Case 进入 Dataset]
+    G --> H[Experiment 重跑新版本]
+    H --> I[比较 Prompt / Model / Workflow 效果]
 ```
 
-两个项目都已经覆盖“Trace → Evaluation → Dataset / Experiment”的基础闭环。主要差异不在于有没有这些功能，而在于：**Trace 标准和调试方式、线上评估自动化、数据分析能力、接入方式以及自部署架构复杂度。**
+| 使用场景 | 能直接看到什么 | 主要作用 |
+| --- | --- | --- |
+| 单次请求调试 | Agent、Workflow、Tool、Retriever、LLM 的父子调用链及输入输出 | 快速确认问题发生在哪个节点 |
+| 运行质量分析 | Token、Cost、Latency、Error、模型、Session 等统计 | 找出高成本、慢调用和高错误环节 |
+| 质量评估 | 人工、代码或 LLM-as-a-Judge 评分 | 判断回答、检索或 Agent 执行质量 |
+| 版本验证 | 同一 Dataset 上的新旧 Prompt、Model、Workflow 运行结果 | 判断改动是否提升以及是否产生回归 |
+
+### 1.4 整体架构
+
+```mermaid
+flowchart TB
+    subgraph A[Agent 应用]
+        APP[Agent / Workflow / Tool / LLM / Retriever]
+    end
+
+    subgraph C[采集层]
+        COL[OpenTelemetry / SDK / Dify Monitoring]
+    end
+
+    subgraph P[Phoenix / Langfuse]
+        T[Tracing / Debug]
+        E[Evaluation]
+        D[Dataset / Experiment]
+        M[Prompt / Dashboard / Analytics]
+    end
+
+    S[(Trace / Metadata / Config Storage)]
+    U[研发人员]
+
+    APP --> COL --> T
+    T --> E
+    T --> D
+    T --> M
+    E --> D
+
+    T --> S
+    E --> S
+    D --> S
+    M --> S
+
+    U --> T
+    U --> E
+    U --> D
+    U --> M
+```
+
+两个项目都覆盖从“运行观测 → 问题定位 → 质量评估 → Dataset / Experiment 验证”的基础闭环。主要差异在于 Trace 标准和调试方式、线上评估自动化、数据分析能力、接入方式以及自部署架构复杂度。
 
 ---
 
@@ -64,17 +113,33 @@ ELv2 允许公司内部自部署、修改和使用，但限制把 Phoenix 本身
 
 #### 2.1.2 核心架构
 
-Phoenix 的最小自部署链路比较集中：应用把 OTLP Trace 直接上报到 Phoenix Server，Phoenix 自身提供采集、存储访问、Web UI 和 API；数据可以保存在 SQLite，也可以切换到外部 PostgreSQL。
+Phoenix 的架构比较集中：采集、Trace 服务、Web UI、API 和评估能力都由 Phoenix Server 提供，底层使用 SQLite 或 PostgreSQL 保存数据。
 
 ```mermaid
-flowchart LR
-    A[Agent / Application]
-    --> I[OpenTelemetry / OpenInference]
-    --> P[Phoenix Server\nOTLP + API + Web UI]
+flowchart TB
+    subgraph A[接入层]
+        APP[Agent / Dify / Application]
+        OT[OpenTelemetry / OpenInference]
+        APP --> OT
+    end
 
-    P --> DB[(SQLite / PostgreSQL)]
-    P --> E[Evaluation / Dataset / Experiment]
-    E -.按需.-> M[LLM Provider]
+    subgraph P[Phoenix]
+        C[OTLP Collector]
+        S[Phoenix Server]
+        UI[Trace UI / API]
+        E[Evaluation / Dataset / Experiment / Prompt]
+
+        C --> S
+        S --> UI
+        S --> E
+    end
+
+    DB[(SQLite / PostgreSQL)]
+    M[LLM Provider]
+
+    OT --> C
+    S --> DB
+    E -.按需.-> M
 ```
 
 官方 Docker 部署中，Phoenix 暴露 `6006` 作为 UI 与 OTLP HTTP 入口，`4317` 作为 OTLP gRPC 入口；如启用 Prometheus 还可暴露 `9090`。生产环境可以连接外部 PostgreSQL，官方当前支持 PostgreSQL 14 及以上版本。
@@ -178,21 +243,39 @@ Langfuse 的定位比单纯 Trace 平台更偏完整 LLM Engineering 平台。�
 
 #### 2.2.2 核心架构
 
-Langfuse v4 的运行链路分为 Web / API、异步 Worker 和多类存储。Trace 进入 Web 服务后，通过对象存储和 Redis 队列进入 Worker，再写入 ClickHouse；PostgreSQL 保存用户、组织、项目、Dataset、配置等事务数据。
+Langfuse v4 将在线 Web / API、异步 Worker 和存储层拆开：PostgreSQL 保存事务数据，ClickHouse 保存大量 Trace / Observation / Score 分析数据，对象存储保存事件与媒体，Redis / Valkey 负责异步队列。
 
 ```mermaid
-flowchart LR
-    A[Agent / SDK / OpenTelemetry]
-    --> W[Langfuse Web / API]
+flowchart TB
+    subgraph A[接入层]
+        APP[Agent / Dify / Application]
+        I[SDK / OpenTelemetry / Ingestion API]
+        APP --> I
+    end
 
-    W --> PG[(PostgreSQL)]
-    W --> S3[(S3 / Blob / MinIO)]
-    W --> Q[(Redis / Valkey)]
-    Q --> WK[Langfuse Worker]
-    WK --> S3
-    WK --> CH[(ClickHouse)]
+    subgraph L[Langfuse]
+        W[Langfuse Web / API]
+        Q[Redis / Valkey Queue]
+        WK[Langfuse Worker]
+        UI[Trace / Dashboard / Prompt / Dataset / Experiment]
+
+        W --> Q
+        Q --> WK
+        W --> UI
+    end
+
+    PG[(PostgreSQL)]
+    CH[(ClickHouse)]
+    S3[(S3 / Blob / MinIO)]
+    M[LLM Provider]
+
+    I --> W
+    W --> PG
+    W --> S3
     WK --> PG
-    WK -.按需.-> M[LLM Provider]
+    WK --> CH
+    WK --> S3
+    WK -.按需.-> M
 ```
 
 这套架构把大量 Trace / Observation / Score 数据放到 ClickHouse 做分析查询，并通过 Worker 异步完成摄取和后台任务；代价是自部署需要维护的基础组件更多。
