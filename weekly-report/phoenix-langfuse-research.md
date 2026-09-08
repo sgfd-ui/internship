@@ -25,20 +25,7 @@
 
 接入 Phoenix 或 Langfuse 后，不改变 Agent 原有业务执行逻辑，平台主要从运行链路中采集 Trace，并围绕 Trace 提供调试、分析、评估和版本验证能力。
 
-```mermaid
-flowchart LR
-    A[Agent / Workflow 运行]
-    --> B[Phoenix / Langfuse]
-
-    B --> C[查看完整调用链]
-    B --> D[定位错误与慢节点]
-    B --> E[统计 Token / Cost / Latency]
-    B --> F[对运行结果做 Evaluation]
-
-    F --> G[失败 / 典型 Case 进入 Dataset]
-    G --> H[Experiment 重跑新版本]
-    H --> I[比较 Prompt / Model / Workflow 效果]
-```
+![接入后的使用效果](./assets/phoenix-langfuse/usage-effect.png)
 
 | 使用场景 | 能直接看到什么 | 主要作用 |
 | --- | --- | --- |
@@ -49,44 +36,7 @@ flowchart LR
 
 ### 1.4 整体架构
 
-```mermaid
-flowchart TB
-    subgraph A[Agent 应用]
-        APP[Agent / Workflow / Tool / LLM / Retriever]
-    end
-
-    subgraph C[采集层]
-        COL[OpenTelemetry / SDK / Dify Monitoring]
-    end
-
-    subgraph P[Phoenix / Langfuse]
-        T[Tracing / Debug]
-        E[Evaluation]
-        D[Dataset / Experiment]
-        M[Prompt / Dashboard / Analytics]
-    end
-
-    S[(Trace / Metadata / Config Storage)]
-    U[研发人员]
-
-    APP --> COL --> T
-    T --> E
-    T --> D
-    T --> M
-    E --> D
-
-    T --> S
-    E --> S
-    D --> S
-    M --> S
-
-    U --> T
-    U --> E
-    U --> D
-    U --> M
-```
-
-两个项目都覆盖从“运行观测 → 问题定位 → 质量评估 → Dataset / Experiment 验证”的基础闭环。主要差异在于 Trace 标准和调试方式、线上评估自动化、数据分析能力、接入方式以及自部署架构复杂度。
+![整体逻辑架构](./assets/phoenix-langfuse/overall-architecture.png)
 
 ---
 
@@ -101,48 +51,21 @@ flowchart TB
 | 项目定位 | 开源 AI Observability 与 Evaluation 平台，面向 LLM / Agent 的追踪、调试、评估和实验 |
 | 开源与维护 | Arize AI |
 | GitHub | [Arize-ai/phoenix](https://github.com/Arize-ai/phoenix) |
-| GitHub Stars | 11,366（2026-09-08 快照） |
+| GitHub Stars | 11,366（2026-09-08） |
 | 主要语言 | Python |
 | 当前版本 | `arize-phoenix-v20.8.0`（2026-09-04 发布） |
 | License | Elastic License 2.0（ELv2） |
 | 核心能力 | Tracing、Evaluation、Dataset、Experiment、Prompt Management、Playground、Dashboard、Remote MCP |
 
-Phoenix 的核心设计建立在 **OpenTelemetry + OpenInference** 上。应用侧通过 OpenTelemetry / OpenInference Instrumentor 采集 LLM、Tool、Retriever、Agent 等调用，Phoenix 同时承担 OTLP Collector、Trace 查询、评估与实验平台。
+这里的 Phoenix 指 **Arize Phoenix**。`phoenixframework/phoenix` 是 Elixir Web Framework，与本次 LLM / Agent Observability 调研不是同一个项目。
 
-ELv2 允许公司内部自部署、修改和使用，但限制把 Phoenix 本身作为对外托管服务向第三方提供其主要功能。
+Phoenix 的核心设计建立在 **OpenTelemetry + OpenInference** 上。应用侧通过 OpenTelemetry / OpenInference Instrumentation 采集 Agent、LLM、Tool、Retriever 等调用，再由 Phoenix 按 Trace / Span 组织运行数据。
 
 #### 2.1.2 核心架构
 
-Phoenix 的架构比较集中：采集、Trace 服务、Web UI、API 和评估能力都由 Phoenix Server 提供，底层使用 SQLite 或 PostgreSQL 保存数据。
+![Arize Phoenix 核心逻辑架构](./assets/phoenix-langfuse/phoenix-architecture.png)
 
-```mermaid
-flowchart TB
-    subgraph A[接入层]
-        APP[Agent / Dify / Application]
-        OT[OpenTelemetry / OpenInference]
-        APP --> OT
-    end
-
-    subgraph P[Phoenix]
-        C[OTLP Collector]
-        S[Phoenix Server]
-        UI[Trace UI / API]
-        E[Evaluation / Dataset / Experiment / Prompt]
-
-        C --> S
-        S --> UI
-        S --> E
-    end
-
-    DB[(SQLite / PostgreSQL)]
-    M[LLM Provider]
-
-    OT --> C
-    S --> DB
-    E -.按需.-> M
-```
-
-官方 Docker 部署中，Phoenix 暴露 `6006` 作为 UI 与 OTLP HTTP 入口，`4317` 作为 OTLP gRPC 入口；如启用 Prometheus 还可暴露 `9090`。生产环境可以连接外部 PostgreSQL，官方当前支持 PostgreSQL 14 及以上版本。
+Phoenix 以 OpenTelemetry 的 Trace / Span 作为基础调用链模型，并通过 OpenInference 补充 Agent、LLM、Tool、Retriever 等 AI 语义。
 
 #### 2.1.3 核心概念
 
@@ -153,72 +76,10 @@ flowchart TB
 | Span | Trace 中的一次具体操作，可表示 Agent、LLM、Tool、Retriever、Embedding 等 |
 | Span Kind | OpenInference 对 Span 的语义分类，例如 `LLM`、`TOOL`、`RETRIEVER`、`AGENT` |
 | Session | 将多次 Trace 归并成一次连续会话 |
-| Annotation | 对 Span、Trace、Session 或文档结果添加人工、LLM 或代码评分与标签 |
-| Dataset | 用于重复测试的一组输入、期望输出和元数据；支持版本化 |
+| Annotation | 对 Span、Trace、Session 等对象添加人工、LLM 或代码评分与标签 |
+| Dataset | 用于重复测试的一组输入、期望输出和元数据，支持版本化 |
 | Experiment | 在固定 Dataset 上运行一版 Prompt、Model 或应用逻辑，并保存输出和评估结果 |
 | Prompt | 可版本化管理的 Prompt，可在 Playground 中调试并通过 Tag 控制使用版本 |
-
-Phoenix 的 Trace 数据结构遵循 OpenTelemetry 的 Trace / Span 父子模型，OpenInference 补充 LLM 应用需要的语义字段，例如模型输入输出、Token、Tool 参数和 Span 类型。
-
-#### 2.1.4 功能能力
-
-| 能力 | Phoenix 实现 |
-| --- | --- |
-| Trace / Span | OpenTelemetry Trace Tree，支持 Agent、Tool、LLM、Retriever 等节点 |
-| LLM 调试 | 查看 Prompt、Response、模型参数、Token、Latency、Error、Cost |
-| Session | 通过 Session ID 聚合多轮 Trace |
-| Annotation | 支持人工标注、代码评分和 LLM 评估结果回写 |
-| Evaluation | 支持 LLM-as-a-Judge、代码规则、检索与响应质量评估 |
-| Dataset | 可从 Trace / Span 中沉淀 Case，形成版本化 Dataset |
-| Experiment | 对固定 Dataset 批量执行应用、Prompt、Model 版本并保存结果 |
-| Prompt Management | Prompt 版本、Tag、历史记录、Playground、Span Replay |
-| Dashboard | 提供 Trace、Latency、Error、Annotation、Token、Cost、Model 等内置分析视图 |
-| CI / 回归 | 提供 pytest、Vitest/Jest 等测试集成，可映射为 Dataset / Experiment |
-| MCP | Phoenix Server 自带 Remote MCP，可查询 Trace、Dataset、Experiment 等平台数据 |
-
-Phoenix 更强调“**标准 Trace + 调试 / 实验**”这条链：线上运行先通过 OpenTelemetry / OpenInference 采集，问题 Case 可以进入 Dataset，再用 Experiment 和 Evaluator 重跑验证。
-
-#### 2.1.5 Dify 接入方式
-
-Dify 已提供 Phoenix 原生 Tracing 接入，基础 Trace 上报不需要修改 Dify 源码。
-
-```mermaid
-flowchart LR
-    D[Dify Application]
-    --> M[Monitoring / Tracing]
-    --> P[Phoenix OTLP Endpoint]
-    --> UI[Phoenix Trace UI]
-```
-
-核心接入步骤：
-
-1. 在 Phoenix 创建项目并准备 Endpoint / API Key。
-2. 在 Dify 的 Monitoring / Tracing 中选择 Phoenix。
-3. 配置 Phoenix Endpoint 与认证信息。
-4. 应用运行后由 Dify 自动上报可观测数据。
-
-如果部分逻辑运行在 Dify 外部，例如独立 Agent 服务或自定义 Python 服务，可以继续使用 OpenTelemetry / OpenInference 补充 Span。要形成完整端到端调用树，需要继续传播 Trace Context。
-
-#### 2.1.6 部署架构
-
-**最小部署：**
-
-```mermaid
-flowchart LR
-    A[Application] -->|OTLP| P[Phoenix Container]
-    P --> DB[(SQLite Volume)]
-```
-
-**团队部署：**
-
-```mermaid
-flowchart LR
-    A[Applications] -->|OTLP HTTP / gRPC| P[Phoenix Service]
-    P --> DB[(PostgreSQL 14+)]
-    U[研发人员] --> P
-```
-
-Phoenix 本身没有强制依赖 ClickHouse、Redis、对象存储或独立 Worker。小规模可以直接使用 SQLite；团队共享和长期保存 Trace 时，更适合连接独立 PostgreSQL。
 
 ---
 
@@ -231,54 +92,19 @@ Phoenix 本身没有强制依赖 ClickHouse、Redis、对象存储或独立 Work
 | 项目定位 | 开源 LLM Engineering 平台，覆盖开发、观测、评估、Prompt 和实验管理 |
 | 开源与维护 | Langfuse；2026 年 1 月起成为 ClickHouse 的一部分 |
 | GitHub | [langfuse/langfuse](https://github.com/langfuse/langfuse) |
-| GitHub Stars | 34,314（2026-09-08 快照） |
+| GitHub Stars | 34,314（2026-09-08） |
 | 主要语言 | TypeScript |
 | 当前版本 | `v4.30.0`（2026-09-04 发布） |
 | License | Open Core：核心 MIT；`ee/`、`web/src/ee/`、`worker/src/ee/` 为 Enterprise License |
 | 核心能力 | Observability、Evaluation、Dataset、Experiment、Prompt Management、Playground、Custom Dashboard、API |
 
-Langfuse 的定位比单纯 Trace 平台更偏完整 LLM Engineering 平台。除了 Trace，它把 Prompt、Dataset、Experiment、Evaluator、Score、Dashboard 都做成长期管理对象。
-
-开源核心使用 MIT License，自部署核心能力可以免费使用；仓库中的 Enterprise 目录采用单独商业许可证，部分企业治理能力需要 Enterprise License。
+Langfuse 的定位偏完整 LLM Engineering 平台。运行数据以 Trace / Observation 组织，同时围绕 User、Session、Score、Prompt、Dataset、Experiment 等对象提供开发和评估能力。
 
 #### 2.2.2 核心架构
 
-Langfuse v4 将在线 Web / API、异步 Worker 和存储层拆开：PostgreSQL 保存事务数据，ClickHouse 保存大量 Trace / Observation / Score 分析数据，对象存储保存事件与媒体，Redis / Valkey 负责异步队列。
+![Langfuse 核心逻辑架构](./assets/phoenix-langfuse/langfuse-architecture.png)
 
-```mermaid
-flowchart TB
-    subgraph A[接入层]
-        APP[Agent / Dify / Application]
-        I[SDK / OpenTelemetry / Ingestion API]
-        APP --> I
-    end
-
-    subgraph L[Langfuse]
-        W[Langfuse Web / API]
-        Q[Redis / Valkey Queue]
-        WK[Langfuse Worker]
-        UI[Trace / Dashboard / Prompt / Dataset / Experiment]
-
-        W --> Q
-        Q --> WK
-        W --> UI
-    end
-
-    PG[(PostgreSQL)]
-    CH[(ClickHouse)]
-    S3[(S3 / Blob / MinIO)]
-    M[LLM Provider]
-
-    I --> W
-    W --> PG
-    W --> S3
-    WK --> PG
-    WK --> CH
-    WK --> S3
-    WK -.按需.-> M
-```
-
-这套架构把大量 Trace / Observation / Score 数据放到 ClickHouse 做分析查询，并通过 Worker 异步完成摄取和后台任务；代价是自部署需要维护的基础组件更多。
+Langfuse 以 Trace 表示一次高层请求，Trace 内部再通过 Observation 表示 Generation、Span、Event、Tool、Agent 等具体执行节点，并使用 User / Session 等对象跨 Trace 聚合。
 
 #### 2.2.3 核心概念
 
@@ -296,76 +122,6 @@ flowchart TB
 | Dataset | 可版本化测试集，保存输入、期望输出和 Metadata |
 | Experiment / Dataset Run | 固定 Dataset 上的一次应用版本执行与评分结果 |
 | Prompt | 中央管理的 Text / Chat Prompt，版本不可变，通过 Label 选择生产或测试版本 |
-
-#### 2.2.4 功能能力
-
-| 能力 | Langfuse 实现 |
-| --- | --- |
-| Trace / Observation | 支持层级调用链，观察 LLM、Retriever、Tool、Agent、Workflow 等执行过程 |
-| LLM 调试 | 查看 Prompt、Response、模型、Token、Cost、Latency、Error 和 Metadata |
-| Session / User | 原生 Session ID 与 User ID，可按用户或会话聚合分析 |
-| Score | 统一保存人工、代码、LLM 和外部系统评分 |
-| Online Evaluation | Evaluator + Rule，可按过滤条件和采样率自动评估线上 Observation |
-| Human Evaluation | 手工评分与 Annotation Queue，可批量分配待人工审核 Case |
-| Dataset | 保存测试 Case，并支持版本化 Dataset |
-| Experiment | SDK / UI 执行 Dataset Run，比较不同应用、Prompt 或模型版本 |
-| Prompt Management | 不可变版本、Label、缓存、回滚、Playground、Trace 关联 |
-| Dashboard | 支持 Custom Dashboard、时间序列、柱状图、饼图、分组、过滤与 Metrics API |
-| API | OpenAPI、Python / JS SDK、OpenTelemetry 接入和公共 API |
-
-Langfuse 的特点是把**线上观测和平台管理能力做得比较完整**：Trace 可以直接进入 Score、在线 Evaluator、Dataset、Experiment、Prompt Metrics 和 Custom Dashboard。
-
-#### 2.2.5 Dify 接入方式
-
-Dify 同样提供 Langfuse 原生 Monitoring 集成，基础 Trace 接入不需要修改 Dify 源码。
-
-```mermaid
-flowchart LR
-    D[Dify Application]
-    --> M[Monitoring]
-    --> L[Langfuse Ingestion API]
-    --> UI[Langfuse Trace UI]
-```
-
-Dify 与 Langfuse 的常用字段映射包括：
-
-| Dify | Langfuse |
-| --- | --- |
-| 用户 | `userId` |
-| `message_id` | Trace 标识 |
-| `conversation_id` | `sessionId` |
-| 应用 / 模型类型 | Tag / Metadata |
-| Workflow / LLM / Tool 运行节点 | Observation |
-
-如果只需要观察 Dify 内部调用链，原生集成即可；如果还要把 Dify 外部的独立 Agent、服务或自研 Tool 纳入同一 Trace，则需要使用 OpenTelemetry / Langfuse SDK 继续传播 Trace Context。
-
-#### 2.2.6 部署架构
-
-Langfuse 官方 Docker Compose 当前包含：
-
-```text
-Langfuse Web
-Langfuse Worker
-PostgreSQL
-ClickHouse
-Redis
-MinIO
-```
-
-其中 MinIO 可以替换为 S3 / Azure Blob 等兼容对象存储，Redis 可以使用外部 Redis / Valkey，PostgreSQL 和 ClickHouse 也可以使用托管服务。
-
-官方当前给出的最小组件规格为：
-
-| 组件 | 最低资源参考 |
-| --- | --- |
-| Langfuse Web | 2 CPU / 4 GiB |
-| Langfuse Worker | 2 CPU / 4 GiB |
-| PostgreSQL | 2 CPU / 4 GiB |
-| Redis / Valkey | 1 CPU / 1.5 GiB |
-| ClickHouse | 2 CPU / 8 GiB |
-| MinIO（如果自建） | 2 CPU / 4 GiB |
-
-这些是各组件的资源起点，不等同于“必须在一台机器上相加后的单机最低配置”。生产环境通常会把数据库、ClickHouse 和对象存储拆到独立托管服务，并分别扩容 Web 与 Worker。
 
 ---
 
