@@ -1,10 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="300" viewBox="0 0 1100 300">
-<style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937}.t{font-size:18px;font-weight:700}.s{font-size:14px}.box{stroke:#8a94a6;stroke-width:1.4;rx:10}.line{stroke:#667085;stroke-width:1.6;fill:none;marker-end:url(#a)}</style>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="560" viewBox="0 0 1280 560">
+<style>
+text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#172033}.title{font-size:24px;font-weight:700}.h{font-size:17px;font-weight:700}.s{font-size:13px}.xs{font-size:12px;fill:#5b6679}.box{stroke:#8792a6;stroke-width:1.2;rx:10}.line{stroke:#667085;stroke-width:1.5;fill:none;marker-end:url(#a)}</style>
 <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker></defs>
-<rect x="35" y="95" width="205" height="110" class="box" fill="#EEF4FF"/><text x="138" y="130" text-anchor="middle" class="t">应用层</text><text x="138" y="158" text-anchor="middle" class="s">Agent · Workflow</text><text x="138" y="182" text-anchor="middle" class="s">Tool · LLM · RAG</text>
-<rect x="295" y="95" width="205" height="110" class="box" fill="#EAF7F3"/><text x="398" y="130" text-anchor="middle" class="t">采集层</text><text x="398" y="158" text-anchor="middle" class="s">OpenTelemetry / SDK</text><text x="398" y="182" text-anchor="middle" class="s">Dify Monitoring</text>
-<rect x="555" y="70" width="235" height="160" class="box" fill="#F3EEFF"/><text x="673" y="110" text-anchor="middle" class="t">Phoenix / Langfuse</text><text x="673" y="140" text-anchor="middle" class="s">Trace 与调试</text><text x="673" y="166" text-anchor="middle" class="s">Evaluation</text><text x="673" y="192" text-anchor="middle" class="s">Dataset / Experiment / Prompt</text>
-<rect x="845" y="95" width="220" height="110" class="box" fill="#FFF5E8"/><text x="955" y="130" text-anchor="middle" class="t">研发使用</text><text x="955" y="158" text-anchor="middle" class="s">定位问题 · 看运行质量</text><text x="955" y="182" text-anchor="middle" class="s">评估与版本验证</text>
-<path d="M240 150 H295" class="line"/><path d="M500 150 H555" class="line"/><path d="M790 150 H845" class="line"/>
-<text x="550" y="270" class="s" text-anchor="middle">逻辑位置：平台位于应用运行链路之后，不参与业务决策，只接收可观测数据并提供工程分析能力。</text>
+<text x="35" y="42" class="title">整体位置：Agent 应用与观测 / 评估平台</text>
+<text x="35" y="68" class="s">两个项目都处在应用运行数据与研发分析之间，但内部组织方式不同。</text>
+
+<rect x="40" y="150" width="210" height="250" class="box" fill="#EAF3FF"/>
+<text x="145" y="183" text-anchor="middle" class="h">业务应用</text>
+<text x="145" y="215" text-anchor="middle" class="s">Agent / Workflow</text>
+<text x="145" y="243" text-anchor="middle" class="s">LLM / Tool / RAG</text>
+<text x="145" y="271" text-anchor="middle" class="s">Dify / 自定义服务</text>
+<text x="145" y="329" text-anchor="middle" class="xs">产生运行 Trace</text>
+<text x="145" y="352" text-anchor="middle" class="xs">Token · Latency · Error</text>
+
+<rect x="310" y="175" width="200" height="200" class="box" fill="#F3EEFF"/>
+<text x="410" y="208" text-anchor="middle" class="h">采集层</text>
+<text x="410" y="245" text-anchor="middle" class="s">OpenTelemetry</text>
+<text x="410" y="273" text-anchor="middle" class="s">SDK / Integration</text>
+<text x="410" y="301" text-anchor="middle" class="s">OpenInference</text>
+<text x="410" y="337" text-anchor="middle" class="xs">传播 Trace Context</text>
+<path d="M250 275 H310" class="line"/>
+
+<rect x="575" y="115" width="260" height="320" class="box" fill="#F4F6F8"/>
+<text x="705" y="150" text-anchor="middle" class="h">Phoenix / Langfuse</text>
+<rect x="605" y="180" width="200" height="48" rx="7" fill="#EAF3FF" stroke="#a8c7e8"/><text x="705" y="210" text-anchor="middle" class="s">Trace / Debug</text>
+<rect x="605" y="245" width="200" height="48" rx="7" fill="#EAF7F0" stroke="#9ccbb5"/><text x="705" y="275" text-anchor="middle" class="s">Evaluation / Score</text>
+<rect x="605" y="310" width="200" height="48" rx="7" fill="#FFF5E5" stroke="#dfc08a"/><text x="705" y="340" text-anchor="middle" class="s">Dataset / Experiment</text>
+<rect x="605" y="375" width="200" height="48" rx="7" fill="#F3EEFF" stroke="#c9c1e4"/><text x="705" y="405" text-anchor="middle" class="s">Prompt / Analytics</text>
+<path d="M510 275 H575" class="line"/>
+
+<rect x="900" y="135" width="330" height="280" class="box" fill="#fff"/>
+<text x="1065" y="168" text-anchor="middle" class="h">研发使用</text>
+<text x="930" y="210" class="s">调试</text><text x="995" y="210" class="xs">还原一次请求的完整执行链</text>
+<text x="930" y="252" class="s">分析</text><text x="995" y="252" class="xs">查看耗时、Token、错误和成本</text>
+<text x="930" y="294" class="s">评估</text><text x="995" y="294" class="xs">人工 / 规则 / LLM Judge</text>
+<text x="930" y="336" class="s">回归</text><text x="995" y="336" class="xs">固定 Dataset 对比新旧版本</text>
+<text x="930" y="378" class="s">运营</text><text x="995" y="378" class="xs">Dashboard / Metrics / Session</text>
+<path d="M835 275 H900" class="line"/>
+
+<text x="640" y="510" text-anchor="middle" class="s">共同位置相同，真正的选型差异主要来自内部数据模型、评估自动化、分析能力和自部署架构。</text>
 </svg>
