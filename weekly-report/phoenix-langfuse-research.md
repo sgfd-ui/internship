@@ -25,21 +25,7 @@
 
 接入 Phoenix 或 Langfuse 后，不改变 Agent 原有业务逻辑，平台主要采集运行 Trace，并把一次 Agent 请求转化为可查看、可分析、可评估的数据。
 
-```mermaid
-flowchart LR
-    A[Agent / Workflow 运行]
-    --> B[Phoenix / Langfuse]
-
-    B --> C[完整调用链]
-    B --> D[错误与慢节点]
-    B --> E[Token / Cost / Latency]
-    B --> F[质量评分]
-
-    F --> G[失败 / 典型 Case]
-    G --> H[Dataset]
-    H --> I[Experiment]
-    I --> J[版本效果对比]
-```
+![使用方式与效果](./assets/phoenix-langfuse/usage-effect.svg)
 
 | 使用场景 | 能直接看到什么 | 主要作用 |
 | --- | --- | --- |
@@ -52,23 +38,7 @@ flowchart LR
 
 这里只展示两个平台在 Agent 系统中的逻辑位置，不展开具体部署组件。
 
-```mermaid
-flowchart LR
-    A[Agent / Workflow / Tool / LLM]
-    --> B[OpenTelemetry / SDK / Monitoring]
-    --> C[Phoenix / Langfuse]
-
-    C --> D[Trace / Debug]
-    C --> E[Evaluation]
-    C --> F[Dataset / Experiment]
-    C --> G[Prompt / Analytics]
-
-    U[研发人员]
-    U --> D
-    U --> E
-    U --> F
-    U --> G
-```
+![整体逻辑架构](./assets/phoenix-langfuse/overall-architecture.svg)
 
 ---
 
@@ -94,17 +64,7 @@ Phoenix 的核心设计建立在 **OpenTelemetry + OpenInference** 上。应用�
 
 #### 2.1.2 核心架构
 
-```mermaid
-flowchart LR
-    A[Agent / Application]
-    --> B[OpenTelemetry / OpenInference]
-    --> C[Phoenix]
-
-    C --> D[Trace / Span]
-    C --> E[Evaluation / Annotation]
-    C --> F[Dataset / Experiment]
-    C --> G[Prompt / Playground]
-```
+![Arize Phoenix 核心架构](./assets/phoenix-langfuse/phoenix-architecture.svg)
 
 Phoenix 以 OpenTelemetry 的 Trace / Span 作为基础调用链模型，并通过 OpenInference 补充 Agent、LLM、Tool、Retriever 等 AI 语义。
 
@@ -142,17 +102,7 @@ Langfuse 的定位偏完整 LLM Engineering 平台。运行数据以 Trace / Obs
 
 #### 2.2.2 核心架构
 
-```mermaid
-flowchart LR
-    A[Agent / Application]
-    --> B[SDK / OpenTelemetry]
-    --> C[Langfuse]
-
-    C --> D[Trace / Observation]
-    C --> E[Score / Evaluation]
-    C --> F[Dataset / Experiment]
-    C --> G[Prompt / Dashboard]
-```
+![Langfuse 核心架构](./assets/phoenix-langfuse/langfuse-architecture.svg)
 
 Langfuse 以 Trace 表示一次高层请求，Trace 内部再通过 Observation 表示 Generation、Span、Event、Tool、Agent 等具体执行节点，并使用 User / Session 等对象跨 Trace 聚合。
 
@@ -201,21 +151,7 @@ Langfuse 以 Trace 表示一次高层请求，Trace 内部再通过 Observation 
 
 一个完整的 Agent 请求需要能够还原为调用树，而不是只有单独的 LLM 日志：
 
-```mermaid
-flowchart LR
-    U[User Request]
-    --> A[Agent / Workflow]
-
-    A --> L[LLM]
-    A --> T[Tool]
-    A --> R[Retriever]
-    A --> S[External Service]
-
-    L --> O[Output]
-    T --> O
-    R --> O
-    S --> O
-```
+![Trace 调用结构](./assets/phoenix-langfuse/trace-structure.svg)
 
 | 对比内容 | Phoenix | Langfuse |
 | --- | --- | --- |
@@ -238,7 +174,7 @@ flowchart LR
 
 ### 3.3 Evaluation
 
-两个项目都不只是“给 Trace 打一个分数”，都能够把评分结果回写并用于筛选失败 Case。差异主要在持续在线评估的组织方式。
+两个项目都能够把人工、代码或 LLM 评估结果关联回运行数据。差异主要在持续在线评估的组织方式。
 
 | 对比内容 | Phoenix | Langfuse |
 | --- | --- | --- |
@@ -252,45 +188,18 @@ flowchart LR
 | 结果筛选 | 按 Annotation / Score / Error 等筛选 Trace | Score Analytics、Trace Filter、Dashboard |
 | 评估结果与 Trace 关联 | Annotation 直接挂到对应对象 | Score 直接挂到 Trace / Observation / Session |
 
-Langfuse 的线上评估链路：
+核心链路可以概括为：
 
-```mermaid
-flowchart LR
-    T[线上 Observation]
-    --> R[Evaluation Rule\nFilter + Sample Rate]
-    --> E[LLM / Code Evaluator]
-    --> S[Score]
-    --> D[Dashboard / Filter]
-```
-
-Phoenix 的常见闭环：
-
-```mermaid
-flowchart LR
-    T[Trace / Span]
-    --> A[Annotation / Evaluator]
-    --> C[失败 Case]
-    --> DS[Dataset]
-    --> EX[Experiment]
-    --> EV[再次 Evaluation]
-```
+- **Phoenix：** Trace / Span → Annotation / Evaluator → Dataset → Experiment
+- **Langfuse：** Observation → Evaluation Rule → Evaluator → Score
 
 这不代表 Phoenix 不能做在线评估，而是两个项目当前产品化入口不同。后续实测重点应放在自动触发、采样、Evaluator 管理和结果回查的操作成本。
 
 ### 3.4 Dataset 与 Experiment
 
-两者都能够形成 Agent 改动前后的回归闭环：
+两者都能够形成同一组 Case 下的新旧版本验证闭环：
 
-```mermaid
-flowchart LR
-    A[线上 Trace]
-    --> B[失败 / 典型 Case]
-    --> C[Dataset]
-    --> D[修改 Prompt / Model / Workflow]
-    --> E[Experiment]
-    --> F[Evaluation]
-    --> G[版本结果对比]
-```
+`线上 Trace / 典型 Case → Dataset → 新版本运行 → Experiment → Evaluation → 结果对比`
 
 | 对比内容 | Phoenix | Langfuse |
 | --- | --- | --- |
@@ -351,14 +260,7 @@ Langfuse 在平台内自由做运营和质量分析的能力更完整；Phoenix 
 
 两个项目都已经有 Dify 原生 Monitoring / Tracing 集成，因此**基础接入都不需要改 Dify 源码**。
 
-```mermaid
-flowchart LR
-    D[Dify Application]
-    --> M[Monitoring / Tracing]
-
-    M --> P[Phoenix]
-    M --> F[Langfuse]
-```
+![Dify 接入方式](./assets/phoenix-langfuse/dify-integration.svg)
 
 | 对比内容 | Phoenix | Langfuse |
 | --- | --- | --- |
@@ -372,53 +274,15 @@ flowchart LR
 | 外部自定义 Agent | 使用 OpenTelemetry / OpenInference 手工补 Span | 使用 OpenTelemetry / SDK 手工补 Observation |
 | 跨服务 Trace | 需要继续传播 W3C Trace Context | 需要继续传播 OpenTelemetry Context |
 
-对于多 Agent 或跨服务应用，需要区分两个层次：
-
-```text
-平台内部节点
-→ 原生 Monitoring / Instrumentation 负责采集
-
-平台外部 Agent / Service / Tool
-→ 显式接 OpenTelemetry / SDK
-→ 继续传播同一个 Trace Context
-→ 才能形成端到端调用树
-```
-
-因此“是否有 Dify 集成”只是基础接入条件，真正需要实测的是复杂 Workflow、多 Agent 和跨服务场景下 Trace 父子关系是否完整。
+对于多 Agent 或跨服务应用，需要区分两个层次：Dify 内部节点由原生 Monitoring / Instrumentation 采集；平台外部 Agent、Service 或 Tool 需要显式接 OpenTelemetry / SDK，并继续传播同一个 Trace Context，才能形成端到端调用树。
 
 ### 4.2 部署架构
 
-#### Phoenix
+![部署架构对比](./assets/phoenix-langfuse/deployment-comparison.svg)
 
-```mermaid
-flowchart LR
-    A[Applications]
-    -->|OTLP| P[Phoenix Server]
-    P --> DB[(SQLite / PostgreSQL)]
-    U[研发人员] --> P
-```
+**Phoenix：** 核心服务集中在 Phoenix Server，外部主要依赖 SQLite 或 PostgreSQL。小规模可以单容器运行，团队环境通常切换到独立 PostgreSQL。
 
-Phoenix 可以从一个容器开始。团队环境通常只需要把 SQLite 换成独立 PostgreSQL，即可把应用和数据生命周期拆开。
-
-#### Langfuse
-
-```mermaid
-flowchart LR
-    A[Applications]
-    --> W[Langfuse Web]
-
-    W --> PG[(PostgreSQL)]
-    W --> S3[(S3 / MinIO)]
-    W --> R[(Redis / Valkey)]
-    R --> WK[Langfuse Worker]
-    WK --> S3
-    WK --> CH[(ClickHouse)]
-    WK --> PG
-
-    U[研发人员] --> W
-```
-
-Langfuse 的 Web / Worker 可以独立横向扩展，但高吞吐 Trace 摄取依赖 ClickHouse、Redis 和对象存储这套异步链路。
+**Langfuse：** Web / API 与 Worker 分开，Trace 摄取和分析还依赖 PostgreSQL、ClickHouse、Redis / Valkey 和对象存储。组件更多，但服务与存储可以分别扩展。
 
 ### 4.3 基础组件与资源要求
 
@@ -441,7 +305,7 @@ Langfuse 的 Web / Worker 可以独立横向扩展，但高吞吐 Trace 摄取�
 
 | 对比内容 | Phoenix | Langfuse |
 | --- | --- | --- |
-| 首次部署 | 单容器即可启动；生产增加 PostgreSQL | 需要同时准备 Web、Worker 和四类基础存储 |
+| 首次部署 | 单容器即可启动；生产增加 PostgreSQL | 需要同时准备 Web、Worker 和多类基础存储 |
 | 版本升级 | 主要升级 Phoenix 应用与数据库 Schema | Web / Worker 同版本升级，同时关注 PostgreSQL / ClickHouse Schema 和组件版本要求 |
 | 数据备份 | SQLite Volume 或 PostgreSQL | PostgreSQL + ClickHouse + 对象存储分别制定备份策略 |
 | Trace 存储扩容 | 主要扩 PostgreSQL / 磁盘 | ClickHouse 与对象存储是主要 Trace 扩容点 |
@@ -604,26 +468,16 @@ Phoenix 的生态入口更强调“任何框架最后统一成 OpenTelemetry / O
 
 ### 8.2 选型原则
 
-最终选型建议基于以下六个一级维度，不按“功能数量”简单计分：
+最终选型建议基于六个一级维度，不按“功能数量”简单计分：
 
-```mermaid
-flowchart TB
-    A[Phoenix vs Langfuse]
-
-    A --> B[可观测能力]
-    A --> C[评估与改进闭环]
-    A --> D[接入能力]
-    A --> E[部署与运维]
-    A --> F[成本]
-    A --> G[成熟度与扩展能力]
-
-    B --> B1[Trace / Agent / Tool / LLM]
-    C --> C1[Evaluation / Dataset / Experiment]
-    D --> D1[Dify / OTel / Trace Context / 改造量]
-    E --> E1[组件 / 扩容 / 备份 / 升级]
-    F --> F1[资源 / 模型 / 数据保留]
-    G --> G1[社区 / API / SDK / 集成]
-```
+| 一级维度 | 重点判断内容 |
+| --- | --- |
+| 可观测能力 | Trace 是否完整，Agent / Tool / LLM 节点是否容易定位 |
+| 评估与改进闭环 | Evaluation、Dataset、Experiment 是否顺畅 |
+| 接入能力 | Dify、OpenTelemetry、跨服务 Trace Context 与改造量 |
+| 部署与运维 | 组件数量、扩容、备份、升级和故障面 |
+| 成本 | 资源、评估模型调用和数据保留成本 |
+| 成熟度与扩展能力 | 社区、API、SDK、Integration 与二次开发便利性 |
 
 ### 8.3 最终建议
 
