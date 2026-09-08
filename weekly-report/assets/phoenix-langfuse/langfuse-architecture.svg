@@ -1,10 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="320" viewBox="0 0 1100 320">
-<style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937}.t{font-size:18px;font-weight:700}.s{font-size:14px}.box{stroke:#8a94a6;stroke-width:1.4;rx:10}.line{stroke:#667085;stroke-width:1.6;fill:none;marker-end:url(#a)}</style>
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="760" viewBox="0 0 1320 760">
+<style>
+text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#172033}.title{font-size:24px;font-weight:700}.h{font-size:17px;font-weight:700}.s{font-size:13px}.xs{font-size:12px;fill:#5b6679}.box{stroke:#8792a6;stroke-width:1.2;rx:10}.line{stroke:#667085;stroke-width:1.5;fill:none;marker-end:url(#a)}.dash{stroke:#98a2b3;stroke-width:1.3;stroke-dasharray:6 5;fill:none;marker-end:url(#a)}</style>
 <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker></defs>
-<rect x="35" y="105" width="190" height="100" class="box" fill="#EEF4FF"/><text x="130" y="144" text-anchor="middle" class="t">Agent / Application</text><text x="130" y="172" text-anchor="middle" class="s">产生运行调用</text>
-<rect x="275" y="105" width="230" height="100" class="box" fill="#EAF7F3"/><text x="390" y="144" text-anchor="middle" class="t">SDK / OpenTelemetry</text><text x="390" y="172" text-anchor="middle" class="s">上报 Trace 与元数据</text>
-<rect x="555" y="55" width="260" height="200" class="box" fill="#F3EEFF"/><text x="685" y="92" text-anchor="middle" class="t">Langfuse</text><rect x="585" y="115" width="200" height="38" class="box" fill="#ffffff"/><text x="685" y="140" text-anchor="middle" class="s">Trace / Observation</text><rect x="585" y="165" width="200" height="38" class="box" fill="#ffffff"/><text x="685" y="190" text-anchor="middle" class="s">Score / Evaluator</text><rect x="585" y="215" width="200" height="38" class="box" fill="#ffffff"/><text x="685" y="240" text-anchor="middle" class="s">Dataset / Experiment / Prompt</text>
-<rect x="865" y="105" width="200" height="100" class="box" fill="#FFF5E8"/><text x="965" y="144" text-anchor="middle" class="t">研发人员</text><text x="965" y="172" text-anchor="middle" class="s">观察、评分、分析</text>
-<path d="M225 155 H275" class="line"/><path d="M505 155 H555" class="line"/><path d="M815 155 H865" class="line"/>
-<text x="550" y="292" class="s" text-anchor="middle">核心特点：平台内部以 Trace / Observation 组织运行数据，并把 Score、User、Session 等作为长期管理对象。</text>
+<text x="35" y="42" class="title">Langfuse 核心架构</text>
+<text x="35" y="68" class="s">特点：运行数据进入平台后，由 Web / Worker 与多种存储组件分工处理；平台对象不只 Trace，还包括 User、Score、Prompt 等。</text>
+
+<rect x="35" y="120" width="205" height="260" class="box" fill="#EAF3FF"/>
+<text x="138" y="153" text-anchor="middle" class="h">应用侧</text>
+<rect x="60" y="180" width="155" height="42" rx="7" fill="#fff" stroke="#c7d2e3"/><text x="138" y="206" text-anchor="middle" class="s">Agent / Workflow</text>
+<rect x="60" y="238" width="155" height="42" rx="7" fill="#fff" stroke="#c7d2e3"/><text x="138" y="264" text-anchor="middle" class="s">LLM / Tool / RAG</text>
+<rect x="60" y="296" width="155" height="42" rx="7" fill="#fff" stroke="#c7d2e3"/><text x="138" y="322" text-anchor="middle" class="s">Dify / LangChain 等</text>
+
+<rect x="285" y="150" width="205" height="200" class="box" fill="#F3EEFF"/>
+<text x="388" y="183" text-anchor="middle" class="h">采集层</text>
+<text x="388" y="220" text-anchor="middle" class="s">Langfuse SDK</text>
+<text x="388" y="247" text-anchor="middle" class="s">OpenTelemetry</text>
+<text x="388" y="286" text-anchor="middle" class="xs">Trace / Observation / Metadata</text>
+<text x="388" y="319" text-anchor="middle" class="xs">HTTP / OTLP</text>
+<path d="M240 250 H285" class="line"/>
+
+<rect x="545" y="105" width="345" height="300" class="box" fill="#F4F6F8"/>
+<text x="718" y="140" text-anchor="middle" class="h">Langfuse 应用层</text>
+<rect x="580" y="175" width="125" height="78" rx="8" fill="#EAF3FF" stroke="#a8c7e8"/><text x="643" y="204" text-anchor="middle" class="s">Langfuse Web</text><text x="643" y="227" text-anchor="middle" class="xs">UI / API / Query</text>
+<rect x="730" y="175" width="125" height="78" rx="8" fill="#EAF7F0" stroke="#9ccbb5"/><text x="793" y="204" text-anchor="middle" class="s">Worker</text><text x="793" y="227" text-anchor="middle" class="xs">异步摄取 / Eval</text>
+<rect x="580" y="290" width="125" height="72" rx="8" fill="#FFF5E5" stroke="#dfc08a"/><text x="643" y="318" text-anchor="middle" class="s">Prompt / Dataset</text><text x="643" y="340" text-anchor="middle" class="xs">配置与实验管理</text>
+<rect x="730" y="290" width="125" height="72" rx="8" fill="#F3EEFF" stroke="#c9c1e4"/><text x="793" y="318" text-anchor="middle" class="s">Score / Eval Rule</text><text x="793" y="340" text-anchor="middle" class="xs">线上自动评估</text>
+<path d="M490 250 H545" class="line"/>
+
+<rect x="945" y="105" width="335" height="300" class="box" fill="#fff"/>
+<text x="1113" y="140" text-anchor="middle" class="h">存储与队列层</text>
+<rect x="975" y="170" width="125" height="75" rx="8" fill="#EAF3FF" stroke="#a8c7e8"/><text x="1038" y="198" text-anchor="middle" class="s">PostgreSQL</text><text x="1038" y="221" text-anchor="middle" class="xs">项目 / 配置 / 元数据</text>
+<rect x="1125" y="170" width="125" height="75" rx="8" fill="#EAF7F0" stroke="#9ccbb5"/><text x="1188" y="198" text-anchor="middle" class="s">ClickHouse</text><text x="1188" y="221" text-anchor="middle" class="xs">Trace / OLAP 分析</text>
+<rect x="975" y="285" width="125" height="75" rx="8" fill="#F3EEFF" stroke="#c9c1e4"/><text x="1038" y="313" text-anchor="middle" class="s">Redis / Valkey</text><text x="1038" y="336" text-anchor="middle" class="xs">Queue / Cache</text>
+<rect x="1125" y="285" width="125" height="75" rx="8" fill="#FFF5E5" stroke="#dfc08a"/><text x="1188" y="313" text-anchor="middle" class="s">Object Storage</text><text x="1188" y="336" text-anchor="middle" class="xs">附件 / 大对象</text>
+<path d="M890 212 H975" class="line"/><path d="M890 230 C920 230 920 207 1125 207" class="line"/><path d="M890 250 C920 250 920 322 975 322" class="line"/><path d="M890 270 C930 270 930 322 1125 322" class="line"/>
+
+<rect x="285" y="455" width="995" height="135" class="box" fill="#EAF7F0"/>
+<text x="310" y="488" class="h">平台对象模型</text>
+<text x="310" y="520" class="s">Project → User / Session → Trace → Observation → Generation</text>
+<text x="310" y="548" class="s">Score / Evaluation Rule、Prompt、Dataset / Experiment 都是独立平台对象，可与运行数据关联。</text>
+<text x="310" y="573" class="xs">这也是 Langfuse 与 Phoenix 的一个重要区别：平台层的数据模型更丰富，不只围绕 Trace / Span 展开。</text>
+
+<rect x="285" y="620" width="995" height="100" class="box" fill="#fff"/>
+<text x="310" y="651" class="h">架构特征</text>
+<text x="310" y="681" class="s">① Web 与 Worker 分离，写入、异步任务和查询可分别扩展。</text>
+<text x="720" y="681" class="s">② ClickHouse 承担高量 Trace 分析，PostgreSQL 保留事务与配置数据。</text>
+<text x="310" y="706" class="s">③ 依赖 Redis / Valkey 与对象存储，组件更多，但数据与执行职责拆分更明确。</text>
 </svg>
