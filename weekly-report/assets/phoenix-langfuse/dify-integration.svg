@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="300" viewBox="0 0 1100 300">
+<style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937}.t{font-size:18px;font-weight:700}.s{font-size:14px}.box{stroke:#8a94a6;stroke-width:1.4;rx:10}.line{stroke:#667085;stroke-width:1.6;fill:none;marker-end:url(#a)}</style>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker></defs>
+<rect x="40" y="70" width="200" height="80" class="box" fill="#EEF4FF"/><text x="140" y="105" text-anchor="middle" class="t">Dify Application</text><text x="140" y="130" text-anchor="middle" class="s">原生 Monitoring</text>
+<rect x="40" y="180" width="200" height="80" class="box" fill="#EEF4FF"/><text x="140" y="215" text-anchor="middle" class="t">外部 Agent / Tool</text><text x="140" y="240" text-anchor="middle" class="s">OpenTelemetry / SDK</text>
+<rect x="330" y="105" width="210" height="100" class="box" fill="#EAF7F3"/><text x="435" y="144" text-anchor="middle" class="t">Trace Context</text><text x="435" y="172" text-anchor="middle" class="s">保证父子调用关系连续</text>
+<rect x="650" y="65" width="180" height="80" class="box" fill="#F3EEFF"/><text x="740" y="112" text-anchor="middle" class="t">Phoenix</text>
+<rect x="650" y="175" width="180" height="80" class="box" fill="#FFF5E8"/><text x="740" y="222" text-anchor="middle" class="t">Langfuse</text>
+<rect x="900" y="105" width="160" height="100" class="box" fill="#EAF7F3"/><text x="980" y="144" text-anchor="middle" class="t">完整 Trace</text><text x="980" y="172" text-anchor="middle" class="s">Workflow / Tool / LLM</text>
+<path d="M240 110 C280 110 290 135 330 145" class="line"/><path d="M240 220 C280 220 290 185 330 170" class="line"/><path d="M540 145 C590 145 600 105 650 105" class="line"/><path d="M540 170 C590 170 600 215 650 215" class="line"/><path d="M830 105 C865 105 865 145 900 145" class="line"/><path d="M830 215 C865 215 865 170 900 170" class="line"/>
+</svg>
