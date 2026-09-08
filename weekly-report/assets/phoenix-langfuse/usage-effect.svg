@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360">
+<style>
+text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937} .t{font-size:18px;font-weight:700}.s{font-size:14px}.box{stroke:#8a94a6;stroke-width:1.4;rx:10}.line{stroke:#667085;stroke-width:1.6;fill:none;marker-end:url(#a)}
+</style>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker></defs>
+<rect x="30" y="135" width="180" height="90" class="box" fill="#EEF4FF"/><text x="120" y="172" text-anchor="middle" class="t">Agent / Workflow</text><text x="120" y="198" text-anchor="middle" class="s">真实运行请求</text>
+<rect x="270" y="135" width="190" height="90" class="box" fill="#F3EEFF"/><text x="365" y="172" text-anchor="middle" class="t">Phoenix / Langfuse</text><text x="365" y="198" text-anchor="middle" class="s">采集并组织 Trace</text>
+<path d="M210 180 H270" class="line"/>
+<rect x="530" y="35" width="220" height="115" class="box" fill="#EAF7F3"/><text x="640" y="68" text-anchor="middle" class="t">看清运行过程</text><text x="640" y="96" text-anchor="middle" class="s">调用链 · 输入输出 · 错误</text><text x="640" y="120" text-anchor="middle" class="s">Latency · Token · Cost</text>
+<rect x="530" y="210" width="220" height="115" class="box" fill="#FFF5E8"/><text x="640" y="243" text-anchor="middle" class="t">评估结果质量</text><text x="640" y="271" text-anchor="middle" class="s">人工 / 代码 / LLM Judge</text><text x="640" y="295" text-anchor="middle" class="s">沉淀失败与典型 Case</text>
+<path d="M460 170 C495 170 495 92 530 92" class="line"/><path d="M460 190 C495 190 495 268 530 268" class="line"/>
+<rect x="830" y="210" width="235" height="115" class="box" fill="#EEF4FF"/><text x="948" y="243" text-anchor="middle" class="t">验证改动是否有效</text><text x="948" y="271" text-anchor="middle" class="s">Dataset → Experiment</text><text x="948" y="295" text-anchor="middle" class="s">比较 Prompt / Model / Workflow</text>
+<path d="M750 268 H830" class="line"/>
+<text x="550" y="348" class="s" text-anchor="middle">核心价值：把“运行日志”变成可定位问题、可评估质量、可验证改动的工程数据。</text>
+</svg>
