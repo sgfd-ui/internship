@@ -25,7 +25,7 @@
 
 接入 Phoenix 或 Langfuse 后，不改变 Agent 原有业务逻辑，平台主要采集运行 Trace，并把一次 Agent 请求转化为可查看、可分析、可评估的数据。
 
-![使用方式与效果](./assets/phoenix-langfuse/usage-effect.svg)
+![使用方式与效果](./assets/phoenix-langfuse/usage-effect.webp)
 
 | 使用场景 | 能直接看到什么 | 主要作用 |
 | --- | --- | --- |
@@ -38,7 +38,7 @@
 
 这里只展示两个平台在 Agent 系统中的逻辑位置，不展开具体部署组件。
 
-![整体逻辑架构](./assets/phoenix-langfuse/overall-architecture.svg)
+![整体逻辑架构](./assets/phoenix-langfuse/overall-architecture.webp)
 
 ---
 
@@ -64,7 +64,7 @@ Phoenix 的核心设计建立在 **OpenTelemetry + OpenInference** 上。应用�
 
 #### 2.1.2 核心架构
 
-![Arize Phoenix 核心架构](./assets/phoenix-langfuse/phoenix-architecture.svg)
+![Arize Phoenix 核心架构](./assets/phoenix-langfuse/phoenix-architecture.webp)
 
 Phoenix 以 OpenTelemetry 的 Trace / Span 作为基础调用链模型，并通过 OpenInference 补充 Agent、LLM、Tool、Retriever 等 AI 语义。
 
@@ -102,7 +102,7 @@ Langfuse 的定位偏完整 LLM Engineering 平台。运行数据以 Trace / Obs
 
 #### 2.2.2 核心架构
 
-![Langfuse 核心架构](./assets/phoenix-langfuse/langfuse-architecture.svg)
+![Langfuse 核心架构](./assets/phoenix-langfuse/langfuse-architecture.webp)
 
 Langfuse 以 Trace 表示一次高层请求，Trace 内部再通过 Observation 表示 Generation、Span、Event、Tool、Agent 等具体执行节点，并使用 User / Session 等对象跨 Trace 聚合。
 
@@ -260,7 +260,7 @@ Langfuse 在平台内自由做运营和质量分析的能力更完整；Phoenix 
 
 两个项目都已经有 Dify 原生 Monitoring / Tracing 集成，因此**基础接入都不需要改 Dify 源码**。
 
-![Dify 接入方式](./assets/phoenix-langfuse/dify-integration.svg)
+![Dify 接入方式](./assets/phoenix-langfuse/dify-integration.webp)
 
 | 对比内容 | Phoenix | Langfuse |
 | --- | --- | --- |
@@ -278,7 +278,7 @@ Langfuse 在平台内自由做运营和质量分析的能力更完整；Phoenix 
 
 ### 4.2 部署架构
 
-![部署架构对比](./assets/phoenix-langfuse/deployment-comparison.svg)
+![部署架构对比](./assets/phoenix-langfuse/deployment-comparison.webp)
 
 **Phoenix：** 核心服务集中在 Phoenix Server，外部主要依赖 SQLite 或 PostgreSQL。小规模可以单容器运行，团队环境通常切换到独立 PostgreSQL。
 
