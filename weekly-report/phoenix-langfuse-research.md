@@ -34,53 +34,36 @@
 | 质量评估 | 人工、代码或 LLM-as-a-Judge 评分 | 判断回答、检索或 Agent 执行质量 |
 | 版本验证 | 同一 Dataset 上的新旧 Prompt、Model、Workflow 运行结果 | 判断改动是否提升以及是否产生回归 |
 
-### 1.4 整体架构
-
-这里只展示 Evaluation 平台在 Agent 系统中的逻辑位置；Phoenix 与 Langfuse 自身的架构差异在第二章展开，实际部署组件在第四章展开。
-
-![整体逻辑架构](./assets/phoenix-langfuse/overall-architecture.svg)
-
 ---
 
 ## 二、架构对比
 
-本章只比较两个项目自身的架构组织方式：运行数据从哪里进入、平台内部如何承接、核心对象如何组织，以及数据最终落在哪里。具体 Web 功能放到第三章比较。
+本章从 **应用层 → 采集层 → 平台层 → 存储层** 四个层级比较两个项目。应用层负责产生 Agent / Workflow 运行数据，采集层负责把运行数据送入平台，平台层承接 Trace、评估、Dataset、Experiment、Prompt 等能力，存储层作为底座负责持久化和分析数据。
 
 ### 2.1 Phoenix 架构
 
-> 本文中的 Phoenix 均指 **Arize Phoenix（Arize-ai/phoenix）**，与 Elixir Web Framework `phoenixframework/phoenix` 无关。
-
 ![Phoenix 架构](./assets/phoenix-langfuse/phoenix-architecture.svg)
 
-Phoenix 的主链路可以概括为：
-
-`Agent / Workflow → OpenTelemetry + OpenInference → Phoenix Server → Trace / Evaluation / Dataset / Experiment / Prompt → SQLite / PostgreSQL`
-
-它的架构重点是 **Trace 为主轴、能力集中在 Phoenix Server**。运行链路、评估、数据集、实验、Prompt 调试和 Web UI / API 基本由一个核心服务承接，外部持久化主要依赖 SQLite 或 PostgreSQL。
+Phoenix 的架构比较集中：应用运行数据先经过 OpenTelemetry / OpenInference 采集，再统一进入 Phoenix Server。Trace 查询、Evaluation、Dataset / Experiment、Prompt / Playground 和 Web UI / API 都集中在平台层；底层使用 SQLite 或 PostgreSQL 持久化数据。
 
 ### 2.2 Langfuse 架构
 
 ![Langfuse 架构](./assets/phoenix-langfuse/langfuse-architecture.svg)
 
-Langfuse 的主链路可以概括为：
-
-`Agent / Workflow → Langfuse SDK / OpenTelemetry → Web / Worker → Trace / Score / Prompt / Dataset / Experiment → PostgreSQL / ClickHouse / Redis / Object Storage`
-
-它的架构重点是 **平台分层更细、平台对象更多、存储职责拆分更明确**。Web / API 负责交互与查询，Worker 承担异步任务和部分评估处理；运行数据、事务数据、缓存 / 队列和大对象由不同存储组件承接。
+Langfuse 同样可以拆成应用层、采集层、平台层和存储层，但平台内部进一步拆成 Web / API 与 Worker。Trace、Score / Evaluation、Prompt、Dataset、User / Session 等能力位于平台层；PostgreSQL、ClickHouse、Redis / Valkey 和 Object Storage 单独构成存储与队列底座。
 
 ### 2.3 架构差异总结
 
 | 架构维度 | Phoenix | Langfuse |
 | --- | --- | --- |
-| 架构中心 | 🟦 以 Trace / Span 为主轴 | 🟧 Trace 之外还围绕 User、Session、Score、Prompt 等平台对象组织 |
-| 核心服务 | 🟦 Phoenix Server 集中承载主要能力 | 🟧 Web / API 与 Worker 分层 |
-| 运行数据组织 | 更接近标准调用链模型 | 调用链之外增加更多平台级管理对象 |
-| 存储结构 | 🟦 SQLite 或 PostgreSQL，整体较集中 | 🟧 PostgreSQL + ClickHouse + Redis / Valkey + Object Storage，多类存储分工 |
-| 异步任务 | 不强制独立 Worker | 🟧 独立 Worker 承担异步处理 |
-| 扩展方式 | 主要扩 Phoenix 服务和数据库 | Web、Worker、分析库和存储可分别扩展 |
-| 架构直观感受 | 🟦 组件少、链路短、理解成本低 | 🟧 分层更完整，但组件和依赖更多 |
-
-架构本身没有绝对优劣：Phoenix 更偏 **集中、标准、轻量**；Langfuse 更偏 **平台化、分层、可扩展**。后续功能差异很大一部分也来自这两种架构取向。
+| 总体形态 | 集中式架构，一个 Phoenix Server 承接大部分平台能力 | 分层式架构，Web / API 与 Worker 分工处理 |
+| 应用层 | Agent、Workflow、LLM、Tool、RAG 等产生运行数据 | Agent、Workflow、LLM、Tool、RAG 等产生运行数据 |
+| 采集层 | 以 OpenTelemetry 为主，OpenInference 补充 AI 语义 | 同时支持 Langfuse SDK 和 OpenTelemetry |
+| 平台服务 | Trace、Evaluation、Dataset、Experiment、Prompt、UI / API 集中在 Phoenix Server | Web / API 负责交互与查询，Worker 负责异步摄取、评估和后台任务 |
+| 平台能力组织 | 主要围绕 Trace 运行链路展开，再连接评估、Dataset、Experiment 和 Prompt | 除 Trace 外，还把 Score、User / Session、Prompt、Dataset 等作为独立平台能力组织 |
+| 存储层 | SQLite 或 PostgreSQL，存储结构较集中 | PostgreSQL、ClickHouse、Redis / Valkey、Object Storage 分工承载不同类型数据 |
+| 异步处理 | 不强制独立 Worker | 独立 Worker 承担异步任务 |
+| 扩展方式 | 主要扩 Phoenix 服务与数据库 | Web、Worker、分析数据库、缓存和对象存储可以分别扩展 |
 
 ---
 
