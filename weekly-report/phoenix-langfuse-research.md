@@ -38,7 +38,7 @@
 
 ## 二、架构对比
 
-本章统一按 **展示层、接口层、服务层、存储与基础设施层** 整理两个项目；每一层内部再按模块拆分，重点看平台自身如何组织，不展开具体代码目录和框架实现。
+本章统一按 **展示层、接口层、服务层、存储与基础设施层** 整理两个项目，并在各层内部继续按模块拆分。
 
 ### 2.1 Phoenix 架构
 
@@ -52,13 +52,14 @@
 
 | 架构维度 | Phoenix | Langfuse |
 | --- | --- | --- |
-| 整体组织 | 以 Phoenix Server 为核心，接口、核心服务和后台执行能力集中在同一运行组件内 | 服务层拆成 Web Service 与 Worker，在线服务和后台处理职责分开 |
-| 接口组织 | REST、GraphQL 和 Trace 数据接收统一由 Phoenix Server 承接 | Web / Public API 与数据摄取接口统一进入平台，再由不同服务继续处理 |
-| 服务组织 | Trace、Evaluation、Dataset / Experiment、Prompt、Dashboard 等服务模块集中部署 | 核心在线服务由 Web Service 承担，异步处理由 Worker 承担 |
-| 后台执行 | 数据写入、实验执行、成本计算和后台维护与核心服务一起运行 | 数据摄取、Evaluation 和异步任务由独立 Worker 运行 |
-| 存储与基础设施 | 以 SQLite 或 PostgreSQL 作为主要数据底座 | PostgreSQL、ClickHouse、Redis / Valkey、Object Storage 按职责拆分 |
-| 扩展方式 | 主要围绕 Phoenix Server 与数据库扩展 | Web、Worker 和不同存储组件可以分别扩展 |
-| 架构复杂度 | 运行组件少，部署关系更集中 | 运行组件和基础设施更多，职责拆分更细 |
+| 整体结构 | 服务层由一个 Phoenix 服务统一承载 | 服务层拆为 Web 服务与 Worker 两个运行组件 |
+| 展示层 | Web 界面与调试台 | Web 界面 |
+| 接口层 | 平台接口、查询接口和数据接收统一组织 | 开放接口、平台接口和数据接收统一组织 |
+| 服务层 | Phoenix 服务内部再拆为核心服务模块与后台执行模块 | Web 服务与 Worker 并列，各自承载对应服务模块 |
+| 后台执行 | 数据写入、实验执行、成本计算和数据清理与核心服务运行在同一 Phoenix 服务中 | 数据摄取、评估执行和后台任务集中在独立 Worker 中 |
+| 存储与基础设施 | 主要使用 SQLite 或 PostgreSQL 关系型存储 | PostgreSQL、ClickHouse、Redis / Valkey 和 Object Storage 分别承担不同存储职责 |
+| 扩展方式 | 主要围绕 Phoenix 服务和数据库整体扩展 | Web 服务、Worker 和不同存储组件可以分别扩展 |
+| 架构复杂度 | 运行组件较少，结构更集中 | 运行组件和基础设施更多，职责拆分更细 |
 
 ---
 
