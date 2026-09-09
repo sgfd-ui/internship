@@ -13,6 +13,7 @@
     </style>
   </defs>
   <rect width="1280" height="840" fill="#fff"/>
+
   <rect x="30" y="24" width="1220" height="126" rx="18" fill="#f2efff" stroke="#d8d0ff"/>
   <rect x="30" y="24" width="170" height="126" rx="18" fill="#e8e2ff"/>
   <g transform="translate(115 87)">
@@ -23,6 +24,7 @@
   <path d="M267 65h34v25h-34zM272 96h24M284 90v6" fill="none" stroke="#7558d8" stroke-width="2.3"/>
   <text x="725" y="79" text-anchor="middle" class="name">Web UI</text>
   <text x="725" y="104" text-anchor="middle" class="sub">Trace 查看 ｜ 实验对比 ｜ Prompt 调试 ｜ 数据看板</text>
+
   <rect x="30" y="168" width="1220" height="144" rx="18" fill="#eef7ff" stroke="#cde4fa"/>
   <rect x="30" y="168" width="170" height="144" rx="18" fill="#dceeff"/>
   <g transform="translate(115 240)">
@@ -41,6 +43,7 @@
   <rect x="880" y="196" width="340" height="88" rx="12" class="card"/>
   <text x="1050" y="228" text-anchor="middle" class="name">Trace 接收</text>
   <text x="1050" y="254" text-anchor="middle" class="sub">接收 Trace / Span 数据</text>
+
   <rect x="30" y="330" width="1220" height="360" rx="18" fill="#ecfaf4" stroke="#c7ead8"/>
   <rect x="30" y="330" width="170" height="360" rx="18" fill="#dcf5e9"/>
   <g transform="translate(115 510)">
@@ -70,6 +73,7 @@
   <rect x="697" y="550" width="159" height="64" rx="10" class="card"/>
   <text x="776" y="575" text-anchor="middle" class="name">System</text>
   <text x="776" y="598" text-anchor="middle" class="sub">系统配置与管理</text>
+
   <rect x="900" y="406" width="295" height="232" rx="14" class="bgBox"/>
   <text x="924" y="438" class="group">后台执行模块</text>
   <rect x="924" y="458" width="120" height="76" rx="10" class="card"/>
@@ -84,6 +88,7 @@
   <rect x="1054" y="550" width="117" height="64" rx="10" class="card"/>
   <text x="1112" y="575" text-anchor="middle" class="name">数据清理</text>
   <text x="1112" y="598" text-anchor="middle" class="sub">后台维护任务</text>
+
   <rect x="30" y="708" width="1220" height="108" rx="18" fill="#fff1f3" stroke="#f2cbd2"/>
   <rect x="30" y="708" width="170" height="108" rx="18" fill="#ffe1e6"/>
   <g transform="translate(115 762)">
@@ -91,10 +96,20 @@
     <path d="M-23 -25v24c0 5 10 8 23 8s23-3 23-8v-24M-23 -13c0 5 10 8 23 8s23-3 23-8" fill="none" stroke="#9a1630" stroke-width="3"/>
     <text x="0" y="41" text-anchor="middle" class="layer">存储层</text>
   </g>
+
   <rect x="300" y="728" width="350" height="68" rx="12" class="card"/>
-  <text x="475" y="756" text-anchor="middle" class="name">SQLite</text>
-  <text x="475" y="780" text-anchor="middle" class="sub">本地关系型存储</text>
+  <g transform="translate(350 762)" stroke="#9a1630" stroke-width="2.4" fill="none">
+    <ellipse cx="0" cy="-13" rx="19" ry="6"/>
+    <path d="M-19 -13v22c0 4 8 6 19 6s19-2 19-6v-22M-19 -2c0 4 8 6 19 6s19-2 19-6"/>
+  </g>
+  <text x="485" y="754" text-anchor="middle" class="name">SQLite</text>
+  <text x="485" y="777" text-anchor="middle" class="sub">（默认）本地关系型存储</text>
+
   <rect x="680" y="728" width="400" height="68" rx="12" class="card"/>
-  <text x="880" y="756" text-anchor="middle" class="name">PostgreSQL</text>
-  <text x="880" y="780" text-anchor="middle" class="sub">生产关系型存储</text>
+  <g transform="translate(735 762)" stroke="#9a1630" stroke-width="2.4" fill="none">
+    <ellipse cx="0" cy="-13" rx="19" ry="6"/>
+    <path d="M-19 -13v22c0 4 8 6 19 6s19-2 19-6v-22M-19 -2c0 4 8 6 19 6s19-2 19-6"/>
+  </g>
+  <text x="895" y="754" text-anchor="middle" class="name">PostgreSQL</text>
+  <text x="895" y="777" text-anchor="middle" class="sub">（可选）生产关系型存储</text>
 </svg>
