@@ -1,42 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
 <defs>
-  <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#6B7A90"/></marker>
+  <marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#728097"/></marker>
   <style>
-    text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#182230}.layer{font-size:18px;font-weight:700}.h{font-size:17px;font-weight:700}.m{font-size:14px}.s{font-size:12px;fill:#667085}.card{fill:#fff;stroke:#D7DFEA;stroke-width:1.2}.line{stroke:#6B7A90;stroke-width:2;fill:none;marker-end:url(#arrow)}
+    text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#162033}
+    .title{font-size:27px;font-weight:700}.layer{font-size:19px;font-weight:700}.group{font-size:15px;font-weight:700}.item{font-size:15px;font-weight:700}.sub{font-size:12px;fill:#667085}.card{fill:#fff;stroke:#d5dce7;stroke-width:1.2}.line{stroke:#728097;stroke-width:2;fill:none;marker-end:url(#a)}
   </style>
 </defs>
-<rect width="1280" height="760" fill="#fff"/>
-<rect x="35" y="28" width="1210" height="130" rx="16" fill="#EDF6FF" stroke="#C9E4FF"/>
-<rect x="35" y="28" width="135" height="130" rx="16" fill="#DDEEFF"/>
-<text x="102" y="96" text-anchor="middle" class="layer">应用层</text>
-<g><rect x="205" y="54" width="250" height="78" rx="12" class="card"/><circle cx="245" cy="82" r="13" fill="#E7F1FF" stroke="#2F80ED" stroke-width="2"/><circle cx="237" cy="82" r="2.5" fill="#2F80ED"/><circle cx="245" cy="82" r="2.5" fill="#2F80ED"/><circle cx="253" cy="82" r="2.5" fill="#2F80ED"/><path d="M233 96 Q245 104 257 96" fill="none" stroke="#2F80ED" stroke-width="2"/><text x="280" y="80" class="h">Agent / Workflow</text><text x="280" y="105" class="s">业务编排与智能体运行</text></g>
-<g><rect x="485" y="54" width="250" height="78" rx="12" class="card"/><path d="M525 70 h24 v28 h-24 z M529 76 h16 M529 82 h12 M529 88 h14" fill="none" stroke="#2F80ED" stroke-width="2.4" stroke-linejoin="round"/><text x="570" y="80" class="h">LLM / Tool / RAG</text><text x="570" y="105" class="s">模型、工具与检索调用</text></g>
-<g><rect x="765" y="54" width="250" height="78" rx="12" class="card"/><path d="M804 70 l18 10 v20 l-18 10 -18-10 v-20 z M786 80 l18 10 18-10 M804 90 v20" fill="none" stroke="#2F80ED" stroke-width="2.4"/><text x="850" y="80" class="h">Dify / Framework</text><text x="850" y="105" class="s">平台或自定义应用框架</text></g>
-<text x="1080" y="83" class="m">产生运行数据</text><text x="1080" y="108" class="s">Trace · Token · Latency · Error</text>
-<path d="M640 158 V182" class="line"/>
-<rect x="35" y="185" width="1210" height="125" rx="16" fill="#F4F1FF" stroke="#D8D1FF"/>
-<rect x="35" y="185" width="135" height="125" rx="16" fill="#E8E2FF"/>
-<text x="102" y="252" text-anchor="middle" class="layer">采集层</text>
-<g><rect x="260" y="210" width="300" height="74" rx="12" class="card"/><circle cx="303" cy="247" r="18" fill="#F1EDFF" stroke="#6D5CE8" stroke-width="2"/><path d="M291 250 q12-24 24 0 M295 255 q8-16 16 0" fill="none" stroke="#6D5CE8" stroke-width="2"/><text x="340" y="241" class="h">OpenTelemetry</text><text x="340" y="265" class="s">采集并传播标准 Trace</text></g>
-<g><rect x="610" y="210" width="300" height="74" rx="12" class="card"/><circle cx="653" cy="247" r="6" fill="#6D5CE8"/><circle cx="637" cy="264" r="6" fill="#6D5CE8"/><circle cx="669" cy="264" r="6" fill="#6D5CE8"/><path d="M653 253 L641 259 M653 253 L665 259" stroke="#6D5CE8" stroke-width="2"/><text x="690" y="241" class="h">OpenInference</text><text x="690" y="265" class="s">补充 Agent / LLM / Tool 等 AI 语义</text></g>
-<text x="995" y="241" class="m">OTLP 上报</text><text x="995" y="265" class="s">HTTP / gRPC</text>
-<path d="M640 310 V334" class="line"/>
-<rect x="35" y="337" width="1210" height="250" rx="16" fill="#ECFAF4" stroke="#BDEBD6"/>
-<rect x="35" y="337" width="135" height="250" rx="16" fill="#DDF5EA"/>
-<text x="102" y="465" text-anchor="middle" class="layer">平台层</text>
-<text x="195" y="375" class="h">Phoenix Server</text><text x="335" y="375" class="s">采集、查询、评估和实验能力集中在一个核心服务</text>
-<g transform="translate(215 407)"><ellipse cx="55" cy="15" rx="48" ry="15" fill="#BFEEDC" stroke="#21A179" stroke-width="2"/><rect x="7" y="15" width="96" height="48" fill="#D9F6EB" stroke="#21A179" stroke-width="2"/><ellipse cx="55" cy="63" rx="48" ry="15" fill="#D9F6EB" stroke="#21A179" stroke-width="2"/><circle cx="83" cy="35" r="3" fill="#21A179"/><circle cx="92" cy="35" r="3" fill="#21A179"/><text x="55" y="102" text-anchor="middle" class="s">统一服务入口</text></g>
-<g><rect x="355" y="400" width="180" height="72" rx="12" class="card"/><polyline points="380,450 400,427 420,443 445,418 470,438" fill="none" stroke="#21A179" stroke-width="3"/><circle cx="380" cy="450" r="4" fill="#21A179"/><circle cx="400" cy="427" r="4" fill="#21A179"/><circle cx="420" cy="443" r="4" fill="#21A179"/><circle cx="445" cy="418" r="4" fill="#21A179"/><text x="480" y="431" class="h">Trace</text><text x="480" y="454" class="s">运行链路与节点详情</text></g>
-<g><rect x="555" y="400" width="180" height="72" rx="12" class="card"/><rect x="578" y="418" width="28" height="28" rx="5" fill="none" stroke="#21A179" stroke-width="2.5"/><path d="M584 432 l6 6 11-13" fill="none" stroke="#21A179" stroke-width="2.5"/><text x="620" y="431" class="h">Evaluation</text><text x="620" y="454" class="s">人工、代码、LLM 评估</text></g>
-<g><rect x="755" y="400" width="220" height="72" rx="12" class="card"/><path d="M780 418 h24 v30 h-24 z M784 424 h16 M784 431 h16 M784 438 h12" fill="none" stroke="#21A179" stroke-width="2.3"/><text x="818" y="431" class="h">Dataset / Experiment</text><text x="818" y="454" class="s">Case 沉淀与版本验证</text></g>
-<g><rect x="995" y="400" width="190" height="72" rx="12" class="card"/><path d="M1020 420 v26 h26 v-26 M1025 425 h16 M1025 432 h12" fill="none" stroke="#21A179" stroke-width="2.3"/><text x="1058" y="431" class="h">Prompt</text><text x="1058" y="454" class="s">版本与 Playground</text></g>
-<g><rect x="355" y="490" width="830" height="68" rx="12" class="card"/><text x="390" y="520" class="h">Web UI / API</text><text x="515" y="520" class="s">查看 Trace、评估、Dataset、Experiment 和 Prompt；API / SDK 用于自动化接入。</text><rect x="1030" y="505" width="115" height="32" rx="16" fill="#DDF5EA"/><text x="1088" y="526" text-anchor="middle" class="s">能力集中</text></g>
-<path d="M640 587 V611" class="line"/>
-<rect x="35" y="614" width="1210" height="118" rx="16" fill="#FFF7EB" stroke="#F5D7A6"/>
-<rect x="35" y="614" width="135" height="118" rx="16" fill="#FFF0D6"/>
-<text x="102" y="680" text-anchor="middle" class="layer">存储层</text>
-<text x="205" y="650" class="h">数据持久化底座</text><text x="205" y="674" class="s">Phoenix 可使用 SQLite 或 PostgreSQL；不强制依赖独立 Redis、ClickHouse 或对象存储。</text>
-<g transform="translate(745 635)"><ellipse cx="40" cy="10" rx="34" ry="10" fill="#FFF4E4" stroke="#F59E0B" stroke-width="2"/><rect x="6" y="10" width="68" height="38" fill="#FFF8EF" stroke="#F59E0B" stroke-width="2"/><ellipse cx="40" cy="48" rx="34" ry="10" fill="#FFF8EF" stroke="#F59E0B" stroke-width="2"/><text x="40" y="80" text-anchor="middle" class="m">SQLite</text></g>
-<text x="865" y="674" class="h">或</text>
-<g transform="translate(915 635)"><ellipse cx="40" cy="10" rx="34" ry="10" fill="#FFF4E4" stroke="#F59E0B" stroke-width="2"/><rect x="6" y="10" width="68" height="38" fill="#FFF8EF" stroke="#F59E0B" stroke-width="2"/><ellipse cx="40" cy="48" rx="34" ry="10" fill="#FFF8EF" stroke="#F59E0B" stroke-width="2"/><text x="40" y="80" text-anchor="middle" class="m">PostgreSQL</text></g>
+<rect width="1280" height="800" fill="#fff"/>
+<text x="44" y="42" class="title">Phoenix 架构</text>
+<rect x="35" y="65" width="1210" height="120" rx="18" fill="#eef6ff" stroke="#c9e2ff"/>
+<rect x="35" y="65" width="135" height="120" rx="18" fill="#dbeeff"/>
+<text x="102" y="132" text-anchor="middle" class="layer">应用层</text>
+<g>
+ <rect x="215" y="92" width="270" height="66" rx="12" class="card"/>
+ <circle cx="250" cy="125" r="14" fill="#e8f2ff" stroke="#2f80ed" stroke-width="2"/>
+ <circle cx="244" cy="122" r="2.5" fill="#2f80ed"/><circle cx="250" cy="116" r="2.5" fill="#2f80ed"/><circle cx="256" cy="122" r="2.5" fill="#2f80ed"/>
+ <text x="282" y="130" class="item">Agent / Workflow</text>
+ <rect x="515" y="92" width="270" height="66" rx="12" class="card"/>
+ <rect x="550" y="108" width="26" height="30" rx="4" fill="none" stroke="#2f80ed" stroke-width="2.2"/><path d="M556 116h14M556 124h14M556 132h10" stroke="#2f80ed" stroke-width="2"/>
+ <text x="593" y="130" class="item">LLM / Tool / RAG</text>
+ <rect x="815" y="92" width="270" height="66" rx="12" class="card"/>
+ <path d="M850 108l17 10v20l-17 10-17-10v-20zM833 118l17 10 17-10M850 128v20" fill="none" stroke="#2f80ed" stroke-width="2.2"/>
+ <text x="890" y="130" class="item">Dify / App Framework</text>
+</g>
+<path d="M640 185V210" class="line"/>
+<rect x="35" y="215" width="1210" height="130" rx="18" fill="#f4f1ff" stroke="#dad2ff"/>
+<rect x="35" y="215" width="135" height="130" rx="18" fill="#e8e2ff"/>
+<text x="102" y="287" text-anchor="middle" class="layer">采集层</text>
+<g>
+ <rect x="215" y="247" width="265" height="66" rx="12" class="card"/>
+ <circle cx="250" cy="280" r="15" fill="#f0ecff" stroke="#6d5ce8" stroke-width="2"/><path d="M240 282q10-20 20 0" fill="none" stroke="#6d5ce8" stroke-width="2"/>
+ <text x="282" y="285" class="item">OpenTelemetry SDK</text>
+ <rect x="505" y="247" width="310" height="66" rx="12" class="card"/>
+ <circle cx="540" cy="271" r="5" fill="#6d5ce8"/><circle cx="527" cy="289" r="5" fill="#6d5ce8"/><circle cx="553" cy="289" r="5" fill="#6d5ce8"/><path d="M540 276L529 285M540 276L551 285" stroke="#6d5ce8" stroke-width="2"/>
+ <text x="572" y="276" class="item">OpenInference</text><text x="572" y="296" class="sub">Instrumentation</text>
+ <rect x="840" y="247" width="245" height="66" rx="12" class="card"/>
+ <path d="M875 291v-24M865 277l10-10 10 10M858 293h34" fill="none" stroke="#6d5ce8" stroke-width="2.4"/>
+ <text x="910" y="276" class="item">OTLP Exporter</text><text x="910" y="296" class="sub">HTTP / gRPC</text>
+</g>
+<path d="M640 345V370" class="line"/>
+<rect x="35" y="375" width="1210" height="285" rx="18" fill="#ecfaf4" stroke="#c5ecd9"/>
+<rect x="35" y="375" width="135" height="285" rx="18" fill="#dcf5e9"/>
+<text x="102" y="525" text-anchor="middle" class="layer">平台层</text>
+<rect x="205" y="400" width="1000" height="68" rx="14" fill="#f9fffc" stroke="#cdebdc"/>
+<text x="225" y="425" class="group">接入模块</text>
+<rect x="380" y="410" width="300" height="46" rx="10" class="card"/>
+<path d="M408 444v-20M400 432l8-8 8 8M394 446h28" fill="none" stroke="#21a179" stroke-width="2.2"/>
+<text x="438" y="439" class="item">OTLP Receiver</text>
+<rect x="710" y="410" width="300" height="46" rx="10" class="card"/>
+<rect x="738" y="421" width="24" height="18" rx="3" fill="none" stroke="#21a179" stroke-width="2.2"/><path d="M744 427h12M744 433h12" stroke="#21a179" stroke-width="2"/>
+<text x="780" y="439" class="item">API</text>
+<rect x="205" y="480" width="1000" height="70" rx="14" fill="#f9fffc" stroke="#cdebdc"/>
+<text x="225" y="507" class="group">服务模块</text>
+<rect x="380" y="491" width="630" height="48" rx="10" class="card"/>
+<ellipse cx="425" cy="506" rx="24" ry="7" fill="#c4efdc" stroke="#21a179" stroke-width="2"/><rect x="401" y="506" width="48" height="18" fill="#d9f7e9" stroke="#21a179" stroke-width="2"/><ellipse cx="425" cy="524" rx="24" ry="7" fill="#d9f7e9" stroke="#21a179" stroke-width="2"/>
+<text x="475" y="521" class="item">Phoenix Server</text>
+<rect x="205" y="562" width="1000" height="78" rx="14" fill="#f9fffc" stroke="#cdebdc"/>
+<text x="225" y="591" class="group">能力模块</text>
+<g>
+ <rect x="340" y="575" width="145" height="50" rx="10" class="card"/><polyline points="360,610 374,594 388,604 402,588 418,601" fill="none" stroke="#21a179" stroke-width="2.6"/><text x="430" y="606" class="item">Trace</text>
+ <rect x="500" y="575" width="150" height="50" rx="10" class="card"/><rect x="520" y="588" width="23" height="23" rx="4" fill="none" stroke="#21a179" stroke-width="2.2"/><path d="M525 600l5 5 9-11" fill="none" stroke="#21a179" stroke-width="2.2"/><text x="555" y="606" class="item">Evaluation</text>
+ <rect x="665" y="575" width="195" height="50" rx="10" class="card"/><path d="M686 588h22v25h-22zM690 594h14M690 601h14" fill="none" stroke="#21a179" stroke-width="2.1"/><text x="720" y="606" class="item">Dataset / Experiment</text>
+ <rect x="875" y="575" width="155" height="50" rx="10" class="card"/><path d="M895 590h22v22h-22zM899 596h14M899 602h10" fill="none" stroke="#21a179" stroke-width="2.1"/><text x="930" y="606" class="item">Prompt</text>
+ <rect x="1045" y="575" width="135" height="50" rx="10" class="card"/><rect x="1063" y="589" width="23" height="18" rx="3" fill="none" stroke="#21a179" stroke-width="2.1"/><text x="1098" y="606" class="item">Web UI</text>
+</g>
+<path d="M640 660V684" class="line"/>
+<rect x="35" y="690" width="1210" height="80" rx="18" fill="#fff6e8" stroke="#f2d9ac"/>
+<rect x="35" y="690" width="135" height="80" rx="18" fill="#ffefd3"/>
+<text x="102" y="737" text-anchor="middle" class="layer">存储层</text>
+<g>
+ <rect x="350" y="706" width="240" height="48" rx="12" class="card"/>
+ <ellipse cx="390" cy="720" rx="23" ry="7" fill="#fff3e2" stroke="#f59e0b" stroke-width="2"/><rect x="367" y="720" width="46" height="16" fill="#fff8ef" stroke="#f59e0b" stroke-width="2"/><ellipse cx="390" cy="736" rx="23" ry="7" fill="#fff8ef" stroke="#f59e0b" stroke-width="2"/><text x="430" y="735" class="item">SQLite</text>
+ <rect x="640" y="706" width="260" height="48" rx="12" class="card"/>
+ <ellipse cx="682" cy="720" rx="23" ry="7" fill="#fff3e2" stroke="#f59e0b" stroke-width="2"/><rect x="659" y="720" width="46" height="16" fill="#fff8ef" stroke="#f59e0b" stroke-width="2"/><ellipse cx="682" cy="736" rx="23" ry="7" fill="#fff8ef" stroke="#f59e0b" stroke-width="2"/><text x="725" y="735" class="item">PostgreSQL</text>
+</g>
 </svg>
