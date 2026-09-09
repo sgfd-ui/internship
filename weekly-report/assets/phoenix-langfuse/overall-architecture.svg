@@ -1,10 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="300" viewBox="0 0 1100 300">
-<style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937}.t{font-size:18px;font-weight:700}.s{font-size:14px}.box{stroke:#8a94a6;stroke-width:1.4;rx:10}.line{stroke:#667085;stroke-width:1.6;fill:none;marker-end:url(#a)}</style>
-<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker></defs>
-<rect x="35" y="95" width="205" height="110" class="box" fill="#EEF4FF"/><text x="138" y="130" text-anchor="middle" class="t">应用层</text><text x="138" y="158" text-anchor="middle" class="s">Agent · Workflow</text><text x="138" y="182" text-anchor="middle" class="s">Tool · LLM · RAG</text>
-<rect x="295" y="95" width="205" height="110" class="box" fill="#EAF7F3"/><text x="398" y="130" text-anchor="middle" class="t">采集层</text><text x="398" y="158" text-anchor="middle" class="s">OpenTelemetry / SDK</text><text x="398" y="182" text-anchor="middle" class="s">Dify Monitoring</text>
-<rect x="555" y="70" width="235" height="160" class="box" fill="#F3EEFF"/><text x="673" y="110" text-anchor="middle" class="t">Phoenix / Langfuse</text><text x="673" y="140" text-anchor="middle" class="s">Trace 与调试</text><text x="673" y="166" text-anchor="middle" class="s">Evaluation</text><text x="673" y="192" text-anchor="middle" class="s">Dataset / Experiment / Prompt</text>
-<rect x="845" y="95" width="220" height="110" class="box" fill="#FFF5E8"/><text x="955" y="130" text-anchor="middle" class="t">研发使用</text><text x="955" y="158" text-anchor="middle" class="s">定位问题 · 看运行质量</text><text x="955" y="182" text-anchor="middle" class="s">评估与版本验证</text>
-<path d="M240 150 H295" class="line"/><path d="M500 150 H555" class="line"/><path d="M790 150 H845" class="line"/>
-<text x="550" y="270" class="s" text-anchor="middle">逻辑位置：平台位于应用运行链路之后，不参与业务决策，只接收可观测数据并提供工程分析能力。</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620">
+<defs>
+  <marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#7b8ba7"/></marker>
+  <style>
+    text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#172033}.title{font-size:24px;font-weight:700}.h{font-size:18px;font-weight:700}.m{font-size:14px}.s{font-size:12px;fill:#63708a}.panel{stroke-width:1.2}.card{fill:#fff;stroke:#d7dfeb;stroke-width:1}.line{stroke:#7b8ba7;stroke-width:2;fill:none;marker-end:url(#a)}
+  </style>
+</defs>
+<rect width="1280" height="620" fill="#fff"/>
+<text x="40" y="42" class="title">整体逻辑架构</text>
+<text x="40" y="68" class="m">Evaluation 平台位于应用运行链路之后，统一接收 Trace，并提供调试、评估与回归能力。</text>
+
+<!-- 应用 -->
+<rect x="38" y="110" width="250" height="430" rx="18" fill="#edf6ff" stroke="#b9d8f3" class="panel"/>
+<text x="62" y="145" class="h">业务应用</text><text x="62" y="167" class="s">Agent 应用与执行生态</text>
+<g>
+ <rect x="62" y="195" width="202" height="68" rx="10" class="card"/><circle cx="91" cy="229" r="13" fill="#d7ecff"/><rect x="83" y="221" width="16" height="13" rx="3" fill="none" stroke="#1976d2" stroke-width="2"/><circle cx="88" cy="227" r="1.6" fill="#1976d2"/><circle cx="95" cy="227" r="1.6" fill="#1976d2"/><path d="M91 216v5M81 226h-5M101 226h5" stroke="#1976d2" stroke-width="2"/><text x="118" y="225" class="m">Agent</text><text x="118" y="245" class="s">智能体应用</text>
+ <rect x="62" y="277" width="202" height="68" rx="10" class="card"/><circle cx="91" cy="311" r="13" fill="#d7ecff"/><circle cx="91" cy="298" r="5" fill="none" stroke="#1976d2" stroke-width="2"/><circle cx="80" cy="321" r="5" fill="none" stroke="#1976d2" stroke-width="2"/><circle cx="102" cy="321" r="5" fill="none" stroke="#1976d2" stroke-width="2"/><path d="M91 303v8M91 311l-11 5M91 311l11 5" stroke="#1976d2" stroke-width="2"/><text x="118" y="307" class="m">Workflow</text><text x="118" y="327" class="s">流程与编排</text>
+ <rect x="62" y="359" width="202" height="68" rx="10" class="card"/><circle cx="91" cy="393" r="13" fill="#d7ecff"/><path d="M84 401l14-14M85 386l4-4 5 5-4 4M93 398l4 4" fill="none" stroke="#1976d2" stroke-width="2" stroke-linecap="round"/><text x="118" y="389" class="m">Tool / MCP</text><text x="118" y="409" class="s">外部工具</text>
+ <rect x="62" y="441" width="202" height="68" rx="10" class="card"/><circle cx="91" cy="475" r="13" fill="#d7ecff"/><rect x="83" y="464" width="16" height="22" rx="3" fill="none" stroke="#1976d2" stroke-width="2"/><path d="M86 470h10M86 475h8M86 480h9" stroke="#1976d2" stroke-width="2"/><text x="118" y="471" class="m">LLM / RAG</text><text x="118" y="491" class="s">模型与知识检索</text>
+</g>
+
+<!-- 采集 -->
+<rect x="330" y="110" width="250" height="430" rx="18" fill="#f3f0ff" stroke="#d1c9f6" class="panel"/>
+<text x="354" y="145" class="h">采集层</text><text x="354" y="167" class="s">多种方式接入运行数据</text>
+<g>
+ <rect x="354" y="195" width="202" height="88" rx="10" class="card"/><circle cx="390" cy="239" r="20" fill="#ece8ff"/><path d="M380 245c9-14 14-14 22-3M384 232c5-8 10-8 14-3M390 224c2-3 5-3 7-1" fill="none" stroke="#5b4bd8" stroke-width="3" stroke-linecap="round"/><text x="420" y="231" class="m">OpenTelemetry</text><text x="420" y="252" class="s">标准协议采集</text>
+ <rect x="354" y="301" width="202" height="88" rx="10" class="card"/><circle cx="390" cy="345" r="20" fill="#ece8ff"/><path d="M390 329l15 9v16l-15 9-15-9v-16zM375 338l15 9 15-9M390 347v16" fill="none" stroke="#5b4bd8" stroke-width="2.4"/><text x="420" y="337" class="m">SDK / Integration</text><text x="420" y="358" class="s">框架与语言集成</text>
+ <rect x="354" y="407" width="202" height="88" rx="10" class="card"/><circle cx="390" cy="451" r="20" fill="#ece8ff"/><rect x="381" y="438" width="18" height="26" rx="3" fill="none" stroke="#5b4bd8" stroke-width="2.2"/><path d="M385 444h10M385 450h10M385 456h7" stroke="#5b4bd8" stroke-width="2"/><text x="420" y="443" class="m">Dify Monitoring</text><text x="420" y="464" class="s">平台原生接入</text>
+</g>
+
+<!-- Evaluation平台 -->
+<rect x="622" y="110" width="340" height="430" rx="18" fill="#ecfbf5" stroke="#aee3cc" class="panel"/>
+<text x="646" y="145" class="h">Evaluation 平台</text><text x="646" y="167" class="s">统一的可观测、评估与回归平台</text>
+<ellipse cx="792" cy="222" rx="58" ry="18" fill="#bfe8d8"/><rect x="734" y="222" width="116" height="55" fill="#3bb28a"/><ellipse cx="792" cy="222" rx="58" ry="18" fill="#57c5a2"/><ellipse cx="792" cy="277" rx="58" ry="18" fill="#2f9f7d"/><path d="M734 240c0 10 116 10 116 0M734 258c0 10 116 10 116 0" stroke="#d7f5e9" stroke-width="2" fill="none"/>
+<g>
+ <rect x="648" y="322" width="135" height="78" rx="10" class="card"/><path d="M672 369l12-16 13 11 12-20" fill="none" stroke="#1d9f7a" stroke-width="3"/><circle cx="672" cy="369" r="4" fill="#1d9f7a"/><circle cx="684" cy="353" r="4" fill="#1d9f7a"/><circle cx="697" cy="364" r="4" fill="#1d9f7a"/><circle cx="709" cy="344" r="4" fill="#1d9f7a"/><text x="722" y="351" class="m">Trace</text><text x="722" y="372" class="s">链路追踪</text>
+ <rect x="801" y="322" width="135" height="78" rx="10" class="card"/><rect x="821" y="341" width="25" height="25" rx="4" fill="none" stroke="#1d9f7a" stroke-width="2.5"/><path d="M827 353l5 5 9-11" fill="none" stroke="#1d9f7a" stroke-width="2.5"/><text x="852" y="351" class="m">Evaluation</text><text x="852" y="372" class="s">效果评估</text>
+ <rect x="648" y="414" width="135" height="78" rx="10" class="card"/><ellipse cx="674" cy="440" rx="12" ry="5" fill="none" stroke="#1d9f7a" stroke-width="2.2"/><path d="M662 440v22c0 7 24 7 24 0v-22M662 451c0 7 24 7 24 0" fill="none" stroke="#1d9f7a" stroke-width="2.2"/><text x="700" y="443" class="m">Dataset</text><text x="700" y="464" class="s">测试集沉淀</text>
+ <rect x="801" y="414" width="135" height="78" rx="10" class="card"/><path d="M822 438h24M828 438v10l-9 16h30l-9-16v-10" fill="none" stroke="#1d9f7a" stroke-width="2.2"/><text x="852" y="443" class="m">Experiment</text><text x="852" y="464" class="s">版本验证</text>
+</g>
+
+<!-- 研发使用 -->
+<rect x="1004" y="110" width="238" height="430" rx="18" fill="#fff7ed" stroke="#f1d6ae" class="panel"/>
+<text x="1028" y="145" class="h">研发使用</text><text x="1028" y="167" class="s">提升开发与迭代效率</text>
+<g>
+ <rect x="1028" y="195" width="190" height="68" rx="10" class="card"/><circle cx="1058" cy="229" r="11" fill="none" stroke="#f59e0b" stroke-width="3"/><path d="M1066 237l10 10" stroke="#f59e0b" stroke-width="3"/><text x="1090" y="225" class="m">调试定位</text><text x="1090" y="245" class="s">快速发现问题</text>
+ <rect x="1028" y="277" width="190" height="68" rx="10" class="card"/><path d="M1048 325v-14M1058 325v-26M1068 325v-36" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/><text x="1090" y="307" class="m">运行分析</text><text x="1090" y="327" class="s">耗时 / 成本 / 错误</text>
+ <rect x="1028" y="359" width="190" height="68" rx="10" class="card"/><path d="M1058 373l5 10 11 1-8 8 2 11-10-5-10 5 2-11-8-8 11-1z" fill="#f59e0b"/><text x="1090" y="389" class="m">质量评估</text><text x="1090" y="409" class="s">评分与失败 Case</text>
+ <rect x="1028" y="441" width="190" height="68" rx="10" class="card"/><path d="M1048 469a13 13 0 1 1 2 10M1048 469h10v-10" fill="none" stroke="#f59e0b" stroke-width="2.5"/><text x="1090" y="471" class="m">版本回归</text><text x="1090" y="491" class="s">对比与验证</text>
+</g>
+
+<path d="M288 325h42" class="line"/><path d="M580 325h42" class="line"/><path d="M962 325h42" class="line"/>
+<text x="640" y="588" text-anchor="middle" class="m">运行数据 → 统一采集 → Trace / Evaluation / Dataset / Experiment → 调试与迭代</text>
 </svg>
