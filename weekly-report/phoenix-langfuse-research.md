@@ -38,7 +38,7 @@
 
 ## 二、架构对比
 
-本章从服务组织、后台处理、存储架构和扩展方式比较两个平台的整体架构，不展开具体代码目录、框架或数据库访问实现。
+本章统一按 **展示层、接口层、服务层、存储与基础设施层** 整理两个项目；每一层内部再按模块拆分，重点看平台自身如何组织，不展开具体代码目录和框架实现。
 
 ### 2.1 Phoenix 架构
 
@@ -52,13 +52,13 @@
 
 | 架构维度 | Phoenix | Langfuse |
 | --- | --- | --- |
-| 整体形态 | 以单一核心服务为中心，平台能力集中 | Web 服务与后台 Worker 分离，整体分层更明确 |
-| 接入方式 | Web、API 和 Trace 数据统一进入核心平台 | Web、API 和 Trace 数据进入平台后，由不同服务承担查询与后台处理 |
-| 服务组织 | Trace、Evaluation、Dataset、Experiment、Prompt 等能力集中在核心服务内部 | 在线查询与配置集中在 Web 服务，异步执行由 Worker 独立承担 |
-| 后台处理 | 数据写入、实验执行、成本计算和清理任务与核心服务一起运行 | 数据摄取、Evaluation 和其他后台任务由独立 Worker 处理 |
-| 存储架构 | 以统一关系型数据库作为主要存储底座 | 按业务数据、分析数据、缓存 / 队列和文件对象拆分多类存储 |
-| 扩展方式 | 主要扩展核心服务实例和数据库能力 | Web、Worker 和不同存储组件可以分别扩展 |
-| 架构复杂度 | 组件少，部署关系更简单 | 组件更多，职责拆分更细，部署和运维关系更复杂 |
+| 整体组织 | 以 Phoenix Server 为核心，接口、核心服务和后台执行能力集中在同一运行组件内 | 服务层拆成 Web Service 与 Worker，在线服务和后台处理职责分开 |
+| 接口组织 | REST、GraphQL 和 Trace 数据接收统一由 Phoenix Server 承接 | Web / Public API 与数据摄取接口统一进入平台，再由不同服务继续处理 |
+| 服务组织 | Trace、Evaluation、Dataset / Experiment、Prompt、Dashboard 等服务模块集中部署 | 核心在线服务由 Web Service 承担，异步处理由 Worker 承担 |
+| 后台执行 | 数据写入、实验执行、成本计算和后台维护与核心服务一起运行 | 数据摄取、Evaluation 和异步任务由独立 Worker 运行 |
+| 存储与基础设施 | 以 SQLite 或 PostgreSQL 作为主要数据底座 | PostgreSQL、ClickHouse、Redis / Valkey、Object Storage 按职责拆分 |
+| 扩展方式 | 主要围绕 Phoenix Server 与数据库扩展 | Web、Worker 和不同存储组件可以分别扩展 |
+| 架构复杂度 | 运行组件少，部署关系更集中 | 运行组件和基础设施更多，职责拆分更细 |
 
 ---
 
