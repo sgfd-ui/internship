@@ -1,86 +1,100 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="840" viewBox="0 0 1280 840">
   <defs>
     <style>
       text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#172033}
-      .layer{font-size:22px;font-weight:700}
-      .group{font-size:18px;font-weight:700}
-      .name{font-size:16px;font-weight:700}
+      .layer{font-size:21px;font-weight:700}
+      .group{font-size:17px;font-weight:700}
+      .name{font-size:15px;font-weight:700}
+      .sub{font-size:12px;fill:#667085}
       .card{fill:#fff;stroke:#d7dde7;stroke-width:1.2}
       .serviceFrame{fill:#fbfdfc;stroke:#9ed8ba;stroke-width:1.6}
       .coreBox{fill:#f9fffc;stroke:#8fd1ad;stroke-width:1.3}
       .bgBox{fill:#fffaf2;stroke:#edc675;stroke-width:1.3}
     </style>
   </defs>
-  <rect width="1280" height="760" fill="#fff"/>
-
-  <!-- 展示层 -->
-  <rect x="30" y="24" width="1220" height="108" rx="18" fill="#f2efff" stroke="#d8d0ff"/>
-  <rect x="30" y="24" width="165" height="108" rx="18" fill="#e8e2ff"/>
-  <path d="M62 55h38v28H62zM69 90h24M81 83v7" fill="none" stroke="#4c2bbf" stroke-width="3"/>
-  <text x="125" y="84" class="layer">展示层</text>
-  <rect x="225" y="45" width="995" height="66" rx="12" class="card"/>
-  <path d="M260 62h34v25h-34zM265 92h24M277 87v5" fill="none" stroke="#7558d8" stroke-width="2.3"/>
-  <text x="725" y="86" text-anchor="middle" class="name">Web UI</text>
-
-  <!-- 接口层 -->
-  <rect x="30" y="150" width="1220" height="116" rx="18" fill="#eef7ff" stroke="#cde4fa"/>
-  <rect x="30" y="150" width="165" height="116" rx="18" fill="#dceeff"/>
-  <circle cx="68" cy="194" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
-  <circle cx="53" cy="222" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
-  <circle cx="83" cy="222" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
-  <path d="M65 202l-9 12M71 202l9 12" stroke="#1f5fbf" stroke-width="3"/>
-  <text x="125" y="214" class="layer">接口层</text>
-  <rect x="225" y="174" width="295" height="68" rx="12" class="card"/>
-  <text x="372" y="215" text-anchor="middle" class="name">REST API</text>
-  <rect x="545" y="174" width="295" height="68" rx="12" class="card"/>
-  <text x="692" y="215" text-anchor="middle" class="name">GraphQL API</text>
-  <rect x="865" y="174" width="355" height="68" rx="12" class="card"/>
-  <text x="1042" y="215" text-anchor="middle" class="name">Trace 接收</text>
-
-  <!-- 服务层 -->
-  <rect x="30" y="286" width="1220" height="342" rx="18" fill="#ecfaf4" stroke="#c7ead8"/>
-  <rect x="30" y="286" width="165" height="342" rx="18" fill="#dcf5e9"/>
-  <circle cx="70" cy="441" r="21" fill="none" stroke="#0c6b50" stroke-width="7"/>
-  <path d="M70 406v12M70 464v12M35 441h12M93 441h12M45 416l9 9M86 457l9 9M95 416l-9 9M54 457l-9 9" stroke="#0c6b50" stroke-width="6"/>
-  <text x="125" y="467" class="layer">服务层</text>
-
-  <rect x="220" y="310" width="1000" height="292" rx="16" class="serviceFrame"/>
-  <text x="250" y="342" class="group">Phoenix 服务</text>
-
-  <rect x="245" y="360" width="615" height="215" rx="14" class="coreBox"/>
-  <text x="267" y="390" class="group">核心服务模块</text>
-  <rect x="267" y="408" width="175" height="60" rx="10" class="card"/>
-  <text x="354" y="444" text-anchor="middle" class="name">Trace / Session</text>
-  <rect x="455" y="408" width="175" height="60" rx="10" class="card"/>
-  <text x="542" y="444" text-anchor="middle" class="name">Evaluation</text>
-  <rect x="643" y="408" width="195" height="60" rx="10" class="card"/>
-  <text x="740" y="444" text-anchor="middle" class="name">Dataset / Experiment</text>
-  <rect x="267" y="486" width="270" height="60" rx="10" class="card"/>
-  <text x="402" y="522" text-anchor="middle" class="name">Prompt / Playground</text>
-  <rect x="553" y="486" width="135" height="60" rx="10" class="card"/>
-  <text x="620" y="522" text-anchor="middle" class="name">Cost / Model</text>
-  <rect x="703" y="486" width="135" height="60" rx="10" class="card"/>
-  <text x="770" y="522" text-anchor="middle" class="name">System</text>
-
-  <rect x="880" y="360" width="315" height="215" rx="14" class="bgBox"/>
-  <text x="902" y="390" class="group">后台执行模块</text>
-  <rect x="902" y="408" width="130" height="60" rx="10" class="card"/>
-  <text x="967" y="444" text-anchor="middle" class="name">Trace 写入</text>
-  <rect x="1045" y="408" width="128" height="60" rx="10" class="card"/>
-  <text x="1109" y="444" text-anchor="middle" class="name">实验执行</text>
-  <rect x="902" y="486" width="130" height="60" rx="10" class="card"/>
-  <text x="967" y="522" text-anchor="middle" class="name">成本计算</text>
-  <rect x="1045" y="486" width="128" height="60" rx="10" class="card"/>
-  <text x="1109" y="522" text-anchor="middle" class="name">数据清理</text>
-
-  <!-- 存储层 -->
-  <rect x="30" y="648" width="1220" height="88" rx="18" fill="#fff1f3" stroke="#f2cbd2"/>
-  <rect x="30" y="648" width="165" height="88" rx="18" fill="#ffe1e6"/>
-  <ellipse cx="67" cy="678" rx="21" ry="8" fill="none" stroke="#9a1630" stroke-width="3"/>
-  <path d="M46 678v24c0 5 9 8 21 8s21-3 21-8v-24M46 690c0 5 9 8 21 8s21-3 21-8" fill="none" stroke="#9a1630" stroke-width="3"/>
-  <text x="125" y="700" class="layer">存储层</text>
-  <rect x="300" y="664" width="360" height="56" rx="12" class="card"/>
-  <text x="480" y="698" text-anchor="middle" class="name">SQLite</text>
-  <rect x="690" y="664" width="390" height="56" rx="12" class="card"/>
-  <text x="885" y="698" text-anchor="middle" class="name">PostgreSQL</text>
+  <rect width="1280" height="840" fill="#fff"/>
+  <rect x="30" y="24" width="1220" height="126" rx="18" fill="#f2efff" stroke="#d8d0ff"/>
+  <rect x="30" y="24" width="170" height="126" rx="18" fill="#e8e2ff"/>
+  <g transform="translate(115 87)">
+    <path d="M-22 -30h44v30h-44zM-14 8h28M0 0v8" fill="none" stroke="#4c2bbf" stroke-width="3"/>
+    <text x="0" y="35" text-anchor="middle" class="layer">展示层</text>
+  </g>
+  <rect x="230" y="47" width="990" height="80" rx="12" class="card"/>
+  <path d="M267 65h34v25h-34zM272 96h24M284 90v6" fill="none" stroke="#7558d8" stroke-width="2.3"/>
+  <text x="725" y="79" text-anchor="middle" class="name">Web UI</text>
+  <text x="725" y="104" text-anchor="middle" class="sub">Trace 查看 ｜ 实验对比 ｜ Prompt 调试 ｜ 数据看板</text>
+  <rect x="30" y="168" width="1220" height="144" rx="18" fill="#eef7ff" stroke="#cde4fa"/>
+  <rect x="30" y="168" width="170" height="144" rx="18" fill="#dceeff"/>
+  <g transform="translate(115 240)">
+    <circle cx="0" cy="-27" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
+    <circle cx="-18" cy="4" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
+    <circle cx="18" cy="4" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
+    <path d="M-4 -19l-11 17M4 -19l11 17" stroke="#1f5fbf" stroke-width="3"/>
+    <text x="0" y="40" text-anchor="middle" class="layer">接口层</text>
+  </g>
+  <rect x="230" y="196" width="300" height="88" rx="12" class="card"/>
+  <text x="380" y="228" text-anchor="middle" class="name">REST API</text>
+  <text x="380" y="254" text-anchor="middle" class="sub">平台开放接口</text>
+  <rect x="555" y="196" width="300" height="88" rx="12" class="card"/>
+  <text x="705" y="228" text-anchor="middle" class="name">GraphQL API</text>
+  <text x="705" y="254" text-anchor="middle" class="sub">页面查询与交互接口</text>
+  <rect x="880" y="196" width="340" height="88" rx="12" class="card"/>
+  <text x="1050" y="228" text-anchor="middle" class="name">Trace 接收</text>
+  <text x="1050" y="254" text-anchor="middle" class="sub">接收 Trace / Span 数据</text>
+  <rect x="30" y="330" width="1220" height="360" rx="18" fill="#ecfaf4" stroke="#c7ead8"/>
+  <rect x="30" y="330" width="170" height="360" rx="18" fill="#dcf5e9"/>
+  <g transform="translate(115 510)">
+    <circle cx="0" cy="-28" r="21" fill="none" stroke="#0c6b50" stroke-width="7"/>
+    <path d="M0 -63v12M0 -5v12M-35 -28h12M23 -28h12M-25 -53l9 9M16 -12l9 9M25 -53l-9 9M-16 -12l-9 9" stroke="#0c6b50" stroke-width="6"/>
+    <text x="0" y="36" text-anchor="middle" class="layer">服务层</text>
+  </g>
+  <rect x="225" y="354" width="995" height="312" rx="16" class="serviceFrame"/>
+  <text x="252" y="386" class="group">Phoenix 服务</text>
+  <rect x="250" y="406" width="630" height="232" rx="14" class="coreBox"/>
+  <text x="274" y="438" class="group">核心服务模块</text>
+  <rect x="274" y="458" width="180" height="76" rx="10" class="card"/>
+  <text x="364" y="485" text-anchor="middle" class="name">Trace / Session</text>
+  <text x="364" y="510" text-anchor="middle" class="sub">调用链与会话管理</text>
+  <rect x="468" y="458" width="180" height="76" rx="10" class="card"/>
+  <text x="558" y="485" text-anchor="middle" class="name">Evaluation</text>
+  <text x="558" y="510" text-anchor="middle" class="sub">评估与标注</text>
+  <rect x="662" y="458" width="194" height="76" rx="10" class="card"/>
+  <text x="759" y="485" text-anchor="middle" class="name">Dataset / Experiment</text>
+  <text x="759" y="510" text-anchor="middle" class="sub">数据集与实验管理</text>
+  <rect x="274" y="550" width="245" height="64" rx="10" class="card"/>
+  <text x="396" y="575" text-anchor="middle" class="name">Prompt / Playground</text>
+  <text x="396" y="598" text-anchor="middle" class="sub">提示词管理与调试</text>
+  <rect x="533" y="550" width="150" height="64" rx="10" class="card"/>
+  <text x="608" y="575" text-anchor="middle" class="name">Cost / Model</text>
+  <text x="608" y="598" text-anchor="middle" class="sub">成本与模型统计</text>
+  <rect x="697" y="550" width="159" height="64" rx="10" class="card"/>
+  <text x="776" y="575" text-anchor="middle" class="name">System</text>
+  <text x="776" y="598" text-anchor="middle" class="sub">系统配置与管理</text>
+  <rect x="900" y="406" width="295" height="232" rx="14" class="bgBox"/>
+  <text x="924" y="438" class="group">后台执行模块</text>
+  <rect x="924" y="458" width="120" height="76" rx="10" class="card"/>
+  <text x="984" y="485" text-anchor="middle" class="name">Trace 写入</text>
+  <text x="984" y="510" text-anchor="middle" class="sub">批量落库</text>
+  <rect x="1054" y="458" width="117" height="76" rx="10" class="card"/>
+  <text x="1112" y="485" text-anchor="middle" class="name">实验执行</text>
+  <text x="1112" y="510" text-anchor="middle" class="sub">运行实验任务</text>
+  <rect x="924" y="550" width="120" height="64" rx="10" class="card"/>
+  <text x="984" y="575" text-anchor="middle" class="name">成本计算</text>
+  <text x="984" y="598" text-anchor="middle" class="sub">统计调用成本</text>
+  <rect x="1054" y="550" width="117" height="64" rx="10" class="card"/>
+  <text x="1112" y="575" text-anchor="middle" class="name">数据清理</text>
+  <text x="1112" y="598" text-anchor="middle" class="sub">后台维护任务</text>
+  <rect x="30" y="708" width="1220" height="108" rx="18" fill="#fff1f3" stroke="#f2cbd2"/>
+  <rect x="30" y="708" width="170" height="108" rx="18" fill="#ffe1e6"/>
+  <g transform="translate(115 762)">
+    <ellipse cx="0" cy="-25" rx="23" ry="8" fill="none" stroke="#9a1630" stroke-width="3"/>
+    <path d="M-23 -25v24c0 5 10 8 23 8s23-3 23-8v-24M-23 -13c0 5 10 8 23 8s23-3 23-8" fill="none" stroke="#9a1630" stroke-width="3"/>
+    <text x="0" y="41" text-anchor="middle" class="layer">存储层</text>
+  </g>
+  <rect x="300" y="728" width="350" height="68" rx="12" class="card"/>
+  <text x="475" y="756" text-anchor="middle" class="name">SQLite</text>
+  <text x="475" y="780" text-anchor="middle" class="sub">本地关系型存储</text>
+  <rect x="680" y="728" width="400" height="68" rx="12" class="card"/>
+  <text x="880" y="756" text-anchor="middle" class="name">PostgreSQL</text>
+  <text x="880" y="780" text-anchor="middle" class="sub">生产关系型存储</text>
 </svg>
