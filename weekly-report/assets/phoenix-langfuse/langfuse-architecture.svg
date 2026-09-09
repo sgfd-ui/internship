@@ -1,83 +1,82 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="870" viewBox="0 0 1280 870">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="860" viewBox="0 0 1280 860">
 <defs>
   <style>
     text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#172033}
-    .layer{font-size:20px;font-weight:700}.group{font-size:15px;font-weight:700}.name{font-size:16px;font-weight:700}.sub{font-size:12px;fill:#667085}.route{font-size:12px;font-weight:700;fill:#6d5ce8}.card{fill:#fff;stroke:#d5dce7;stroke-width:1.2}
+    .layer{font-size:19px;font-weight:700}.group{font-size:14px;font-weight:700}.name{font-size:16px;font-weight:700}.sub{font-size:12px;fill:#667085}.card{fill:#fff;stroke:#d6dde8;stroke-width:1.2}
   </style>
 </defs>
-<rect width="1280" height="870" fill="#fff"/>
-<rect x="35" y="25" width="1210" height="120" rx="18" fill="#eef6ff" stroke="#cce2ff"/>
-<rect x="35" y="25" width="135" height="120" rx="18" fill="#dceeff"/>
-<text x="102" y="92" text-anchor="middle" class="layer">应用层</text>
+<rect width="1280" height="860" fill="#fff"/>
+<rect x="35" y="25" width="1210" height="130" rx="18" fill="#eef6ff" stroke="#cce2ff"/>
+<rect x="35" y="25" width="135" height="130" rx="18" fill="#dceeff"/>
+<text x="102" y="97" text-anchor="middle" class="layer">接口层</text>
 <g>
-  <rect x="220" y="52" width="260" height="66" rx="12" class="card"/>
-  <circle cx="255" cy="85" r="14" fill="#e8f2ff" stroke="#2f80ed" stroke-width="2"/>
-  <circle cx="249" cy="83" r="2.4" fill="#2f80ed"/><circle cx="255" cy="77" r="2.4" fill="#2f80ed"/><circle cx="261" cy="83" r="2.4" fill="#2f80ed"/>
-  <text x="290" y="91" class="name">Agent / Workflow</text>
-  <rect x="510" y="52" width="260" height="66" rx="12" class="card"/>
-  <rect x="546" y="68" width="25" height="30" rx="4" fill="none" stroke="#2f80ed" stroke-width="2.2"/>
-  <path d="M552 76h13M552 84h13M552 92h9" stroke="#2f80ed" stroke-width="2"/>
-  <text x="590" y="91" class="name">LLM / Tool / RAG</text>
-  <rect x="800" y="52" width="260" height="66" rx="12" class="card"/>
-  <path d="M837 68l17 10v20l-17 10-17-10V78zM820 78l17 10 17-10M837 88v20" fill="none" stroke="#2f80ed" stroke-width="2.2"/>
-  <text x="880" y="91" class="name">Dify / App Framework</text>
+  <rect x="195" y="52" width="220" height="76" rx="12" class="card"/>
+  <rect x="222" y="70" width="30" height="23" rx="3" fill="none" stroke="#2f80ed" stroke-width="2.2"/><line x1="228" y1="99" x2="246" y2="99" stroke="#2f80ed" stroke-width="2.2"/>
+  <text x="272" y="82" class="name">Web UI</text><text x="272" y="103" class="sub">Next.js / React</text>
+  <rect x="435" y="52" width="220" height="76" rx="12" class="card"/>
+  <circle cx="470" cy="84" r="15" fill="none" stroke="#2f80ed" stroke-width="2.2"/><path d="M462 84h16M470 76v16" stroke="#2f80ed" stroke-width="2"/>
+  <text x="502" y="82" class="name">tRPC API</text><text x="502" y="103" class="sub">Web 内部类型安全 API</text>
+  <rect x="675" y="52" width="220" height="76" rx="12" class="card"/>
+  <rect x="703" y="69" width="28" height="28" rx="5" fill="none" stroke="#2f80ed" stroke-width="2.2"/><path d="M710 77h14M710 84h14M710 91h10" stroke="#2f80ed" stroke-width="2"/>
+  <text x="750" y="82" class="name">Public REST API</text><text x="750" y="103" class="sub">SDK / 外部系统接口</text>
+  <rect x="915" y="52" width="260" height="76" rx="12" class="card"/>
+  <path d="M946 96V73M936 82l10-10 10 10M930 99h32" fill="none" stroke="#2f80ed" stroke-width="2.3"/>
+  <text x="985" y="82" class="name">Ingestion / OTLP</text><text x="985" y="103" class="sub">Trace / Event 接收入口</text>
 </g>
-<rect x="35" y="175" width="1210" height="245" rx="18" fill="#f4f1ff" stroke="#dad2ff"/>
-<rect x="35" y="175" width="135" height="245" rx="18" fill="#e8e2ff"/>
-<text x="102" y="305" text-anchor="middle" class="layer">采集层</text>
-<rect x="190" y="205" width="315" height="180" rx="14" fill="#faf9ff" stroke="#d9d2ff"/>
-<text x="210" y="232" class="group">① 数据捕获模块</text>
-<rect x="220" y="250" width="255" height="50" rx="10" class="card"/>
-<text x="348" y="281" text-anchor="middle" class="name">Langfuse SDK / Integrations</text>
-<text x="210" y="320" class="route">或</text>
-<rect x="220" y="330" width="255" height="50" rx="10" class="card"/>
-<text x="348" y="361" text-anchor="middle" class="name">OTel Instrumentation</text>
-<rect x="530" y="205" width="315" height="180" rx="14" fill="#faf9ff" stroke="#d9d2ff"/>
-<text x="550" y="232" class="group">② 数据标准化模块</text>
-<rect x="560" y="250" width="255" height="50" rx="10" class="card"/>
-<text x="688" y="281" text-anchor="middle" class="name">Langfuse Event</text>
-<text x="550" y="320" class="route">或</text>
-<rect x="560" y="330" width="255" height="50" rx="10" class="card"/>
-<text x="688" y="361" text-anchor="middle" class="name">OpenTelemetry SDK</text>
-<rect x="870" y="205" width="335" height="180" rx="14" fill="#faf9ff" stroke="#d9d2ff"/>
-<text x="890" y="232" class="group">③ 数据上报模块</text>
-<rect x="900" y="250" width="275" height="50" rx="10" class="card"/>
-<text x="1038" y="281" text-anchor="middle" class="name">Ingestion API Client</text>
-<text x="890" y="320" class="route">或</text>
-<rect x="900" y="330" width="275" height="50" rx="10" class="card"/>
-<text x="1038" y="351" text-anchor="middle" class="name">OTLP Exporter</text>
-<text x="1038" y="368" text-anchor="middle" class="sub">HTTP / gRPC</text>
-<rect x="35" y="450" width="1210" height="300" rx="18" fill="#ecfaf4" stroke="#c5ecd9"/>
-<rect x="35" y="450" width="135" height="300" rx="18" fill="#dcf5e9"/>
-<text x="102" y="607" text-anchor="middle" class="layer">平台层</text>
-<rect x="205" y="472" width="1000" height="62" rx="14" fill="#f9fffc" stroke="#cdebdc"/>
-<text x="225" y="498" class="group">接收模块</text>
-<rect x="390" y="481" width="260" height="44" rx="10" class="card"/>
-<text x="520" y="510" text-anchor="middle" class="name">Ingestion API</text>
-<rect x="690" y="481" width="260" height="44" rx="10" class="card"/>
-<text x="820" y="510" text-anchor="middle" class="name">OTLP Endpoint</text>
-<rect x="205" y="547" width="1000" height="70" rx="14" fill="#f9fffc" stroke="#cdebdc"/>
-<text x="225" y="575" class="group">服务模块</text>
-<rect x="390" y="558" width="260" height="48" rx="10" class="card"/>
-<text x="520" y="588" text-anchor="middle" class="name">Web / API</text>
-<rect x="690" y="558" width="260" height="48" rx="10" class="card"/>
-<text x="820" y="588" text-anchor="middle" class="name">Worker</text>
-<rect x="205" y="630" width="1000" height="100" rx="14" fill="#f9fffc" stroke="#cdebdc"/>
-<text x="225" y="659" class="group">功能模块</text>
+<rect x="35" y="175" width="1210" height="165" rx="18" fill="#f4f1ff" stroke="#dad2ff"/>
+<rect x="35" y="175" width="135" height="165" rx="18" fill="#e8e2ff"/>
+<text x="102" y="265" text-anchor="middle" class="layer">核心服务层</text>
 <g>
-  <rect x="315" y="673" width="155" height="42" rx="10" class="card"/><text x="393" y="700" text-anchor="middle" class="name">Trace</text>
-  <rect x="485" y="673" width="165" height="42" rx="10" class="card"/><text x="568" y="700" text-anchor="middle" class="name">Score / Eval</text>
-  <rect x="665" y="673" width="190" height="42" rx="10" class="card"/><text x="760" y="700" text-anchor="middle" class="name">Dataset / Experiment</text>
-  <rect x="870" y="673" width="135" height="42" rx="10" class="card"/><text x="938" y="700" text-anchor="middle" class="name">Prompt</text>
-  <rect x="1020" y="673" width="160" height="42" rx="10" class="card"/><text x="1100" y="700" text-anchor="middle" class="name">Dashboard</text>
+  <rect x="215" y="220" width="285" height="92" rx="12" class="card"/>
+  <rect x="245" y="240" width="34" height="25" rx="4" fill="none" stroke="#6d5ce8" stroke-width="2.2"/><path d="M252 247h20M252 254h16" stroke="#6d5ce8" stroke-width="2"/>
+  <text x="298" y="250" class="name">Langfuse Web</text><text x="298" y="273" class="sub">Next.js UI、tRPC、Public API</text>
+  <rect x="515" y="220" width="285" height="92" rx="12" class="card"/>
+  <path d="M545 241l18 10v20l-18 10-18-10v-20zM527 251l18 10 18-10" fill="none" stroke="#6d5ce8" stroke-width="2.2"/>
+  <text x="585" y="250" class="name">@langfuse/shared</text><text x="585" y="273" class="sub">业务服务 · Domain · Repository</text>
+  <rect x="815" y="220" width="350" height="92" rx="12" class="card"/>
+  <circle cx="850" cy="257" r="14" fill="none" stroke="#6d5ce8" stroke-width="2.2"/><path d="M850 239v7M850 268v7M832 257h7M861 257h7" stroke="#6d5ce8" stroke-width="2"/>
+  <text x="885" y="250" class="name">Langfuse Worker</text><text x="885" y="273" class="sub">Express + BullMQ，处理异步任务</text>
 </g>
-<rect x="35" y="780" width="1210" height="75" rx="18" fill="#fff6e8" stroke="#f2d9ac"/>
-<rect x="35" y="780" width="135" height="75" rx="18" fill="#ffefd3"/>
-<text x="102" y="824" text-anchor="middle" class="layer">存储层</text>
+<rect x="35" y="360" width="1210" height="165" rx="18" fill="#ecfaf4" stroke="#c5ecd9"/>
+<rect x="35" y="360" width="135" height="165" rx="18" fill="#dcf5e9"/>
+<text x="102" y="450" text-anchor="middle" class="layer">业务模块层</text>
 <g>
-  <rect x="205" y="793" width="220" height="50" rx="12" class="card"/><text x="315" y="823" text-anchor="middle" class="name">PostgreSQL</text>
-  <rect x="445" y="793" width="220" height="50" rx="12" class="card"/><text x="555" y="823" text-anchor="middle" class="name">ClickHouse</text>
-  <rect x="685" y="793" width="220" height="50" rx="12" class="card"/><text x="795" y="823" text-anchor="middle" class="name">Redis / Valkey</text>
-  <rect x="925" y="793" width="260" height="50" rx="12" class="card"/><text x="1055" y="823" text-anchor="middle" class="name">Object Storage</text>
+  <rect x="190" y="395" width="195" height="92" rx="12" class="card"/>
+  <polyline points="265,430 279,414 293,424 307,408 323,421" fill="none" stroke="#21a179" stroke-width="2.7"/>
+  <text x="287" y="452" text-anchor="middle" class="name">Trace / Observation</text><text x="287" y="472" text-anchor="middle" class="sub">链路与调用明细</text>
+  <rect x="400" y="395" width="190" height="92" rx="12" class="card"/>
+  <rect x="482" y="411" width="25" height="25" rx="5" fill="none" stroke="#21a179" stroke-width="2.2"/><path d="M488 424l5 5 9-11" fill="none" stroke="#21a179" stroke-width="2.2"/>
+  <text x="495" y="452" text-anchor="middle" class="name">Score / Evaluation</text><text x="495" y="472" text-anchor="middle" class="sub">评分与评估</text>
+  <rect x="605" y="395" width="205" height="92" rx="12" class="card"/>
+  <path d="M695 409h25v31h-25zM700 416h15M700 423h15" fill="none" stroke="#21a179" stroke-width="2.1"/>
+  <text x="707" y="452" text-anchor="middle" class="name">Dataset / Experiment</text><text x="707" y="472" text-anchor="middle" class="sub">数据集与实验</text>
+  <rect x="825" y="395" width="165" height="92" rx="12" class="card"/>
+  <path d="M895 410h24v27h-24zM900 417h14M900 424h10" fill="none" stroke="#21a179" stroke-width="2.1"/>
+  <text x="907" y="452" text-anchor="middle" class="name">Prompt</text><text x="907" y="472" text-anchor="middle" class="sub">版本与管理</text>
+  <rect x="1005" y="395" width="180" height="92" rx="12" class="card"/>
+  <rect x="1078" y="417" width="7" height="20" rx="2" fill="#21a179"/><rect x="1091" y="406" width="7" height="31" rx="2" fill="#21a179"/><rect x="1104" y="423" width="7" height="14" rx="2" fill="#21a179"/>
+  <text x="1095" y="452" text-anchor="middle" class="name">Dashboard / User</text><text x="1095" y="472" text-anchor="middle" class="sub">分析、User、Session</text>
+</g>
+<rect x="35" y="545" width="1210" height="145" rx="18" fill="#f8f6ff" stroke="#ded8ef"/>
+<rect x="35" y="545" width="135" height="145" rx="18" fill="#ece8f6"/>
+<text x="102" y="625" text-anchor="middle" class="layer">任务与数据访问层</text>
+<g>
+  <rect x="195" y="580" width="220" height="78" rx="12" class="card"/>
+  <text x="305" y="607" text-anchor="middle" class="name">BullMQ Queues</text><text x="305" y="629" text-anchor="middle" class="sub">异步任务队列</text>
+  <rect x="435" y="580" width="220" height="78" rx="12" class="card"/>
+  <text x="545" y="607" text-anchor="middle" class="name">Prisma / PostgreSQL</text><text x="545" y="629" text-anchor="middle" class="sub">事务数据访问</text>
+  <rect x="675" y="580" width="220" height="78" rx="12" class="card"/>
+  <text x="785" y="607" text-anchor="middle" class="name">ClickHouse Repositories</text><text x="785" y="629" text-anchor="middle" class="sub">Trace / Score 分析查询</text>
+  <rect x="915" y="580" width="260" height="78" rx="12" class="card"/>
+  <text x="1045" y="607" text-anchor="middle" class="name">Redis / Blob Clients</text><text x="1045" y="629" text-anchor="middle" class="sub">缓存、队列与对象存储访问</text>
+</g>
+<rect x="35" y="710" width="1210" height="110" rx="18" fill="#fff6e8" stroke="#f2d9ac"/>
+<rect x="35" y="710" width="135" height="110" rx="18" fill="#ffefd3"/>
+<text x="102" y="774" text-anchor="middle" class="layer">存储层</text>
+<g>
+  <rect x="195" y="735" width="220" height="60" rx="12" class="card"/><text x="305" y="761" text-anchor="middle" class="name">PostgreSQL</text><text x="305" y="781" text-anchor="middle" class="sub">事务 / 配置 / Prompt</text>
+  <rect x="435" y="735" width="220" height="60" rx="12" class="card"/><text x="545" y="761" text-anchor="middle" class="name">ClickHouse</text><text x="545" y="781" text-anchor="middle" class="sub">Trace / Score / Analytics</text>
+  <rect x="675" y="735" width="220" height="60" rx="12" class="card"/><text x="785" y="761" text-anchor="middle" class="name">Redis / Valkey</text><text x="785" y="781" text-anchor="middle" class="sub">Queue / Cache</text>
+  <rect x="915" y="735" width="260" height="60" rx="12" class="card"/><text x="1045" y="761" text-anchor="middle" class="name">Object Storage</text><text x="1045" y="781" text-anchor="middle" class="sub">Event / Media / Export</text>
 </g>
 </svg>
