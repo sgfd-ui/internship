@@ -38,32 +38,26 @@
 
 ## 二、架构对比
 
-本章按 **应用层 → 采集层 → 平台层 → 存储层** 比较两个项目。采集层只看实际接入工具；平台层继续拆成接入模块、服务模块和能力模块；存储层只保留数据库、缓存和对象存储等基础组件。
-
 ### 2.1 Phoenix 架构
 
 ![Phoenix 架构](./assets/phoenix-langfuse/phoenix-architecture.svg)
-
-Phoenix 的应用侧主要通过 **OpenTelemetry SDK + OpenInference Instrumentation** 记录运行数据，再由 **OTLP Exporter** 上报。平台侧由 OTLP Receiver / API 接入，核心服务集中在 Phoenix Server，底层使用 SQLite 或 PostgreSQL。
 
 ### 2.2 Langfuse 架构
 
 ![Langfuse 架构](./assets/phoenix-langfuse/langfuse-architecture.svg)
 
-Langfuse 可通过 **Langfuse SDK、OpenTelemetry SDK 或框架集成**采集运行数据。平台侧由 Ingestion API / OTLP 接入，Web / API 与 Worker 分工处理前台查询和后台任务，底层由多类存储组件分别承载数据。
-
 ### 2.3 架构差异总结
 
 | 架构层面 | Phoenix | Langfuse |
 | --- | --- | --- |
-| 应用层 | Agent、Workflow、LLM、Tool、RAG、Dify 等 | Agent、Workflow、LLM、Tool、RAG、Dify 等 |
-| 采集工具 | OpenTelemetry SDK、OpenInference Instrumentation、OTLP Exporter | Langfuse SDK、OpenTelemetry SDK、Framework Integrations |
-| 平台接入 | OTLP Receiver、API | Ingestion API、OTLP Receiver |
-| 核心服务 | Phoenix Server 集中承载主要服务 | Web / API 与 Worker 分开 |
-| 能力模块 | Trace、Evaluation、Dataset / Experiment、Prompt、Web UI | Trace / Observation、Score / Evaluation、Dataset / Experiment、Prompt、Dashboard |
-| 存储层 | SQLite 或 PostgreSQL | PostgreSQL、ClickHouse、Redis / Valkey、Object Storage |
-| 异步处理 | 无强制独立 Worker | 独立 Worker |
-| 总体形态 | 服务和存储更集中，组件较少 | 服务、任务和存储职责拆分更细，组件更多 |
+| 数据来源 | Agent、Workflow、LLM、Tool、RAG、Dify 等应用运行时产生调用数据 | Agent、Workflow、LLM、Tool、RAG、Dify 等应用运行时产生调用数据 |
+| 捕获方式 | OpenInference Instrumentation 自动捕获常见 AI 调用；OpenTelemetry SDK 可补手工埋点 | Langfuse SDK / Integrations 直接捕获；也可使用 OpenTelemetry Instrumentation / SDK |
+| 上报方式 | OpenTelemetry SDK 组装 Trace / Span，由 OTLP Exporter 通过 HTTP / gRPC 主动上报 | Langfuse Client 通过 Ingestion API 上报，或 OpenTelemetry Exporter 通过 OTLP 上报 |
+| 平台接收 | OTLP Receiver / API | Ingestion API / OTLP Endpoint |
+| 核心服务 | Phoenix Server 集中承载查询、评估、实验和 Web 服务 | Web / API 负责查询与交互，Worker 负责异步摄取、评估和后台任务 |
+| 功能模块 | Trace、Evaluation、Dataset / Experiment、Prompt、Web UI | Trace、Score / Evaluation、Dataset / Experiment、Prompt、Dashboard |
+| 存储底座 | SQLite 或 PostgreSQL，平台数据集中存储 | PostgreSQL 存项目 / Prompt / 配置；ClickHouse 存 Trace / Score 分析数据；Redis / Valkey 做缓存 / 队列；Object Storage 存文件 / 大对象 |
+| 总体形态 | 采集链路和服务结构更集中，组件较少 | 采集入口、服务处理和存储职责拆分更细，组件更多 |
 
 ---
 
