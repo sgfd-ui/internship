@@ -38,32 +38,32 @@
 
 ## 二、架构对比
 
-本章从 **应用层 → 采集层 → 平台层 → 存储层** 四个层级比较两个项目。应用层负责产生 Agent / Workflow 运行数据，采集层负责把运行数据送入平台，平台层承接 Trace、评估、Dataset、Experiment、Prompt 等能力，存储层作为底座负责持久化和分析数据。
+本章按 **应用层 → 采集层 → 平台层 → 存储层** 比较两个项目。采集层只看实际接入工具；平台层继续拆成接入模块、服务模块和能力模块；存储层只保留数据库、缓存和对象存储等基础组件。
 
 ### 2.1 Phoenix 架构
 
 ![Phoenix 架构](./assets/phoenix-langfuse/phoenix-architecture.svg)
 
-Phoenix 的架构比较集中：应用运行数据先经过 OpenTelemetry / OpenInference 采集，再统一进入 Phoenix Server。Trace 查询、Evaluation、Dataset / Experiment、Prompt / Playground 和 Web UI / API 都集中在平台层；底层使用 SQLite 或 PostgreSQL 持久化数据。
+Phoenix 的应用侧主要通过 **OpenTelemetry SDK + OpenInference Instrumentation** 记录运行数据，再由 **OTLP Exporter** 上报。平台侧由 OTLP Receiver / API 接入，核心服务集中在 Phoenix Server，底层使用 SQLite 或 PostgreSQL。
 
 ### 2.2 Langfuse 架构
 
 ![Langfuse 架构](./assets/phoenix-langfuse/langfuse-architecture.svg)
 
-Langfuse 同样可以拆成应用层、采集层、平台层和存储层，但平台内部进一步拆成 Web / API 与 Worker。Trace、Score / Evaluation、Prompt、Dataset、User / Session 等能力位于平台层；PostgreSQL、ClickHouse、Redis / Valkey 和 Object Storage 单独构成存储与队列底座。
+Langfuse 可通过 **Langfuse SDK、OpenTelemetry SDK 或框架集成**采集运行数据。平台侧由 Ingestion API / OTLP 接入，Web / API 与 Worker 分工处理前台查询和后台任务，底层由多类存储组件分别承载数据。
 
 ### 2.3 架构差异总结
 
-| 架构维度 | Phoenix | Langfuse |
+| 架构层面 | Phoenix | Langfuse |
 | --- | --- | --- |
-| 总体形态 | 集中式架构，一个 Phoenix Server 承接大部分平台能力 | 分层式架构，Web / API 与 Worker 分工处理 |
-| 应用层 | Agent、Workflow、LLM、Tool、RAG 等产生运行数据 | Agent、Workflow、LLM、Tool、RAG 等产生运行数据 |
-| 采集层 | 以 OpenTelemetry 为主，OpenInference 补充 AI 语义 | 同时支持 Langfuse SDK 和 OpenTelemetry |
-| 平台服务 | Trace、Evaluation、Dataset、Experiment、Prompt、UI / API 集中在 Phoenix Server | Web / API 负责交互与查询，Worker 负责异步摄取、评估和后台任务 |
-| 平台能力组织 | 主要围绕 Trace 运行链路展开，再连接评估、Dataset、Experiment 和 Prompt | 除 Trace 外，还把 Score、User / Session、Prompt、Dataset 等作为独立平台能力组织 |
-| 存储层 | SQLite 或 PostgreSQL，存储结构较集中 | PostgreSQL、ClickHouse、Redis / Valkey、Object Storage 分工承载不同类型数据 |
-| 异步处理 | 不强制独立 Worker | 独立 Worker 承担异步任务 |
-| 扩展方式 | 主要扩 Phoenix 服务与数据库 | Web、Worker、分析数据库、缓存和对象存储可以分别扩展 |
+| 应用层 | Agent、Workflow、LLM、Tool、RAG、Dify 等 | Agent、Workflow、LLM、Tool、RAG、Dify 等 |
+| 采集工具 | OpenTelemetry SDK、OpenInference Instrumentation、OTLP Exporter | Langfuse SDK、OpenTelemetry SDK、Framework Integrations |
+| 平台接入 | OTLP Receiver、API | Ingestion API、OTLP Receiver |
+| 核心服务 | Phoenix Server 集中承载主要服务 | Web / API 与 Worker 分开 |
+| 能力模块 | Trace、Evaluation、Dataset / Experiment、Prompt、Web UI | Trace / Observation、Score / Evaluation、Dataset / Experiment、Prompt、Dashboard |
+| 存储层 | SQLite 或 PostgreSQL | PostgreSQL、ClickHouse、Redis / Valkey、Object Storage |
+| 异步处理 | 无强制独立 Worker | 独立 Worker |
+| 总体形态 | 服务和存储更集中，组件较少 | 服务、任务和存储职责拆分更细，组件更多 |
 
 ---
 
