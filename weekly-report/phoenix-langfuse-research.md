@@ -38,7 +38,7 @@
 
 ## 二、架构对比
 
-本章基于两个 GitHub 项目当前代码，从接口层、核心服务层、业务模块层、数据访问层和存储层整理项目内部架构。
+本章从服务组织、后台处理、存储架构和扩展方式比较两个平台的整体架构，不展开具体代码目录、框架或数据库访问实现。
 
 ### 2.1 Phoenix 架构
 
@@ -50,16 +50,15 @@
 
 ### 2.3 架构差异总结
 
-| 架构层面 | Phoenix | Langfuse |
+| 架构维度 | Phoenix | Langfuse |
 | --- | --- | --- |
-| 代码组织 | 前端位于 `js/app`；后端主要集中在 `src/phoenix/server` 与 `src/phoenix/db` | Monorepo 明确拆成 `web`、`worker`、`packages/shared` 等主要包 |
-| 接口层 | React Web UI、REST API、GraphQL API，以及 OTLP HTTP / gRPC Trace 接收入口 | Next.js Web UI、tRPC、Public REST API，以及 Ingestion / OTLP 接收入口 |
-| 核心服务 | FastAPI App 与 gRPC Server 都由 Phoenix Server 统一启动和管理 | Web 与 Worker 是两个独立运行组件，公共业务逻辑通过 `@langfuse/shared` 复用 |
-| 后台处理 | BulkInserter、DML Event Handler、Experiment Runner、各类 Daemon 随 Phoenix Server 生命周期运行 | BullMQ Queue 与独立 Worker 负责异步摄取、Evaluation 和后台任务 |
-| 业务模块 | Trace / Session、Annotation / Evaluation、Dataset / Experiment、Prompt / Playground、Cost / Model 等集中在 Phoenix 服务内部 | Trace / Observation、Score / Evaluation、Dataset / Experiment、Prompt、Dashboard、User / Session 等按功能模块组织 |
-| 数据访问层 | Async SQLAlchemy + DB Models / Insertion，Alembic 管理数据库 Schema | `@langfuse/shared` 提供 Repository、Prisma、ClickHouse、Redis 与 Blob Storage 等服务端访问能力 |
-| 存储层 | SQLite 或 PostgreSQL | PostgreSQL、ClickHouse、Redis / Valkey、Object Storage |
-| 总体形态 | 单核心服务为主，后台任务和数据访问也集中在同一平台代码体系内 | Web、Worker、共享服务和多类存储分工更明确，整体更偏分布式组件化架构 |
+| 整体形态 | 以单一核心服务为中心，平台能力集中 | Web 服务与后台 Worker 分离，整体分层更明确 |
+| 接入方式 | Web、API 和 Trace 数据统一进入核心平台 | Web、API 和 Trace 数据进入平台后，由不同服务承担查询与后台处理 |
+| 服务组织 | Trace、Evaluation、Dataset、Experiment、Prompt 等能力集中在核心服务内部 | 在线查询与配置集中在 Web 服务，异步执行由 Worker 独立承担 |
+| 后台处理 | 数据写入、实验执行、成本计算和清理任务与核心服务一起运行 | 数据摄取、Evaluation 和其他后台任务由独立 Worker 处理 |
+| 存储架构 | 以统一关系型数据库作为主要存储底座 | 按业务数据、分析数据、缓存 / 队列和文件对象拆分多类存储 |
+| 扩展方式 | 主要扩展核心服务实例和数据库能力 | Web、Worker 和不同存储组件可以分别扩展 |
+| 架构复杂度 | 组件少，部署关系更简单 | 组件更多，职责拆分更细，部署和运维关系更复杂 |
 
 ---
 
