@@ -36,222 +36,162 @@
 
 ### 1.4 整体架构
 
-这里只展示两个平台在 Agent 系统中的逻辑位置；Phoenix 与 Langfuse 自身的内部架构差异放在 2.1.2、2.2.2 和 4.2 展开。
+这里只展示 Evaluation 平台在 Agent 系统中的逻辑位置；Phoenix 与 Langfuse 自身的架构差异在第二章展开，实际部署组件在第四章展开。
 
 ![整体逻辑架构](./assets/phoenix-langfuse/overall-architecture.svg)
 
 ---
 
-## 二、候选项目介绍
+## 二、架构对比
 
-### 2.1 Phoenix
+本章只比较两个项目自身的架构组织方式：运行数据从哪里进入、平台内部如何承接、核心对象如何组织，以及数据最终落在哪里。具体 Web 功能放到第三章比较。
 
-#### 2.1.1 项目介绍
+### 2.1 Phoenix 架构
 
-| 项目 | 内容 |
-| --- | --- |
-| 项目定位 | 开源 AI Observability 与 Evaluation 平台，面向 LLM / Agent 的追踪、调试、评估和实验 |
-| 开源与维护 | Arize AI |
-| GitHub | [Arize-ai/phoenix](https://github.com/Arize-ai/phoenix) |
-| GitHub Stars | 11,366（2026-09-08） |
-| 主要语言 | Python |
-| 当前版本 | `arize-phoenix-v20.8.0`（2026-09-04 发布） |
-| License | Elastic License 2.0（ELv2） |
+> 本文中的 Phoenix 均指 **Arize Phoenix（Arize-ai/phoenix）**，与 Elixir Web Framework `phoenixframework/phoenix` 无关。
 
-这里的 Phoenix 指 **Arize Phoenix**。`phoenixframework/phoenix` 是 Elixir Web Framework，与本次 LLM / Agent Observability 调研不是同一个项目。
+![Phoenix 架构](./assets/phoenix-langfuse/phoenix-architecture.svg)
 
-Phoenix 的核心设计建立在 **OpenTelemetry + OpenInference** 上。应用侧通过 OpenTelemetry / OpenInference Instrumentation 采集 Agent、LLM、Tool、Retriever 等调用，再由 Phoenix 按 Trace / Span 组织运行数据。
+Phoenix 的主链路可以概括为：
 
-#### 2.1.2 核心架构
+`Agent / Workflow → OpenTelemetry + OpenInference → Phoenix Server → Trace / Evaluation / Dataset / Experiment / Prompt → SQLite / PostgreSQL`
 
-![Arize Phoenix 核心架构](./assets/phoenix-langfuse/phoenix-architecture.svg)
+它的架构重点是 **Trace 为主轴、能力集中在 Phoenix Server**。运行链路、评估、数据集、实验、Prompt 调试和 Web UI / API 基本由一个核心服务承接，外部持久化主要依赖 SQLite 或 PostgreSQL。
 
-Phoenix 的主链路是 **Agent / Application → OpenTelemetry + OpenInference → Phoenix → Trace / Span、Evaluation、Dataset / Experiment**。核心特点是以标准 Trace / Span 为底座，再通过 OpenInference 补充 Agent、LLM、Tool、Retriever 等 AI 语义。
+### 2.2 Langfuse 架构
 
-#### 2.1.3 核心概念
+![Langfuse 架构](./assets/phoenix-langfuse/langfuse-architecture.svg)
 
-| 概念 | 简明含义 |
-| --- | --- |
-| Project | Trace 的逻辑隔离单位，一个项目下保存一组应用运行数据 |
-| Trace | 一次完整请求或任务的调用链，由多个父子 Span 组成 |
-| Span | Trace 中的一次具体操作，可表示 Agent、LLM、Tool、Retriever、Embedding 等 |
-| Span Kind | OpenInference 对 Span 的语义分类，例如 `LLM`、`TOOL`、`RETRIEVER`、`AGENT` |
-| Session | 将多次 Trace 归并成一次连续会话 |
-| Annotation | 对 Span、Trace、Session 等对象添加人工、LLM 或代码评分与标签 |
-| Dataset | 用于重复测试的一组输入、期望输出和元数据，支持版本化 |
-| Experiment | 在固定 Dataset 上运行一版 Prompt、Model 或应用逻辑，并保存输出和评估结果 |
-| Prompt | 可版本化管理的 Prompt，可在 Playground 中调试并通过 Tag 控制使用版本 |
+Langfuse 的主链路可以概括为：
+
+`Agent / Workflow → Langfuse SDK / OpenTelemetry → Web / Worker → Trace / Score / Prompt / Dataset / Experiment → PostgreSQL / ClickHouse / Redis / Object Storage`
+
+它的架构重点是 **平台分层更细、平台对象更多、存储职责拆分更明确**。Web / API 负责交互与查询，Worker 承担异步任务和部分评估处理；运行数据、事务数据、缓存 / 队列和大对象由不同存储组件承接。
+
+### 2.3 架构差异总结
+
+| 架构维度 | Phoenix | Langfuse |
+| --- | --- | --- |
+| 架构中心 | 🟦 以 Trace / Span 为主轴 | 🟧 Trace 之外还围绕 User、Session、Score、Prompt 等平台对象组织 |
+| 核心服务 | 🟦 Phoenix Server 集中承载主要能力 | 🟧 Web / API 与 Worker 分层 |
+| 运行数据组织 | 更接近标准调用链模型 | 调用链之外增加更多平台级管理对象 |
+| 存储结构 | 🟦 SQLite 或 PostgreSQL，整体较集中 | 🟧 PostgreSQL + ClickHouse + Redis / Valkey + Object Storage，多类存储分工 |
+| 异步任务 | 不强制独立 Worker | 🟧 独立 Worker 承担异步处理 |
+| 扩展方式 | 主要扩 Phoenix 服务和数据库 | Web、Worker、分析库和存储可分别扩展 |
+| 架构直观感受 | 🟦 组件少、链路短、理解成本低 | 🟧 分层更完整，但组件和依赖更多 |
+
+架构本身没有绝对优劣：Phoenix 更偏 **集中、标准、轻量**；Langfuse 更偏 **平台化、分层、可扩展**。后续功能差异很大一部分也来自这两种架构取向。
 
 ---
 
-### 2.2 Langfuse
+## 三、功能对比
 
-#### 2.2.1 项目介绍
+### 3.1 功能总览
 
-| 项目 | 内容 |
-| --- | --- |
-| 项目定位 | 开源 LLM Engineering 平台，覆盖开发、观测、评估、Prompt 和实验管理 |
-| 开源与维护 | Langfuse；2026 年 1 月起成为 ClickHouse 的一部分 |
-| GitHub | [langfuse/langfuse](https://github.com/langfuse/langfuse) |
-| GitHub Stars | 34,314（2026-09-08） |
-| 主要语言 | TypeScript |
-| 当前版本 | `v4.30.0`（2026-09-04 发布） |
-| License | Open Core：核心 MIT；`ee/`、`web/src/ee/`、`worker/src/ee/` 为 Enterprise License |
+这里把 **Web 页面能直接查看、配置或操作的功能** 当作平台能力窗口，从使用者视角比较，不在这一节展开底层字段和协议。
 
-Langfuse 的定位偏完整 LLM Engineering 平台。运行数据以 Trace / Observation 组织，同时围绕 User、Session、Score、Prompt、Dataset、Experiment 等对象提供开发和评估能力。
+> 标记说明：**🟦 Phoenix 更突出 / 更直接**；**🟧 Langfuse 更完整 / 更产品化**；`—` 表示两者都有且差异不明显。
 
-#### 2.2.2 核心架构
+| 功能分类 | 功能点 | Phoenix | Langfuse | 差异 |
+| --- | --- | --- | --- | --- |
+| 运行与调试 | 项目管理 | 支持按项目查看和隔离运行数据 | 支持按项目管理运行数据与配置 | — |
+| 运行与调试 | 运行记录 | 支持查看历史请求与运行记录 | 支持查看历史请求与运行记录 | — |
+| 运行与调试 | 调用链 | 支持查看 Agent、Tool、Retriever、LLM 等完整执行链 | 支持查看 Agent、Tool、LLM 等完整执行链 | — |
+| 运行与调试 | 节点详情 | 可逐节点查看执行状态和上下游关系 | 可逐节点查看执行状态和上下游关系 | — |
+| 运行与调试 | 输入 / 输出 | 可查看每一步的输入、输出和模型调用内容 | 可查看每一步的输入、输出和模型调用内容 | — |
+| 运行与调试 | 搜索 / 筛选 | 支持按运行属性、错误、评估结果等筛选 | 支持按运行属性、标签、用户、评分等筛选 | — |
+| 运行与调试 | 错误定位 | 可快速定位失败节点和错误信息 | 可定位失败节点，并结合筛选 / 看板观察错误分布 | — |
+| 运行与调试 | 耗时分析 | 可查看请求和各节点耗时 | 可查看请求和各节点耗时 | — |
+| 运行与调试 | Token 统计 | 支持查看 Token 使用情况 | 支持查看 Token 使用情况 | — |
+| 运行与调试 | 成本统计 | 支持查看模型调用成本和趋势 | 支持查看模型调用成本并按更多维度聚合 | 🟧 Langfuse 分析维度更多 |
+| 运行与调试 | 模型调用统计 | 可查看模型调用量、错误和成本 | 可查看模型调用量、错误、成本和趋势 | — |
+| 运行与调试 | 会话管理 | 支持按 Session 聚合多轮请求 | 支持按 Session 聚合多轮请求 | — |
+| 运行与调试 | 用户分析 | 可记录用户信息并作为运行属性查看 / 筛选 | 可直接按用户查看调用、成本和质量表现 | 🟧 Langfuse 用户维度更直接 |
+| 可视化分析 | 项目看板 | 提供项目级运行看板 | 提供项目级运行与质量看板 | — |
+| 可视化分析 | 自定义看板 | 以内置项目看板和 Trace 查询为主 | 支持自定义 Dashboard、指标、维度和过滤条件 | 🟧 Langfuse 更灵活 |
+| 可视化分析 | 质量趋势 | 可查看评估 / Annotation 随时间变化 | 可查看 Score 趋势，并与自定义看板结合 | 🟧 Langfuse 更适合持续分析 |
+| 可视化分析 | 成本 / 耗时趋势 | 支持项目级成本、Token、Latency 分析 | 支持按用户、Session、模型、Prompt 等维度拆分 | 🟧 Langfuse 维度更多 |
+| 可视化分析 | 模型维度分析 | 支持查看不同模型的调用、Token 和成本 | 支持按模型聚合质量、成本、Latency 等指标 | — |
+| 可视化分析 | 用户 / 会话维度分析 | Session 分析较直接，用户更多依赖运行属性 | User / Session 都可作为主要分析维度 | 🟧 Langfuse 更完整 |
+| 可视化分析 | 指标告警 | Phoenix OSS 更偏查看与分析，不以告警配置为核心入口 | 可针对指标阈值配置告警 | 🟧 Langfuse 更完整 |
+| 质量评估 | 人工评分 | 支持在运行数据上人工打分和标注 | 支持在运行数据上人工打分和评论 | — |
+| 质量评估 | LLM 自动评估 | 支持使用 LLM-as-a-Judge 评价结果质量 | 支持使用 LLM-as-a-Judge 评价线上和实验结果 | — |
+| 质量评估 | 代码规则评估 | 支持自定义代码规则评估 | 支持 Python / TypeScript Code Evaluator | — |
+| 质量评估 | 线上持续评估 | 支持对线上运行结果执行评估，通常需要额外组织执行流程 | 可在平台内配置 Evaluator 与规则，按条件 / 采样自动评估线上数据 | 🟧 Langfuse 自动化入口更完整 |
+| 质量评估 | 评估结果分析 | 可按评分 / 标签筛选运行记录并查看趋势 | 支持 Score Analytics，并可进入自定义 Dashboard | 🟧 Langfuse 分析能力更强 |
+| 质量评估 | 人工审核队列 | 支持直接人工标注、筛选 Case 和沉淀 Dataset | 提供 Annotation Queue，可组织待审核样本和连续审核流程 | 🟧 Langfuse 审核流程更完整 |
+| 质量评估 | 用户反馈 | 可通过 Annotation 记录点赞、评分等反馈 | 支持将终端用户反馈直接记录为 Score 并分析 | 🟧 Langfuse 更产品化 |
+| 数据集与实验 | 从运行记录建 Dataset | 可直接把失败 / 典型 Trace 加入 Dataset | 可把 Trace / Observation 加入 Dataset | — |
+| 数据集与实验 | Dataset 管理 | 支持创建、维护和重复使用评测数据集 | 支持创建、维护和重复使用评测数据集 | — |
+| 数据集与实验 | 样本输入 / 期望结果 | 支持保存输入、期望结果和样本信息 | 支持保存输入、期望结果和样本信息 | — |
+| 数据集与实验 | 批量 Experiment | 可在固定 Dataset 上批量运行 Prompt / Model / 应用版本 | 可在固定 Dataset 上批量运行 Prompt / Model / 应用版本 | — |
+| 数据集与实验 | 新旧版本对比 | 支持比较不同 Experiment 的结果 | 支持并排比较不同 Dataset Run / Experiment | — |
+| 数据集与实验 | Experiment 自动评分 | 可给实验结果挂 Evaluator / Annotation | 可给实验结果挂 Evaluator / Score | — |
+| 数据集与实验 | Experiment 人工复核 | 支持在实验结果中查看和补充标注 | 支持在 Experiment Compare 中直接人工评分 | — |
+| Prompt | Prompt 管理 | 支持集中保存和管理 Prompt | 支持集中保存和管理 Prompt | — |
+| Prompt | Prompt 版本 | 支持保存历史版本 | 每次修改形成版本并保留历史记录 | — |
+| Prompt | 生产 / 测试版本切换 | 可通过 Tag 指向要使用的版本 | 可通过 Label 指向生产、测试或自定义版本 | — |
+| Prompt | Playground | 支持在 Web 中直接测试 Prompt 和模型 | 支持在 Web 中直接测试 Prompt 和模型 | — |
+| Prompt | 模型参数调试 | 可在 Playground 调整模型、参数、工具和输出格式 | 可在 Playground 调整模型和调用参数 | — |
+| Prompt | 多 Prompt 对比 | 支持多个 Prompt 变体并排测试 | 支持不同 Prompt / Model 版本对比 | — |
+| Prompt | Dataset 批量测试 | 可直接把 Dataset 加载到 Playground 批量运行 | 可通过 Prompt Experiment / Dataset 批量运行 | — |
+| Prompt | 真实调用重放 | 可从真实 LLM Span 直接 Replay 到 Playground 再调试 | 可从 Trace 进入 Playground 做调试和复现 | 🟦 Phoenix Replay 路径更直接 |
+| Prompt | Prompt 效果分析 | 可结合 Trace、Experiment 和评估结果判断 Prompt 表现 | 可直接查看 Prompt 版本对应的成本、Latency、评分等 Metrics | 🟧 Langfuse 版本分析更完整 |
 
-![Langfuse 核心架构](./assets/phoenix-langfuse/langfuse-architecture.svg)
+整体上，两者的基础闭环都很完整：**运行观测 → 问题定位 → 质量评估 → Dataset → Experiment → Prompt / 版本迭代**。真正需要重点比较的不是“有没有”，而是几个明显差异：**线上持续评估、人工审核、用户 / 会话分析、自定义看板，以及 Prompt 调试与版本管理方式。**
 
-Langfuse 的主链路是 **Agent / Application → SDK / OpenTelemetry → Langfuse → Trace / Observation、Score / Evaluator、Dataset / Experiment / Prompt**。相比 Phoenix，它在 Trace 之外还把 Score、User、Session 等作为更明确的平台级对象。
+### 3.2 关键功能差异与实现方式
 
-#### 2.2.3 核心概念
+这一节只分析 3.1 中真正存在明显差异的功能，并解释为什么使用体验会不同。
 
-| 概念 | 简明含义 |
-| --- | --- |
-| Project | Langfuse 中应用与运行数据的基本隔离单位 |
-| Trace | 一次请求或高层任务的完整调用链 |
-| Observation | Trace 中的具体执行节点，可表示 Generation、Span、Event、Agent、Tool 等 |
-| Generation | 一次 LLM 调用，保存模型、Prompt、Response、Token、Cost、Latency 等 |
-| Session | 将多条 Trace 归并成同一连续会话 |
-| User | 用户标识，可跨 Trace / Session 聚合调用、成本和质量信息 |
-| Score | 通用评估对象，可保存 Numeric、Categorical、Boolean、Text 等结果 |
-| Evaluator | 评分逻辑，可以是 LLM-as-a-Judge、Code Evaluator、人工或外部程序 |
-| Evaluation Rule | 对线上 Observation 定义过滤条件、采样率和 Evaluator，实现持续在线评估 |
-| Dataset | 可版本化测试集，保存输入、期望输出和 Metadata |
-| Experiment / Dataset Run | 固定 Dataset 上的一次应用版本执行与评分结果 |
-| Prompt | 中央管理的 Text / Chat Prompt，版本不可变，通过 Label 选择生产或测试版本 |
+#### 3.2.1 线上持续评估
 
----
-
-## 三、核心能力对比
-
-### 3.1 能力总览
-
-这里先从使用者视角比较“平台能帮我完成什么”，具体实现方式放到后续小节展开。
-
-| 功能视角 | Phoenix | Langfuse |
+| | Phoenix | Langfuse |
 | --- | --- | --- |
-| 查看一次请求完整过程 | 可以查看 Agent、Workflow、Tool、Retriever、LLM 等完整调用链，并逐节点查看输入输出 | 可以查看完整调用链和各执行节点，同样支持逐节点查看输入输出 |
-| 定位错误与慢节点 | 支持按错误、耗时、模型调用等信息定位问题，适合逐条 Trace 调试 | 支持错误、耗时、成本等定位，也可以结合筛选和 Dashboard 观察问题分布 |
-| 查看运行成本与性能 | 可以查看 Token、Cost、Latency、模型等运行指标 | 可以查看 Token、Cost、Latency、模型等运行指标，并做更多聚合分析 |
-| 跟踪多轮会话 | 支持把多次请求按 Session 聚合查看 | 支持 Session，并且更方便按用户和会话维度持续分析 |
-| 对结果做质量评估 | 支持人工评分、代码规则和 LLM-as-a-Judge，可用于线上 Trace 和离线实验 | 支持人工评分、代码规则和 LLM-as-a-Judge，评估结果可以持续沉淀和分析 |
-| 持续评估线上结果 | 可以对线上运行结果做评估，但自动触发与持续评估通常需要额外组织执行流程 | 原生提供规则、筛选和采样机制，更适合直接做持续在线评估 |
-| 人工审核与反馈 | 支持直接对运行结果做 Annotation 和人工评分 | 支持人工评分，并提供 Annotation Queue 组织待审核样本 |
-| 沉淀失败 / 典型 Case | 可以从线上 Trace 中挑选 Case 进入 Dataset，用于后续复测 | 可以从线上 Trace 中沉淀 Case 到 Dataset，用于评估和回归测试 |
-| 管理测试集 | 支持 Dataset 和版本管理，可重复执行同一批 Case | 支持 Dataset 和版本管理，也可以按历史版本重复运行 |
-| 做版本对比与回归验证 | 支持在固定 Dataset 上批量运行新旧 Prompt、Model 或应用版本并比较结果 | 支持 Dataset Run / Experiment，对新旧版本做批量评分和结果对比 |
-| 调试和管理 Prompt | 支持 Prompt 版本、Tag、Playground 和真实调用 Replay | 支持 Prompt 版本、Label、Playground、缓存以及与运行数据的关联分析 |
-| 做整体质量与运营分析 | 提供内置 Dashboard 和 Trace 查询，重点偏运行调试与评估结果查看 | 提供更灵活的 Dashboard 和指标分析，更适合持续观察用户、会话、模型、成本和质量趋势 |
+| 用户看到的功能 | 可以给线上 Trace / Span 做自动评估并回看结果 | 可以直接配置 Evaluator，对符合条件的线上数据持续评分 |
+| 底层组织方式 | 评估结果主要以 Annotation 形式挂回运行数据；持续执行通常由应用、任务或评估工作流触发 | 以 Score 统一保存评估结果，并提供 Evaluation Rule 定义过滤条件、采样比例和自动触发 |
+| 实际影响 | 能完成线上评估，但自动化调度需要多组织一层 | 🟧 更适合直接做长期、持续的线上质量监控 |
 
-从功能使用上看，两者都能完成 **“看运行过程 → 定位问题 → 评估结果 → 沉淀 Case → 回归验证”**。Phoenix 的使用重心更偏 **Trace 调试和实验验证**；Langfuse 则在此基础上把 **持续评估、人工审核、用户 / 会话分析和 Dashboard** 做得更平台化。
+这里的区别不是 Phoenix “不能在线评估”，而是 **Langfuse 把持续评估的规则和调度入口做进了平台本身**。
 
-### 3.2 Trace 与 Agent 可观测
+#### 3.2.2 人工审核与标注
 
-一个完整的 Agent 请求需要能够还原为调用树，而不是只有单独的 LLM 日志：
-
-![Trace 调用结构](./assets/phoenix-langfuse/trace-structure.svg)
-
-| 对比内容 | Phoenix | Langfuse |
+| | Phoenix | Langfuse |
 | --- | --- | --- |
-| 基础模型 | OpenTelemetry Trace / Span | Trace / Observation，底层支持 OpenTelemetry |
-| Agent / Tool 类型 | OpenInference Span Kind 显式表示 `AGENT`、`TOOL`、`LLM` 等 | Observation 类型与 Metadata 表示 Agent、Tool、Generation 等 |
-| 父子调用关系 | OpenTelemetry 原生 Parent Span | Observation Parent / Child |
-| Workflow 节点 | 可作为 Span 进入 Trace Tree | 可作为 Observation 进入 Trace Tree |
-| Tool 输入输出 | 支持 | 支持 |
-| LLM Prompt / Response | 支持 | 支持 |
-| Model 参数 | 支持 | 支持 |
-| Error / Status | 支持状态和错误过滤 | 支持状态和错误分析 |
-| Token | 支持 | 支持 |
-| Cost | 支持模型价格和自定义价格 | 支持模型价格与 Cost 聚合 |
-| Latency | Span / Trace / Session 级 | Observation / Trace / Session 级 |
-| Metadata / Tag | Span Attribute / Project / Metadata | Metadata / Tag |
-| Session | 原生支持 | 原生支持 |
-| User | 通过 Attributes / Metadata 表示 | 原生 `userId` |
+| 用户看到的功能 | 在 Trace、Span、Session 或实验结果上直接打分 / 标注 | 可以逐条评分，也可以把一批样本加入 Annotation Queue |
+| 底层组织方式 | Annotation 直接绑定运行对象，常见路径是“筛选问题 Case → 标注 → 加入 Dataset” | Score Config 定义评分项，Annotation Queue 负责组织样本、审核人员和连续处理流程 |
+| 实际影响 | 适合研发调试过程中顺手标注 | 🟧 更适合多人、批量、持续的人审流程 |
 
-**关键差异：** Phoenix 更贴近 OpenTelemetry / OpenInference 标准 Trace；Langfuse 在标准 Trace 之上增加了更强的平台级 User、Score、Prompt、Dashboard 等对象。复杂 ReAct、多 Workflow 和跨服务 Trace Context 的实际完整性需要通过实测判断。
+#### 3.2.3 用户与会话分析
 
-### 3.3 Evaluation
-
-两个项目都能够把人工、代码或 LLM 评估结果关联回运行数据。差异主要在持续在线评估的组织方式。
-
-| 对比内容 | Phoenix | Langfuse |
+| | Phoenix | Langfuse |
 | --- | --- | --- |
-| 人工评分 | Annotation，可在 UI 对 Trace / Span / Session 等打分或标签 | Manual Score + Annotation Queue |
-| 自定义 Score | 支持 Annotation / Programmatic Eval | Score 是平台一级对象 |
-| LLM-as-a-Judge | 支持 `phoenix-evals` 和平台 Evaluator | 支持 UI Evaluator，直接配置模型和 Prompt |
-| Code Evaluator | 支持代码规则 / 自定义 Eval | 支持 Python / TypeScript Code Evaluator |
-| 线上 Evaluation | 可对 Trace 执行 Evaluator 并回写 Annotation；持续自动执行通常通过应用、任务或 Evaluator 工作流组织 | Evaluator + Rule 原生支持过滤、采样和自动执行线上评估 |
-| 离线 Evaluation | Dataset + Experiment + Evaluator | Dataset Run / Experiment + Evaluator |
-| 人工审核队列 | 主要通过 Annotation / Dataset 工作流 | 原生 Annotation Queue |
-| 结果筛选 | 按 Annotation / Score / Error 等筛选 Trace | Score Analytics、Trace Filter、Dashboard |
-| 评估结果与 Trace 关联 | Annotation 直接挂到对应对象 | Score 直接挂到 Trace / Observation / Session |
+| Session | 原生支持多轮 Session 查看 | 原生支持多轮 Session 查看 |
+| User | 用户信息更多作为运行属性记录和筛选 | User 是明确的分析维度，可直接按用户聚合调用、成本和质量 |
+| 实际影响 | Session 调试足够直接 | 🟧 如果产品需要长期看“某类用户 / 某个用户”的使用与质量，Langfuse 更省事 |
 
-核心链路可以概括为：
+底层原因是 Langfuse 的数据模型里 **User / Session 本身就是平台级对象和指标维度**；Phoenix 的主轴更偏 Trace / Session，用户信息通常作为属性参与查询。
 
-- **Phoenix：** Trace / Span → Annotation / Evaluator → Dataset → Experiment
-- **Langfuse：** Observation → Evaluation Rule → Evaluator → Score
+#### 3.2.4 Dashboard 与数据分析
 
-这不代表 Phoenix 不能做在线评估，而是两个项目当前产品化入口不同。后续实测重点应放在自动触发、采样、Evaluator 管理和结果回查的操作成本。
-
-### 3.4 Dataset 与 Experiment
-
-两者都能够形成同一组 Case 下的新旧版本验证闭环：
-
-`线上 Trace / 典型 Case → Dataset → 新版本运行 → Experiment → Evaluation → 结果对比`
-
-| 对比内容 | Phoenix | Langfuse |
+| | Phoenix | Langfuse |
 | --- | --- | --- |
-| Dataset 管理 | 支持 | 支持 |
-| Dataset 版本 | 支持版本化 Dataset | 支持版本化 Dataset，可指定历史版本运行 |
-| Trace → Dataset | 支持从生产 Trace / Span 沉淀 Case | 支持从 Trace / Observation 沉淀 Dataset Item |
-| Expected Output | 支持 | 支持 |
-| 批量 Experiment | 支持 | 支持 |
-| Prompt / Model 版本比较 | 支持在固定 Dataset 上比较 | 支持 Dataset Run 比较 |
-| Experiment 评分 | Evaluator / Annotation | Score / Evaluator |
-| 结果对比 | Experiment UI / 下载结果 | Experiment Results Grid / Score Matrix |
-| 自动化接口 | SDK / API | SDK / API / OpenTelemetry Attributes |
-| CI 回归 | pytest、Vitest/Jest 等测试集成 | 可在 CI 中通过 SDK / API 运行 Dataset Experiment |
+| 默认看板 | Project Dashboard 直接展示 Trace 量、Latency、Error、Annotation、Token、Cost、Model、Tool 等常用指标 | 默认提供运行和质量分析，并可继续自定义 |
+| 自定义分析 | 以内置看板、Trace 查询和导出为主 | Custom Dashboard 可组合 Metric、Dimension、Filter 和图表，并配合 Metrics API / Alert |
+| 实际影响 | 🟦 常见研发排障指标开箱即用，结构更直接 | 🟧 适合把质量、成本和用户维度长期做成运营 / 监控看板 |
 
-### 3.5 Prompt 管理
+这也是两者平台定位差异最明显的地方之一：Phoenix 更偏 **“调试一条链路并验证改动”**，Langfuse 更偏 **“持续观察整个 LLM 应用的运行和质量”**。
 
-Prompt 管理不是本次最终选型的一级维度，但它决定 Trace → Prompt 调试 → Experiment 是否能够在同一平台闭环。
+#### 3.2.5 Prompt 调试与版本管理
 
-| 对比内容 | Phoenix | Langfuse |
+| | Phoenix | Langfuse |
 | --- | --- | --- |
-| Prompt 存储 | 支持 | 支持 |
-| Prompt Version | 支持版本历史 | 每次修改形成不可变 Version |
-| 生产版本控制 | 使用 Tag 区分和切换版本 | 使用 `production` / 自定义 Label 指向版本 |
-| 开发 / 生产区分 | Tag | Label |
-| Prompt 获取 | Client / API | SDK / API，客户端有本地缓存 |
-| Playground | 支持 | 支持 |
-| Trace 回放 | Span Replay，可从真实 LLM 调用继续调 Prompt | 可以从 Trace 进入 Playground 调试 |
-| Trace 关联 | Trace / Span 与 Prompt 调试流程可关联 | Prompt Version 可直接关联 Trace，并查看该版本运行 Metrics |
-| Experiment 关联 | 可将 Prompt Version 用于 Dataset Experiment | 可将 Prompt Version 用于 Dataset Run / Experiment |
-| 回滚 | 将 Tag 切回旧版本 | 将 Label 指回旧 Version |
+| 从问题到调试 | 🟦 可以从真实 LLM Span 直接 Replay 到 Playground，修改 Prompt / Model / 参数后重跑 | 可以从 Trace 关联到 Prompt / Playground，再进行测试 |
+| Prompt 版本 | Version + Tag | Version + Label |
+| 版本效果 | 主要通过 Trace、Dataset、Experiment 和 Evaluation 比较 | Prompt Version 可直接关联运行 Metrics，查看成本、Latency 和评分表现 |
+| 实际影响 | 🟦 从“发现问题 → 重放真实调用 → 修改验证”路径更直接 | 🟧 从“Prompt 资产 → 发布版本 → 运行指标 → 评估结果”管理得更完整 |
 
-Langfuse 还提供客户端 Prompt Cache，运行时获取 Prompt 时可以降低对平台可用性的依赖。部分受保护 Label 等治理能力属于 Enterprise 功能。
-
-### 3.6 数据分析与可视化
-
-| 分析维度 | Phoenix | Langfuse |
-| --- | --- | --- |
-| 请求量 | Project Dashboard / Trace 查询 | Dashboard / Metrics API |
-| Token | 支持 | 支持 |
-| Cost | 支持 Cost Trend、Model Cost 等 | 支持 Cost Metric、Model / User / Tag 等分组 |
-| Latency | Trace / Span / Session 统计 | Observation / Trace / Session 统计 |
-| Error | 支持错误状态和过滤 | 支持错误和状态分析 |
-| Score / Annotation | 支持 Annotation 图表和筛选 | 支持 Score Analytics / Dashboard |
-| Model | 支持按模型统计 Token / Cost | 支持 Model 维度聚合 |
-| Agent / Workflow | 通过 Span Kind / Name / Metadata 分析 | 通过 Observation Name / Type / Metadata 分析 |
-| User | 主要通过 Metadata / Attribute | 原生 `userId` 维度 |
-| Session | 支持 | 支持 |
-| 自定义 Dashboard | 以预置 Project Dashboard 和 Trace Query 为主；复杂自定义报表可通过 API / 导出接 BI | 原生 Custom Dashboard，可配置 Metric、Dimension、Filter 和图表 |
-| 指标 API | Trace / Span Query、REST / GraphQL | Metrics API，可直接做聚合查询 |
-
-Langfuse 在平台内自由做运营和质量分析的能力更完整；Phoenix 的重点更偏 Trace 调试、评估和内置项目分析。是否需要额外接 Grafana / BI，取决于最终的数据分析需求。
+因此这一项不是简单判断谁更强：**Phoenix 更偏调试工作台，Langfuse 更偏 Prompt 生命周期管理。**
 
 ---
 
