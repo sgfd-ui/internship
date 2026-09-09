@@ -23,7 +23,7 @@
 
 ### 1.3 使用方式与效果
 
-接入 Phoenix 或 Langfuse 后，不改变 Agent 原有业务逻辑，平台主要采集运行 Trace，并把一次 Agent 请求转化为可查看、可分析、可评估的数据。
+接入 Evaluation 平台后，不改变 Agent 原有业务逻辑，平台主要采集运行 Trace，并把一次 Agent 请求转化为可查看、可分析、可评估的数据。
 
 ![使用方式与效果](./assets/phoenix-langfuse/usage-effect.svg)
 
@@ -66,9 +66,7 @@ Phoenix 的核心设计建立在 **OpenTelemetry + OpenInference** 上。应用�
 
 ![Arize Phoenix 核心架构](./assets/phoenix-langfuse/phoenix-architecture.svg)
 
-读图重点：**Phoenix 以标准 Trace 为中心，采集、Trace 查询、Evaluation、Dataset / Experiment、Prompt 和 Web UI / API 基本集中在 Phoenix Server 内部；外部持久化只需要 SQLite 或 PostgreSQL。**
-
-Phoenix 以 OpenTelemetry 的 Trace / Span 作为基础调用链模型，并通过 OpenInference 补充 Agent、LLM、Tool、Retriever 等 AI 语义。
+Phoenix 的主链路是 **Agent / Application → OpenTelemetry + OpenInference → Phoenix → Trace / Span、Evaluation、Dataset / Experiment**。核心特点是以标准 Trace / Span 为底座，再通过 OpenInference 补充 Agent、LLM、Tool、Retriever 等 AI 语义。
 
 #### 2.1.3 核心概念
 
@@ -106,9 +104,7 @@ Langfuse 的定位偏完整 LLM Engineering 平台。运行数据以 Trace / Obs
 
 ![Langfuse 核心架构](./assets/phoenix-langfuse/langfuse-architecture.svg)
 
-读图重点：**Langfuse 的平台层不是单一服务模型，而是 Web / Worker 分离；Trace 分析进入 ClickHouse，事务与配置数据进入 PostgreSQL，同时依赖 Redis / Valkey 和对象存储。平台对象也比单纯 Trace 更丰富。**
-
-Langfuse 以 Trace 表示一次高层请求，Trace 内部再通过 Observation 表示 Generation、Span、Event、Tool、Agent 等具体执行节点，并使用 User / Session 等对象跨 Trace 聚合。
+Langfuse 的主链路是 **Agent / Application → SDK / OpenTelemetry → Langfuse → Trace / Observation、Score / Evaluator、Dataset / Experiment / Prompt**。相比 Phoenix，它在 Trace 之外还把 Score、User、Session 等作为更明确的平台级对象。
 
 #### 2.2.3 核心概念
 
