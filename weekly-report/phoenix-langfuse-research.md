@@ -38,8 +38,6 @@
 
 ## 二、架构对比
 
-本章统一按 **展示层、接口层、服务层、存储层** 整理两个项目，并在各层内部继续按模块拆分。
-
 ### 2.1 Phoenix 架构
 
 ![Phoenix 架构](./assets/phoenix-langfuse/phoenix-architecture.svg)
@@ -54,7 +52,7 @@
 | --- | --- | --- |
 | 服务组织 | 一个 Phoenix 服务统一承载核心服务模块与后台执行模块 | Web 服务与 Worker 拆成两个独立运行组件 |
 | 后台处理 | 数据写入、实验执行、成本计算和数据清理与核心服务运行在同一服务内 | 数据写入、评估执行、数据导出和其他后台任务由独立 Worker 处理 |
-| 存储架构 | 主要使用 SQLite 或 PostgreSQL | PostgreSQL、ClickHouse、Redis / Valkey 和 Object Storage 按职责拆分 |
+| 存储架构 | SQLite（默认）或 PostgreSQL（可选） | PostgreSQL、ClickHouse、Redis / Valkey 和 Object Storage 按职责拆分 |
 | 扩展方式 | 主要围绕 Phoenix 服务和数据库整体扩展 | Web 服务、Worker 和不同存储组件可以分别扩展 |
 | 架构复杂度 | 运行组件少，结构集中 | 运行组件和基础设施更多，职责拆分更细 |
 
