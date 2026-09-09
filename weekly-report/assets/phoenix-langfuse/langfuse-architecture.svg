@@ -1,88 +1,106 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="780" viewBox="0 0 1280 780">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="860" viewBox="0 0 1280 860">
   <defs>
     <style>
       text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#172033}
-      .layer{font-size:22px;font-weight:700}
-      .group{font-size:18px;font-weight:700}
-      .name{font-size:16px;font-weight:700}
+      .layer{font-size:21px;font-weight:700}
+      .group{font-size:17px;font-weight:700}
+      .name{font-size:15px;font-weight:700}
+      .sub{font-size:12px;fill:#667085}
       .card{fill:#fff;stroke:#d7dde7;stroke-width:1.2}
       .webFrame{fill:#f9fffc;stroke:#8fd1ad;stroke-width:1.5}
       .workerFrame{fill:#fffaf2;stroke:#edc675;stroke-width:1.5}
     </style>
   </defs>
-  <rect width="1280" height="780" fill="#fff"/>
-
-  <!-- 展示层 -->
-  <rect x="30" y="24" width="1220" height="108" rx="18" fill="#f2efff" stroke="#d8d0ff"/>
-  <rect x="30" y="24" width="165" height="108" rx="18" fill="#e8e2ff"/>
-  <path d="M62 55h38v28H62zM69 90h24M81 83v7" fill="none" stroke="#4c2bbf" stroke-width="3"/>
-  <text x="125" y="84" class="layer">展示层</text>
-  <rect x="225" y="45" width="995" height="66" rx="12" class="card"/>
-  <path d="M260 62h34v25h-34zM265 92h24M277 87v5" fill="none" stroke="#7558d8" stroke-width="2.3"/>
-  <text x="725" y="86" text-anchor="middle" class="name">Web UI</text>
-
-  <!-- 接口层 -->
-  <rect x="30" y="150" width="1220" height="116" rx="18" fill="#eef7ff" stroke="#cde4fa"/>
-  <rect x="30" y="150" width="165" height="116" rx="18" fill="#dceeff"/>
-  <circle cx="68" cy="194" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
-  <circle cx="53" cy="222" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
-  <circle cx="83" cy="222" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
-  <path d="M65 202l-9 12M71 202l9 12" stroke="#1f5fbf" stroke-width="3"/>
-  <text x="125" y="214" class="layer">接口层</text>
-  <rect x="215" y="174" width="230" height="68" rx="12" class="card"/>
-  <text x="330" y="215" text-anchor="middle" class="name">Public API</text>
-  <rect x="465" y="174" width="230" height="68" rx="12" class="card"/>
-  <text x="580" y="215" text-anchor="middle" class="name">Internal API</text>
-  <rect x="715" y="174" width="230" height="68" rx="12" class="card"/>
-  <text x="830" y="215" text-anchor="middle" class="name">Ingestion API</text>
-  <rect x="965" y="174" width="255" height="68" rx="12" class="card"/>
-  <text x="1092" y="215" text-anchor="middle" class="name">OTLP Endpoint</text>
-
-  <!-- 服务层 -->
-  <rect x="30" y="286" width="1220" height="352" rx="18" fill="#ecfaf4" stroke="#c7ead8"/>
-  <rect x="30" y="286" width="165" height="352" rx="18" fill="#dcf5e9"/>
-  <circle cx="70" cy="446" r="21" fill="none" stroke="#0c6b50" stroke-width="7"/>
-  <path d="M70 411v12M70 469v12M35 446h12M93 446h12M45 421l9 9M86 462l9 9M95 421l-9 9M54 462l-9 9" stroke="#0c6b50" stroke-width="6"/>
-  <text x="125" y="472" class="layer">服务层</text>
-
-  <rect x="220" y="310" width="660" height="302" rx="16" class="webFrame"/>
-  <text x="246" y="342" class="group">Web 服务</text>
-  <rect x="246" y="362" width="190" height="62" rx="10" class="card"/>
-  <text x="341" y="399" text-anchor="middle" class="name">Trace / Observation</text>
-  <rect x="451" y="362" width="190" height="62" rx="10" class="card"/>
-  <text x="546" y="399" text-anchor="middle" class="name">Score / Evaluation</text>
-  <rect x="656" y="362" width="198" height="62" rx="10" class="card"/>
-  <text x="755" y="399" text-anchor="middle" class="name">Dataset / Experiment</text>
-  <rect x="246" y="442" width="190" height="62" rx="10" class="card"/>
-  <text x="341" y="479" text-anchor="middle" class="name">Prompt</text>
-  <rect x="451" y="442" width="190" height="62" rx="10" class="card"/>
-  <text x="546" y="479" text-anchor="middle" class="name">Dashboard / Metrics</text>
-  <rect x="656" y="442" width="198" height="62" rx="10" class="card"/>
-  <text x="755" y="479" text-anchor="middle" class="name">User / Session</text>
-
-  <rect x="900" y="310" width="320" height="302" rx="16" class="workerFrame"/>
-  <text x="926" y="342" class="group">Worker</text>
-  <rect x="926" y="372" width="125" height="76" rx="10" class="card"/>
-  <text x="988" y="416" text-anchor="middle" class="name">数据摄取</text>
-  <rect x="1066" y="372" width="128" height="76" rx="10" class="card"/>
-  <text x="1130" y="416" text-anchor="middle" class="name">评估执行</text>
-  <rect x="926" y="468" width="125" height="76" rx="10" class="card"/>
-  <text x="988" y="512" text-anchor="middle" class="name">数据导出</text>
-  <rect x="1066" y="468" width="128" height="76" rx="10" class="card"/>
-  <text x="1130" y="512" text-anchor="middle" class="name">后台任务</text>
-
-  <!-- 存储层 -->
-  <rect x="30" y="658" width="1220" height="92" rx="18" fill="#fff1f3" stroke="#f2cbd2"/>
-  <rect x="30" y="658" width="165" height="92" rx="18" fill="#ffe1e6"/>
-  <ellipse cx="67" cy="689" rx="21" ry="8" fill="none" stroke="#9a1630" stroke-width="3"/>
-  <path d="M46 689v24c0 5 9 8 21 8s21-3 21-8v-24M46 701c0 5 9 8 21 8s21-3 21-8" fill="none" stroke="#9a1630" stroke-width="3"/>
-  <text x="125" y="712" class="layer">存储层</text>
-  <rect x="215" y="676" width="230" height="56" rx="12" class="card"/>
-  <text x="330" y="710" text-anchor="middle" class="name">PostgreSQL</text>
-  <rect x="465" y="676" width="230" height="56" rx="12" class="card"/>
-  <text x="580" y="710" text-anchor="middle" class="name">ClickHouse</text>
-  <rect x="715" y="676" width="230" height="56" rx="12" class="card"/>
-  <text x="830" y="710" text-anchor="middle" class="name">Redis / Valkey</text>
-  <rect x="965" y="676" width="255" height="56" rx="12" class="card"/>
-  <text x="1092" y="710" text-anchor="middle" class="name">Object Storage</text>
+  <rect width="1280" height="860" fill="#fff"/>
+  <rect x="30" y="24" width="1220" height="126" rx="18" fill="#f2efff" stroke="#d8d0ff"/>
+  <rect x="30" y="24" width="170" height="126" rx="18" fill="#e8e2ff"/>
+  <g transform="translate(115 87)">
+    <path d="M-22 -30h44v30h-44zM-14 8h28M0 0v8" fill="none" stroke="#4c2bbf" stroke-width="3"/>
+    <text x="0" y="35" text-anchor="middle" class="layer">展示层</text>
+  </g>
+  <rect x="230" y="47" width="990" height="80" rx="12" class="card"/>
+  <path d="M267 65h34v25h-34zM272 96h24M284 90v6" fill="none" stroke="#7558d8" stroke-width="2.3"/>
+  <text x="725" y="79" text-anchor="middle" class="name">Web UI</text>
+  <text x="725" y="104" text-anchor="middle" class="sub">Trace 查看 ｜ 评估分析 ｜ Prompt 管理 ｜ 数据看板</text>
+  <rect x="30" y="168" width="1220" height="144" rx="18" fill="#eef7ff" stroke="#cde4fa"/>
+  <rect x="30" y="168" width="170" height="144" rx="18" fill="#dceeff"/>
+  <g transform="translate(115 240)">
+    <circle cx="0" cy="-27" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
+    <circle cx="-18" cy="4" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
+    <circle cx="18" cy="4" r="8" fill="none" stroke="#1f5fbf" stroke-width="3"/>
+    <path d="M-4 -19l-11 17M4 -19l11 17" stroke="#1f5fbf" stroke-width="3"/>
+    <text x="0" y="40" text-anchor="middle" class="layer">接口层</text>
+  </g>
+  <rect x="220" y="196" width="230" height="88" rx="12" class="card"/>
+  <text x="335" y="228" text-anchor="middle" class="name">Public API</text>
+  <text x="335" y="254" text-anchor="middle" class="sub">对外开放接口</text>
+  <rect x="470" y="196" width="230" height="88" rx="12" class="card"/>
+  <text x="585" y="228" text-anchor="middle" class="name">Internal API</text>
+  <text x="585" y="254" text-anchor="middle" class="sub">页面与内部调用接口</text>
+  <rect x="720" y="196" width="230" height="88" rx="12" class="card"/>
+  <text x="835" y="228" text-anchor="middle" class="name">Ingestion API</text>
+  <text x="835" y="254" text-anchor="middle" class="sub">接收事件数据</text>
+  <rect x="970" y="196" width="250" height="88" rx="12" class="card"/>
+  <text x="1095" y="228" text-anchor="middle" class="name">OTLP Endpoint</text>
+  <text x="1095" y="254" text-anchor="middle" class="sub">接收 Trace 数据</text>
+  <rect x="30" y="330" width="1220" height="390" rx="18" fill="#ecfaf4" stroke="#c7ead8"/>
+  <rect x="30" y="330" width="170" height="390" rx="18" fill="#dcf5e9"/>
+  <g transform="translate(115 525)">
+    <circle cx="0" cy="-28" r="21" fill="none" stroke="#0c6b50" stroke-width="7"/>
+    <path d="M0 -63v12M0 -5v12M-35 -28h12M23 -28h12M-25 -53l9 9M16 -12l9 9M25 -53l-9 9M-16 -12l-9 9" stroke="#0c6b50" stroke-width="6"/>
+    <text x="0" y="36" text-anchor="middle" class="layer">服务层</text>
+  </g>
+  <rect x="225" y="354" width="650" height="342" rx="16" class="webFrame"/>
+  <text x="252" y="386" class="group">Web 服务</text>
+  <rect x="252" y="410" width="185" height="82" rx="10" class="card"/>
+  <text x="344" y="438" text-anchor="middle" class="name">Trace / Observation</text>
+  <text x="344" y="464" text-anchor="middle" class="sub">调用链与事件管理</text>
+  <rect x="455" y="410" width="185" height="82" rx="10" class="card"/>
+  <text x="547" y="438" text-anchor="middle" class="name">Score / Evaluation</text>
+  <text x="547" y="464" text-anchor="middle" class="sub">评分与评估管理</text>
+  <rect x="658" y="410" width="190" height="82" rx="10" class="card"/>
+  <text x="753" y="438" text-anchor="middle" class="name">Dataset / Experiment</text>
+  <text x="753" y="464" text-anchor="middle" class="sub">数据集与实验管理</text>
+  <rect x="252" y="512" width="185" height="82" rx="10" class="card"/>
+  <text x="344" y="540" text-anchor="middle" class="name">Prompt</text>
+  <text x="344" y="566" text-anchor="middle" class="sub">提示词与版本管理</text>
+  <rect x="455" y="512" width="185" height="82" rx="10" class="card"/>
+  <text x="547" y="540" text-anchor="middle" class="name">Dashboard / Metrics</text>
+  <text x="547" y="566" text-anchor="middle" class="sub">指标与数据看板</text>
+  <rect x="658" y="512" width="190" height="82" rx="10" class="card"/>
+  <text x="753" y="540" text-anchor="middle" class="name">User / Session</text>
+  <text x="753" y="566" text-anchor="middle" class="sub">用户与会话管理</text>
+  <rect x="895" y="354" width="325" height="342" rx="16" class="workerFrame"/>
+  <text x="922" y="386" class="group">Worker</text>
+  <rect x="922" y="410" width="132" height="82" rx="10" class="card"/>
+  <text x="988" y="438" text-anchor="middle" class="name">数据写入</text>
+  <text x="988" y="464" text-anchor="middle" class="sub">Trace / Event 入库</text>
+  <rect x="1064" y="410" width="132" height="82" rx="10" class="card"/>
+  <text x="1130" y="438" text-anchor="middle" class="name">评估执行</text>
+  <text x="1130" y="464" text-anchor="middle" class="sub">运行评估任务</text>
+  <rect x="922" y="512" width="132" height="82" rx="10" class="card"/>
+  <text x="988" y="540" text-anchor="middle" class="name">数据导出</text>
+  <text x="988" y="566" text-anchor="middle" class="sub">生成导出结果</text>
+  <rect x="1064" y="512" width="132" height="82" rx="10" class="card"/>
+  <text x="1130" y="540" text-anchor="middle" class="name">后台任务</text>
+  <text x="1130" y="566" text-anchor="middle" class="sub">队列与定时任务</text>
+  <rect x="30" y="738" width="1220" height="98" rx="18" fill="#fff1f3" stroke="#f2cbd2"/>
+  <rect x="30" y="738" width="170" height="98" rx="18" fill="#ffe1e6"/>
+  <g transform="translate(115 787)">
+    <ellipse cx="0" cy="-22" rx="22" ry="8" fill="none" stroke="#9a1630" stroke-width="3"/>
+    <path d="M-22 -22v22c0 5 10 8 22 8s22-3 22-8v-22M-22 -11c0 5 10 8 22 8s22-3 22-8" fill="none" stroke="#9a1630" stroke-width="3"/>
+    <text x="0" y="36" text-anchor="middle" class="layer">存储层</text>
+  </g>
+  <rect x="215" y="754" width="230" height="66" rx="12" class="card"/>
+  <text x="330" y="782" text-anchor="middle" class="name">PostgreSQL</text>
+  <text x="330" y="806" text-anchor="middle" class="sub">业务与配置数据</text>
+  <rect x="465" y="754" width="230" height="66" rx="12" class="card"/>
+  <text x="580" y="782" text-anchor="middle" class="name">ClickHouse</text>
+  <text x="580" y="806" text-anchor="middle" class="sub">Trace 与分析数据</text>
+  <rect x="715" y="754" width="230" height="66" rx="12" class="card"/>
+  <text x="830" y="782" text-anchor="middle" class="name">Redis / Valkey</text>
+  <text x="830" y="806" text-anchor="middle" class="sub">缓存与任务队列</text>
+  <rect x="965" y="754" width="255" height="66" rx="12" class="card"/>
+  <text x="1092" y="782" text-anchor="middle" class="name">Object Storage</text>
+  <text x="1092" y="806" text-anchor="middle" class="sub">文件与大对象</text>
 </svg>
