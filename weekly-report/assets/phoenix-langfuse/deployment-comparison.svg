@@ -1,34 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="720" viewBox="0 0 1360 720">
-<style>
-text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#172033}.title{font-size:24px;font-weight:700}.h{font-size:18px;font-weight:700}.s{font-size:13px}.xs{font-size:12px;fill:#5b6679}.box{stroke:#8792a6;stroke-width:1.2;rx:10}.line{stroke:#667085;stroke-width:1.5;fill:none;marker-end:url(#a)}.dash{stroke:#98a2b3;stroke-width:1.2;stroke-dasharray:6 5;fill:none}</style>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420">
+<style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937}.h{font-size:20px;font-weight:700}.t{font-size:17px;font-weight:700}.s{font-size:14px}.box{stroke:#8a94a6;stroke-width:1.4;rx:10}.line{stroke:#667085;stroke-width:1.5;fill:none;marker-end:url(#a)}</style>
 <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker></defs>
-<text x="35" y="42" class="title">自部署架构对比</text>
-<text x="35" y="68" class="s">这里只比较运行所需核心组件和数据流，不展开 CPU / 内存规格。</text>
-
-<rect x="35" y="105" width="610" height="505" class="box" fill="#EAF3FF"/>
-<text x="65" y="142" class="h">Phoenix</text>
-<text x="65" y="168" class="xs">集中式：应用、采集、查询和 UI 主要由 Phoenix Server 承担</text>
-<rect x="90" y="215" width="170" height="60" rx="8" fill="#fff" stroke="#b9c7da"/><text x="175" y="250" text-anchor="middle" class="s">Applications</text>
-<rect x="325" y="195" width="230" height="100" rx="8" fill="#F3EEFF" stroke="#c9c1e4"/><text x="440" y="229" text-anchor="middle" class="h">Phoenix Server</text><text x="440" y="255" text-anchor="middle" class="xs">OTLP Collector · API · UI · Eval</text><text x="440" y="277" text-anchor="middle" class="xs">Trace Query · Dataset · Experiment</text>
-<path d="M260 245 H325" class="line"/>
-<rect x="325" y="355" width="230" height="95" rx="8" fill="#EAF7F0" stroke="#9ccbb5"/><text x="440" y="390" text-anchor="middle" class="h">SQLite / PostgreSQL</text><text x="440" y="418" text-anchor="middle" class="xs">Trace 与平台数据持久化</text>
-<path d="M440 295 V355" class="line"/>
-<rect x="90" y="500" width="465" height="75" rx="8" fill="#fff" stroke="#b9c7da"/><text x="115" y="528" class="s">部署特征</text><text x="115" y="552" class="xs">单容器可启动；生产主要增加 PostgreSQL。无强制 Redis、ClickHouse、对象存储和独立 Worker。</text>
-
-<rect x="715" y="105" width="610" height="505" class="box" fill="#F3EEFF"/>
-<text x="745" y="142" class="h">Langfuse</text>
-<text x="745" y="168" class="xs">分层式：Web、Worker 与不同存储组件分工处理摄取、查询和分析</text>
-<rect x="755" y="215" width="150" height="60" rx="8" fill="#fff" stroke="#c9c1e4"/><text x="830" y="250" text-anchor="middle" class="s">Applications</text>
-<rect x="950" y="195" width="145" height="80" rx="8" fill="#EAF3FF" stroke="#a8c7e8"/><text x="1023" y="226" text-anchor="middle" class="s">Langfuse Web</text><text x="1023" y="249" text-anchor="middle" class="xs">UI / API / Query</text>
-<rect x="1140" y="195" width="145" height="80" rx="8" fill="#EAF7F0" stroke="#9ccbb5"/><text x="1213" y="226" text-anchor="middle" class="s">Worker</text><text x="1213" y="249" text-anchor="middle" class="xs">Ingestion / Eval</text>
-<path d="M905 245 H950" class="line"/><path d="M1095 235 H1140" class="line"/>
-<rect x="755" y="350" width="120" height="78" rx="8" fill="#EAF3FF" stroke="#a8c7e8"/><text x="815" y="381" text-anchor="middle" class="s">PostgreSQL</text><text x="815" y="404" text-anchor="middle" class="xs">事务 / 配置</text>
-<rect x="890" y="350" width="120" height="78" rx="8" fill="#EAF7F0" stroke="#9ccbb5"/><text x="950" y="381" text-anchor="middle" class="s">ClickHouse</text><text x="950" y="404" text-anchor="middle" class="xs">Trace / OLAP</text>
-<rect x="1025" y="350" width="120" height="78" rx="8" fill="#F3EEFF" stroke="#c9c1e4"/><text x="1085" y="381" text-anchor="middle" class="s">Redis / Valkey</text><text x="1085" y="404" text-anchor="middle" class="xs">Queue / Cache</text>
-<rect x="1160" y="350" width="120" height="78" rx="8" fill="#FFF5E5" stroke="#dfc08a"/><text x="1220" y="381" text-anchor="middle" class="s">Object Store</text><text x="1220" y="404" text-anchor="middle" class="xs">附件 / 大对象</text>
-<path d="M1023 275 C1023 310 815 310 815 350" class="line"/><path d="M1023 275 C1023 318 950 318 950 350" class="line"/><path d="M1213 275 C1213 315 1085 315 1085 350" class="line"/><path d="M1213 275 V350" class="line"/>
-<rect x="755" y="500" width="525" height="75" rx="8" fill="#fff" stroke="#c9c1e4"/><text x="780" y="528" class="s">部署特征</text><text x="780" y="552" class="xs">Web / Worker 可独立扩展；Trace 分析走 ClickHouse；Queue 和对象存储进入核心依赖，组件与故障面更多。</text>
-
-<rect x="160" y="640" width="1040" height="55" rx="10" fill="#fff" stroke="#9aa5b5"/>
-<text x="680" y="673" text-anchor="middle" class="s">最直观差异：Phoenix 是“一个核心服务 + 一个数据库”；Langfuse 是“Web / Worker + PostgreSQL + ClickHouse + Redis + 对象存储”。</text>
+<text x="275" y="38" text-anchor="middle" class="h">Phoenix</text><text x="825" y="38" text-anchor="middle" class="h">Langfuse</text>
+<rect x="55" y="75" width="180" height="75" class="box" fill="#EEF4FF"/><text x="145" y="108" text-anchor="middle" class="t">Applications</text><text x="145" y="132" text-anchor="middle" class="s">OTLP / OTel</text>
+<rect x="330" y="75" width="180" height="75" class="box" fill="#F3EEFF"/><text x="420" y="108" text-anchor="middle" class="t">Phoenix Server</text><text x="420" y="132" text-anchor="middle" class="s">Collector + UI + API</text>
+<rect x="330" y="225" width="180" height="75" class="box" fill="#EAF7F3"/><text x="420" y="258" text-anchor="middle" class="t">SQLite / PostgreSQL</text><text x="420" y="282" text-anchor="middle" class="s">主要持久化依赖</text>
+<path d="M235 112 H330" class="line"/><path d="M420 150 V225" class="line"/>
+<text x="275" y="355" text-anchor="middle" class="s">部署特点：服务集中，外部依赖少。</text>
+<rect x="600" y="75" width="160" height="75" class="box" fill="#EEF4FF"/><text x="680" y="108" text-anchor="middle" class="t">Applications</text><text x="680" y="132" text-anchor="middle" class="s">SDK / OTel</text>
+<rect x="815" y="75" width="160" height="75" class="box" fill="#F3EEFF"/><text x="895" y="108" text-anchor="middle" class="t">Web / API</text><text x="895" y="132" text-anchor="middle" class="s">接入与查询</text>
+<rect x="815" y="185" width="160" height="75" class="box" fill="#FFF5E8"/><text x="895" y="218" text-anchor="middle" class="t">Worker</text><text x="895" y="242" text-anchor="middle" class="s">异步摄取与后台任务</text>
+<rect x="590" y="300" width="125" height="60" class="box" fill="#EAF7F3"/><text x="652" y="336" text-anchor="middle" class="s">PostgreSQL</text>
+<rect x="730" y="300" width="125" height="60" class="box" fill="#EAF7F3"/><text x="792" y="336" text-anchor="middle" class="s">ClickHouse</text>
+<rect x="870" y="300" width="125" height="60" class="box" fill="#EAF7F3"/><text x="932" y="336" text-anchor="middle" class="s">Redis</text>
+<rect x="1010" y="300" width="70" height="60" class="box" fill="#EAF7F3"/><text x="1045" y="326" text-anchor="middle" class="s">S3 /</text><text x="1045" y="346" text-anchor="middle" class="s">MinIO</text>
+<path d="M760 112 H815" class="line"/><path d="M895 150 V185" class="line"/><path d="M895 260 C895 280 652 280 652 300" class="line"/><path d="M895 260 C895 280 792 280 792 300" class="line"/><path d="M895 260 V300" class="line"/><path d="M895 260 C895 280 1045 280 1045 300" class="line"/>
+<text x="825" y="395" text-anchor="middle" class="s">部署特点：服务与存储拆分，组件更多，扩展路径更明确。</text>
+<line x1="550" y1="55" x2="550" y2="395" stroke="#d0d5dd" stroke-width="1.2"/>
 </svg>
