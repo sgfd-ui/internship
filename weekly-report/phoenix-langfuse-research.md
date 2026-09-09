@@ -129,23 +129,24 @@ Langfuse 的主链路是 **Agent / Application → SDK / OpenTelemetry → Langf
 
 ### 3.1 能力总览
 
-| 对比维度 | Phoenix | Langfuse |
+这里先从使用者视角比较“平台能帮我完成什么”，具体实现方式放到后续小节展开。
+
+| 功能视角 | Phoenix | Langfuse |
 | --- | --- | --- |
-| Trace 可观测 | 支持；OpenTelemetry + OpenInference 为核心模型 | 支持；OpenTelemetry / SDK 采集，平台内使用 Trace / Observation 模型 |
-| 多 Agent / Workflow 调试 | 支持父子 Span、Agent / Tool / LLM 等语义类型 | 支持层级 Observation、Agent / Tool / Generation |
-| Tool / LLM 调用定位 | 支持输入、输出、状态、Latency、Token 等 | 支持输入、输出、状态、Latency、Token、Cost 等 |
-| Session | 原生 Session，可聚合多轮 Trace | 原生 Session，可聚合多轮 Trace |
-| User 分析 | 可通过 OpenTelemetry / Metadata 记录用户属性，主要以 Project / Session / Trace 分析为主 | 原生 `userId`，支持按用户聚合 |
-| Token / Cost | 支持自动 Token / Cost 计算和聚合 | 支持自动 Token / Cost 计算和聚合 |
-| Evaluation | LLM、Code、Human Annotation；可用于 Trace、Dataset、Experiment | LLM、Code、Human、API；支持线上 Rule 自动触发 |
-| Dataset | 支持版本化 Dataset | 支持版本化 Dataset |
-| Experiment | 支持 | 支持 |
-| Prompt 管理 | Version + Tag + Playground + Span Replay | Immutable Version + Label + Cache + Playground |
-| Dashboard / Analytics | 内置 Project Dashboard；支持筛选、查询和导出 | Custom Dashboard + Metrics API，分析维度更开放 |
-| OpenTelemetry | 原生基础标准 | 原生支持 |
-| OpenInference | 核心语义标准 | 可通过 OpenTelemetry 接入 OpenInference Instrumentation |
-| API / SDK | Python / TypeScript Client、REST / GraphQL、OTLP | Python / JS/TS SDK、OpenAPI、OTLP |
-| Dify 原生接入 | 有 | 有 |
+| 查看一次请求完整过程 | 可以查看 Agent、Workflow、Tool、Retriever、LLM 等完整调用链，并逐节点查看输入输出 | 可以查看完整调用链和各执行节点，同样支持逐节点查看输入输出 |
+| 定位错误与慢节点 | 支持按错误、耗时、模型调用等信息定位问题，适合逐条 Trace 调试 | 支持错误、耗时、成本等定位，也可以结合筛选和 Dashboard 观察问题分布 |
+| 查看运行成本与性能 | 可以查看 Token、Cost、Latency、模型等运行指标 | 可以查看 Token、Cost、Latency、模型等运行指标，并做更多聚合分析 |
+| 跟踪多轮会话 | 支持把多次请求按 Session 聚合查看 | 支持 Session，并且更方便按用户和会话维度持续分析 |
+| 对结果做质量评估 | 支持人工评分、代码规则和 LLM-as-a-Judge，可用于线上 Trace 和离线实验 | 支持人工评分、代码规则和 LLM-as-a-Judge，评估结果可以持续沉淀和分析 |
+| 持续评估线上结果 | 可以对线上运行结果做评估，但自动触发与持续评估通常需要额外组织执行流程 | 原生提供规则、筛选和采样机制，更适合直接做持续在线评估 |
+| 人工审核与反馈 | 支持直接对运行结果做 Annotation 和人工评分 | 支持人工评分，并提供 Annotation Queue 组织待审核样本 |
+| 沉淀失败 / 典型 Case | 可以从线上 Trace 中挑选 Case 进入 Dataset，用于后续复测 | 可以从线上 Trace 中沉淀 Case 到 Dataset，用于评估和回归测试 |
+| 管理测试集 | 支持 Dataset 和版本管理，可重复执行同一批 Case | 支持 Dataset 和版本管理，也可以按历史版本重复运行 |
+| 做版本对比与回归验证 | 支持在固定 Dataset 上批量运行新旧 Prompt、Model 或应用版本并比较结果 | 支持 Dataset Run / Experiment，对新旧版本做批量评分和结果对比 |
+| 调试和管理 Prompt | 支持 Prompt 版本、Tag、Playground 和真实调用 Replay | 支持 Prompt 版本、Label、Playground、缓存以及与运行数据的关联分析 |
+| 做整体质量与运营分析 | 提供内置 Dashboard 和 Trace 查询，重点偏运行调试与评估结果查看 | 提供更灵活的 Dashboard 和指标分析，更适合持续观察用户、会话、模型、成本和质量趋势 |
+
+从功能使用上看，两者都能完成 **“看运行过程 → 定位问题 → 评估结果 → 沉淀 Case → 回归验证”**。Phoenix 的使用重心更偏 **Trace 调试和实验验证**；Langfuse 则在此基础上把 **持续评估、人工审核、用户 / 会话分析和 Dashboard** 做得更平台化。
 
 ### 3.2 Trace 与 Agent 可观测
 
