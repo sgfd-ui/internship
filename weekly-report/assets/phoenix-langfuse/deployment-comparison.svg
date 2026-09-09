@@ -1,20 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420">
-<style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937}.h{font-size:20px;font-weight:700}.t{font-size:17px;font-weight:700}.s{font-size:14px}.box{stroke:#8a94a6;stroke-width:1.4;rx:10}.line{stroke:#667085;stroke-width:1.5;fill:none;marker-end:url(#a)}</style>
-<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker></defs>
-<text x="275" y="38" text-anchor="middle" class="h">Phoenix</text><text x="825" y="38" text-anchor="middle" class="h">Langfuse</text>
-<rect x="55" y="75" width="180" height="75" class="box" fill="#EEF4FF"/><text x="145" y="108" text-anchor="middle" class="t">Applications</text><text x="145" y="132" text-anchor="middle" class="s">OTLP / OTel</text>
-<rect x="330" y="75" width="180" height="75" class="box" fill="#F3EEFF"/><text x="420" y="108" text-anchor="middle" class="t">Phoenix Server</text><text x="420" y="132" text-anchor="middle" class="s">Collector + UI + API</text>
-<rect x="330" y="225" width="180" height="75" class="box" fill="#EAF7F3"/><text x="420" y="258" text-anchor="middle" class="t">SQLite / PostgreSQL</text><text x="420" y="282" text-anchor="middle" class="s">主要持久化依赖</text>
-<path d="M235 112 H330" class="line"/><path d="M420 150 V225" class="line"/>
-<text x="275" y="355" text-anchor="middle" class="s">部署特点：服务集中，外部依赖少。</text>
-<rect x="600" y="75" width="160" height="75" class="box" fill="#EEF4FF"/><text x="680" y="108" text-anchor="middle" class="t">Applications</text><text x="680" y="132" text-anchor="middle" class="s">SDK / OTel</text>
-<rect x="815" y="75" width="160" height="75" class="box" fill="#F3EEFF"/><text x="895" y="108" text-anchor="middle" class="t">Web / API</text><text x="895" y="132" text-anchor="middle" class="s">接入与查询</text>
-<rect x="815" y="185" width="160" height="75" class="box" fill="#FFF5E8"/><text x="895" y="218" text-anchor="middle" class="t">Worker</text><text x="895" y="242" text-anchor="middle" class="s">异步摄取与后台任务</text>
-<rect x="590" y="300" width="125" height="60" class="box" fill="#EAF7F3"/><text x="652" y="336" text-anchor="middle" class="s">PostgreSQL</text>
-<rect x="730" y="300" width="125" height="60" class="box" fill="#EAF7F3"/><text x="792" y="336" text-anchor="middle" class="s">ClickHouse</text>
-<rect x="870" y="300" width="125" height="60" class="box" fill="#EAF7F3"/><text x="932" y="336" text-anchor="middle" class="s">Redis</text>
-<rect x="1010" y="300" width="70" height="60" class="box" fill="#EAF7F3"/><text x="1045" y="326" text-anchor="middle" class="s">S3 /</text><text x="1045" y="346" text-anchor="middle" class="s">MinIO</text>
-<path d="M760 112 H815" class="line"/><path d="M895 150 V185" class="line"/><path d="M895 260 C895 280 652 280 652 300" class="line"/><path d="M895 260 C895 280 792 280 792 300" class="line"/><path d="M895 260 V300" class="line"/><path d="M895 260 C895 280 1045 280 1045 300" class="line"/>
-<text x="825" y="395" text-anchor="middle" class="s">部署特点：服务与存储拆分，组件更多，扩展路径更明确。</text>
-<line x1="550" y1="55" x2="550" y2="395" stroke="#d0d5dd" stroke-width="1.2"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="680" viewBox="0 0 1320 680">
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#7b8ba7"/></marker><style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#172033}.title{font-size:24px;font-weight:700}.h{font-size:20px;font-weight:700}.m{font-size:14px}.s{font-size:12px;fill:#63708a}.card{fill:#fff;stroke:#d7dfeb;stroke-width:1}.line{stroke:#7b8ba7;stroke-width:2;fill:none;marker-end:url(#a)}</style></defs>
+<rect width="1320" height="680" fill="#fff"/>
+<text x="40" y="42" class="title">自部署架构对比</text><text x="40" y="68" class="m">只看核心运行组件：Phoenix 更集中，Langfuse 的服务与存储拆分更细。</text>
+
+<!-- Phoenix -->
+<rect x="38" y="105" width="590" height="500" rx="20" fill="#edf6ff" stroke="#b9d8f3"/>
+<text x="68" y="145" class="h">Phoenix</text><text x="545" y="145" text-anchor="end" class="m">组件少 · 部署集中</text>
+<rect x="72" y="190" width="520" height="82" rx="12" class="card"/>
+<circle cx="116" cy="231" r="18" fill="#d7ecff"/><circle cx="108" cy="226" r="6" fill="none" stroke="#1976d2" stroke-width="2.4"/><circle cx="124" cy="226" r="6" fill="none" stroke="#1976d2" stroke-width="2.4"/><path d="M98 245c3-11 17-11 20 0M114 245c3-11 17-11 20 0" fill="none" stroke="#1976d2" stroke-width="2.4"/><text x="154" y="225" class="h">Applications</text><text x="154" y="247" class="s">Agent / Workflow / Dify / 自定义服务</text>
+<path d="M332 272v34" class="line"/>
+<rect x="72" y="306" width="520" height="120" rx="12" fill="#f3f0ff" stroke="#d1c9f6"/>
+<circle cx="126" cy="366" r="26" fill="#ece8ff"/><rect x="112" y="348" width="28" height="36" rx="4" fill="none" stroke="#5b4bd8" stroke-width="2.5"/><path d="M117 357h18M117 365h18M117 373h12" stroke="#5b4bd8" stroke-width="2"/><text x="170" y="354" class="h">Phoenix Server</text><text x="170" y="379" class="m">OTLP Collector · API · UI · Trace Query</text><text x="170" y="402" class="s">Evaluation · Dataset · Experiment · Prompt</text>
+<path d="M332 426v34" class="line"/>
+<rect x="72" y="460" width="520" height="100" rx="12" fill="#ecfbf5" stroke="#aee3cc"/>
+<ellipse cx="126" cy="498" rx="20" ry="7" fill="none" stroke="#1d9f7a" stroke-width="2.5"/><path d="M106 498v32c0 10 40 10 40 0v-32M106 514c0 10 40 10 40 0" fill="none" stroke="#1d9f7a" stroke-width="2.5"/><text x="170" y="503" class="h">SQLite / PostgreSQL</text><text x="170" y="528" class="s">Trace 与平台数据持久化</text>
+
+<!-- divider -->
+<line x1="660" y1="110" x2="660" y2="610" stroke="#d9dee7" stroke-width="1.2"/>
+<text x="660" y="352" text-anchor="middle" class="h" fill="#7b8ba7">VS</text>
+
+<!-- Langfuse -->
+<rect x="692" y="105" width="590" height="500" rx="20" fill="#ecfbf5" stroke="#aee3cc"/>
+<text x="722" y="145" class="h">Langfuse</text><text x="1248" y="145" text-anchor="end" class="m">组件更多 · 扩展路径清晰</text>
+<rect x="726" y="190" width="522" height="82" rx="12" class="card"/>
+<circle cx="770" cy="231" r="18" fill="#d7ecff"/><circle cx="762" cy="226" r="6" fill="none" stroke="#1976d2" stroke-width="2.4"/><circle cx="778" cy="226" r="6" fill="none" stroke="#1976d2" stroke-width="2.4"/><path d="M752 245c3-11 17-11 20 0M768 245c3-11 17-11 20 0" fill="none" stroke="#1976d2" stroke-width="2.4"/><text x="808" y="225" class="h">Applications</text><text x="808" y="247" class="s">Agent / Workflow / Dify / 自定义服务</text>
+<path d="M987 272v26" class="line"/>
+<rect x="726" y="300" width="244" height="102" rx="12" fill="#f3f0ff" stroke="#d1c9f6"/>
+<rect x="752" y="326" width="34" height="28" rx="4" fill="none" stroke="#5b4bd8" stroke-width="2.5"/><path d="M752 334h34M760 362h18" stroke="#5b4bd8" stroke-width="2.3"/><text x="804" y="337" class="h">Web / API</text><text x="804" y="362" class="s">UI / Query / Ingestion</text>
+<rect x="1004" y="300" width="244" height="102" rx="12" fill="#f3f0ff" stroke="#d1c9f6"/>
+<circle cx="1040" cy="351" r="16" fill="none" stroke="#5b4bd8" stroke-width="2.4"/><path d="M1040 328v8M1040 366v8M1017 351h8M1055 351h8M1024 335l6 6M1050 361l6 6M1056 335l-6 6M1030 361l-6 6" stroke="#5b4bd8" stroke-width="2"/><text x="1070" y="337" class="h">Worker</text><text x="1070" y="362" class="s">异步摄取 / Eval / 后台任务</text>
+<path d="M848 402v40" class="line"/><path d="M1126 402v40" class="line"/>
+<g>
+ <rect x="726" y="442" width="118" height="112" rx="11" class="card"/><ellipse cx="785" cy="475" rx="17" ry="6" fill="none" stroke="#1d9f7a" stroke-width="2.4"/><path d="M768 475v28c0 8 34 8 34 0v-28M768 489c0 8 34 8 34 0" fill="none" stroke="#1d9f7a" stroke-width="2.4"/><text x="785" y="528" text-anchor="middle" class="m">PostgreSQL</text><text x="785" y="548" text-anchor="middle" class="s">事务 / 配置</text>
+ <rect x="858" y="442" width="118" height="112" rx="11" class="card"/><path d="M894 505v-16M907 505v-31M920 505v-45" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/><text x="917" y="528" text-anchor="middle" class="m">ClickHouse</text><text x="917" y="548" text-anchor="middle" class="s">Trace / OLAP</text>
+ <rect x="990" y="442" width="118" height="112" rx="11" class="card"/><path d="M1020 475l17-9 17 9-17 9zM1020 489l17 9 17-9M1020 503l17 9 17-9" fill="none" stroke="#d94841" stroke-width="2.5"/><text x="1049" y="528" text-anchor="middle" class="m">Redis / Valkey</text><text x="1049" y="548" text-anchor="middle" class="s">Queue / Cache</text>
+ <rect x="1122" y="442" width="126" height="112" rx="11" class="card"/><path d="M1156 499c-11-1-11-16 0-18 3-12 21-13 26-3 11-3 17 10 9 18" fill="none" stroke="#1976d2" stroke-width="2.6"/><text x="1185" y="528" text-anchor="middle" class="m">Object Storage</text><text x="1185" y="548" text-anchor="middle" class="s">文件 / 附件</text>
+</g>
+<text x="660" y="646" text-anchor="middle" class="m">最直观差异：Phoenix = 核心服务 + 数据库；Langfuse = Web / Worker + 多类存储组件。</text>
 </svg>
