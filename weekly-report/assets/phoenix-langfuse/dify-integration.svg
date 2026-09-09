@@ -1,11 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="300" viewBox="0 0 1100 300">
-<style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937}.t{font-size:18px;font-weight:700}.s{font-size:14px}.box{stroke:#8a94a6;stroke-width:1.4;rx:10}.line{stroke:#667085;stroke-width:1.6;fill:none;marker-end:url(#a)}</style>
-<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker></defs>
-<rect x="40" y="70" width="200" height="80" class="box" fill="#EEF4FF"/><text x="140" y="105" text-anchor="middle" class="t">Dify Application</text><text x="140" y="130" text-anchor="middle" class="s">原生 Monitoring</text>
-<rect x="40" y="180" width="200" height="80" class="box" fill="#EEF4FF"/><text x="140" y="215" text-anchor="middle" class="t">外部 Agent / Tool</text><text x="140" y="240" text-anchor="middle" class="s">OpenTelemetry / SDK</text>
-<rect x="330" y="105" width="210" height="100" class="box" fill="#EAF7F3"/><text x="435" y="144" text-anchor="middle" class="t">Trace Context</text><text x="435" y="172" text-anchor="middle" class="s">保证父子调用关系连续</text>
-<rect x="650" y="65" width="180" height="80" class="box" fill="#F3EEFF"/><text x="740" y="112" text-anchor="middle" class="t">Phoenix</text>
-<rect x="650" y="175" width="180" height="80" class="box" fill="#FFF5E8"/><text x="740" y="222" text-anchor="middle" class="t">Langfuse</text>
-<rect x="900" y="105" width="160" height="100" class="box" fill="#EAF7F3"/><text x="980" y="144" text-anchor="middle" class="t">完整 Trace</text><text x="980" y="172" text-anchor="middle" class="s">Workflow / Tool / LLM</text>
-<path d="M240 110 C280 110 290 135 330 145" class="line"/><path d="M240 220 C280 220 290 185 330 170" class="line"/><path d="M540 145 C590 145 600 105 650 105" class="line"/><path d="M540 170 C590 170 600 215 650 215" class="line"/><path d="M830 105 C865 105 865 145 900 145" class="line"/><path d="M830 215 C865 215 865 170 900 170" class="line"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620">
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#7b8ba7"/></marker><style>text{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#172033}.title{font-size:24px;font-weight:700}.h{font-size:18px;font-weight:700}.m{font-size:14px}.s{font-size:12px;fill:#63708a}.card{fill:#fff;stroke:#d7dfeb;stroke-width:1}.line{stroke:#7b8ba7;stroke-width:2;fill:none;marker-end:url(#a)}</style></defs>
+<rect width="1280" height="620" fill="#fff"/>
+<text x="40" y="42" class="title">Dify 接入方式</text><text x="40" y="68" class="m">Dify 内部节点原生上报；平台外部 Agent / Tool 继续补 Trace，并传播同一个 Trace Context。</text>
+
+<!-- left -->
+<rect x="38" y="115" width="280" height="385" rx="18" fill="#edf6ff" stroke="#b9d8f3"/>
+<text x="62" y="150" class="h">Dify Application</text><text x="62" y="172" class="s">内部节点由 Monitoring / Tracing 采集</text>
+<rect x="62" y="205" width="232" height="72" rx="10" class="card"/><circle cx="92" cy="241" r="14" fill="#d7ecff"/><circle cx="92" cy="228" r="5" fill="none" stroke="#1976d2" stroke-width="2"/><circle cx="81" cy="251" r="5" fill="none" stroke="#1976d2" stroke-width="2"/><circle cx="103" cy="251" r="5" fill="none" stroke="#1976d2" stroke-width="2"/><path d="M92 233v8M92 241l-11 5M92 241l11 5" stroke="#1976d2" stroke-width="2"/><text x="122" y="237" class="m">Workflow</text><text x="122" y="257" class="s">流程执行轨迹</text>
+<rect x="62" y="292" width="232" height="72" rx="10" class="card"/><circle cx="92" cy="328" r="14" fill="#d7ecff"/><path d="M84 336l14-14M85 321l4-4 5 5-4 4M93 333l4 4" fill="none" stroke="#1976d2" stroke-width="2"/><text x="122" y="324" class="m">Tool</text><text x="122" y="344" class="s">外部工具调用</text>
+<rect x="62" y="379" width="232" height="72" rx="10" class="card"/><circle cx="92" cy="415" r="14" fill="#d7ecff"/><rect x="84" y="404" width="16" height="22" rx="3" fill="none" stroke="#1976d2" stroke-width="2"/><path d="M87 410h10M87 415h8M87 420h9" stroke="#1976d2" stroke-width="2"/><text x="122" y="411" class="m">LLM</text><text x="122" y="431" class="s">模型输入输出与 Token</text>
+
+<rect x="38" y="520" width="280" height="70" rx="15" fill="#f3f0ff" stroke="#d1c9f6"/>
+<path d="M70 557l12-10 12 10-12 10zM82 547v20" fill="none" stroke="#5b4bd8" stroke-width="2.4"/><text x="108" y="552" class="m">外部 Agent / Tool</text><text x="108" y="572" class="s">通过 SDK / OpenTelemetry 补充 Span</text>
+
+<!-- trace context -->
+<rect x="370" y="205" width="230" height="245" rx="18" fill="#f3f0ff" stroke="#d1c9f6"/>
+<text x="394" y="240" class="h">Trace Context</text><text x="394" y="263" class="s">保持父子调用关系连续</text>
+<g transform="translate(438 292)"><rect x="0" y="18" width="54" height="28" rx="14" fill="none" stroke="#5b4bd8" stroke-width="5" transform="rotate(-35 27 32)"/><rect x="38" y="0" width="54" height="28" rx="14" fill="none" stroke="#5b4bd8" stroke-width="5" transform="rotate(-35 65 14)"/><path d="M35 34l23-16" stroke="#5b4bd8" stroke-width="5" stroke-linecap="round"/></g>
+<rect x="398" y="372" width="78" height="34" rx="8" fill="#fff" stroke="#d7dfeb"/><text x="437" y="394" text-anchor="middle" class="s">Trace ID</text><rect x="486" y="372" width="86" height="34" rx="8" fill="#fff" stroke="#d7dfeb"/><text x="529" y="394" text-anchor="middle" class="s">Span Context</text>
+
+<!-- platforms -->
+<rect x="654" y="155" width="275" height="160" rx="18" fill="#ecfbf5" stroke="#aee3cc"/>
+<circle cx="704" cy="220" r="30" fill="#d7f5e9"/><path d="M689 224c12-22 28-18 31-2-10-3-16 1-18 12-3-7-7-9-13-10z" fill="#1d9f7a"/><text x="748" y="208" class="h">Phoenix</text><text x="748" y="232" class="s">Dify 原生 Tracing</text><rect x="748" y="250" width="58" height="28" rx="7" fill="#fff" stroke="#cde9dd"/><text x="777" y="268" text-anchor="middle" class="s">OTel</text><rect x="814" y="250" width="72" height="28" rx="7" fill="#fff" stroke="#cde9dd"/><text x="850" y="268" text-anchor="middle" class="s">SDK</text>
+<rect x="654" y="345" width="275" height="160" rx="18" fill="#edf6ff" stroke="#b9d8f3"/>
+<circle cx="704" cy="410" r="30" fill="#d7ecff"/><path d="M684 408c9-17 27-20 40-8M684 416c13 12 31 10 40-4" fill="none" stroke="#1976d2" stroke-width="6" stroke-linecap="round"/><text x="748" y="398" class="h">Langfuse</text><text x="748" y="422" class="s">Dify 原生 Monitoring</text><rect x="748" y="440" width="58" height="28" rx="7" fill="#fff" stroke="#c9ddf0"/><text x="777" y="458" text-anchor="middle" class="s">OTel</text><rect x="814" y="440" width="72" height="28" rx="7" fill="#fff" stroke="#c9ddf0"/><text x="850" y="458" text-anchor="middle" class="s">SDK</text>
+
+<!-- full trace -->
+<rect x="982" y="115" width="260" height="475" rx="18" fill="#fff7ed" stroke="#f1d6ae"/>
+<text x="1006" y="150" class="h">完整 Trace</text><text x="1006" y="172" class="s">端到端关联同一次请求</text>
+<rect x="1006" y="205" width="212" height="72" rx="10" class="card"/><circle cx="1035" cy="241" r="13" fill="#fff0d8"/><circle cx="1035" cy="228" r="5" fill="none" stroke="#f59e0b" stroke-width="2"/><circle cx="1024" cy="251" r="5" fill="none" stroke="#f59e0b" stroke-width="2"/><circle cx="1046" cy="251" r="5" fill="none" stroke="#f59e0b" stroke-width="2"/><path d="M1035 233v8M1035 241l-11 5M1035 241l11 5" stroke="#f59e0b" stroke-width="2"/><text x="1065" y="237" class="m">Workflow</text><text x="1065" y="257" class="s">父子节点与执行顺序</text>
+<rect x="1006" y="292" width="212" height="72" rx="10" class="card"/><circle cx="1035" cy="328" r="13" fill="#fff0d8"/><path d="M1027 336l14-14M1028 321l4-4 5 5-4 4M1036 333l4 4" fill="none" stroke="#f59e0b" stroke-width="2"/><text x="1065" y="324" class="m">Tool</text><text x="1065" y="344" class="s">输入、输出与耗时</text>
+<rect x="1006" y="379" width="212" height="72" rx="10" class="card"/><circle cx="1035" cy="415" r="13" fill="#fff0d8"/><rect x="1027" y="404" width="16" height="22" rx="3" fill="none" stroke="#f59e0b" stroke-width="2"/><path d="M1030 410h10M1030 415h8M1030 420h9" stroke="#f59e0b" stroke-width="2"/><text x="1065" y="411" class="m">LLM</text><text x="1065" y="431" class="s">Prompt / Response / Token</text>
+<rect x="1006" y="466" width="212" height="72" rx="10" class="card"/><circle cx="1035" cy="502" r="12" fill="none" stroke="#f59e0b" stroke-width="2.3"/><circle cx="1035" cy="494" r="4" fill="none" stroke="#f59e0b" stroke-width="2"/><path d="M1026 511c3-9 15-9 18 0" fill="none" stroke="#f59e0b" stroke-width="2"/><text x="1065" y="498" class="m">Session / User</text><text x="1065" y="518" class="s">会话与用户维度</text>
+
+<path d="M318 305c24 0 28 20 52 20" class="line"/><path d="M318 555c24 0 28-100 52-100" class="line"/><path d="M600 285c24 0 30-50 54-50" class="line"/><path d="M600 365c24 0 30 60 54 60" class="line"/><path d="M929 235c25 0 28 95 53 95" class="line"/><path d="M929 425c25 0 28-65 53-65" class="line"/>
 </svg>
