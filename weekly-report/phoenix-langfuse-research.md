@@ -38,6 +38,8 @@
 
 ## 二、架构对比
 
+本章基于两个 GitHub 项目当前代码，从接口层、核心服务层、业务模块层、数据访问层和存储层整理项目内部架构。
+
 ### 2.1 Phoenix 架构
 
 ![Phoenix 架构](./assets/phoenix-langfuse/phoenix-architecture.svg)
@@ -50,14 +52,14 @@
 
 | 架构层面 | Phoenix | Langfuse |
 | --- | --- | --- |
-| 数据来源 | Agent、Workflow、LLM、Tool、RAG、Dify 等应用运行时产生调用数据 | Agent、Workflow、LLM、Tool、RAG、Dify 等应用运行时产生调用数据 |
-| 捕获方式 | OpenInference Instrumentation 自动捕获常见 AI 调用；OpenTelemetry SDK 可补手工埋点 | Langfuse SDK / Integrations 直接捕获；也可使用 OpenTelemetry Instrumentation / SDK |
-| 上报方式 | OpenTelemetry SDK 组装 Trace / Span，由 OTLP Exporter 通过 HTTP / gRPC 主动上报 | Langfuse Client 通过 Ingestion API 上报，或 OpenTelemetry Exporter 通过 OTLP 上报 |
-| 平台接收 | OTLP Receiver / API | Ingestion API / OTLP Endpoint |
-| 核心服务 | Phoenix Server 集中承载查询、评估、实验和 Web 服务 | Web / API 负责查询与交互，Worker 负责异步摄取、评估和后台任务 |
-| 功能模块 | Trace、Evaluation、Dataset / Experiment、Prompt、Web UI | Trace、Score / Evaluation、Dataset / Experiment、Prompt、Dashboard |
-| 存储底座 | SQLite 或 PostgreSQL，平台数据集中存储 | PostgreSQL 存项目 / Prompt / 配置；ClickHouse 存 Trace / Score 分析数据；Redis / Valkey 做缓存 / 队列；Object Storage 存文件 / 大对象 |
-| 总体形态 | 采集链路和服务结构更集中，组件较少 | 采集入口、服务处理和存储职责拆分更细，组件更多 |
+| 代码组织 | 前端位于 `js/app`；后端主要集中在 `src/phoenix/server` 与 `src/phoenix/db` | Monorepo 明确拆成 `web`、`worker`、`packages/shared` 等主要包 |
+| 接口层 | React Web UI、REST API、GraphQL API，以及 OTLP HTTP / gRPC Trace 接收入口 | Next.js Web UI、tRPC、Public REST API，以及 Ingestion / OTLP 接收入口 |
+| 核心服务 | FastAPI App 与 gRPC Server 都由 Phoenix Server 统一启动和管理 | Web 与 Worker 是两个独立运行组件，公共业务逻辑通过 `@langfuse/shared` 复用 |
+| 后台处理 | BulkInserter、DML Event Handler、Experiment Runner、各类 Daemon 随 Phoenix Server 生命周期运行 | BullMQ Queue 与独立 Worker 负责异步摄取、Evaluation 和后台任务 |
+| 业务模块 | Trace / Session、Annotation / Evaluation、Dataset / Experiment、Prompt / Playground、Cost / Model 等集中在 Phoenix 服务内部 | Trace / Observation、Score / Evaluation、Dataset / Experiment、Prompt、Dashboard、User / Session 等按功能模块组织 |
+| 数据访问层 | Async SQLAlchemy + DB Models / Insertion，Alembic 管理数据库 Schema | `@langfuse/shared` 提供 Repository、Prisma、ClickHouse、Redis 与 Blob Storage 等服务端访问能力 |
+| 存储层 | SQLite 或 PostgreSQL | PostgreSQL、ClickHouse、Redis / Valkey、Object Storage |
+| 总体形态 | 单核心服务为主，后台任务和数据访问也集中在同一平台代码体系内 | Web、Worker、共享服务和多类存储分工更明确，整体更偏分布式组件化架构 |
 
 ---
 
