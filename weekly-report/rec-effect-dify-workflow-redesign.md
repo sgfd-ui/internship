@@ -1,790 +1,1361 @@
-# 推荐效果分析 Agent：Dify 多 Agent 执行架构重构方案
+# 推荐效果分析 Agent：Dify 多 Agent 工作流设计方案
 
-> 本文只设计 **Dify 内部的请求路由、Sub-Agent 分工、并行执行、Prompt 与结果汇总**。推荐效果 Tool 的 ES / DB 查询、指标计算、统计检验、异常检测、贡献拆解、Repository 与大结果存储继续由现有 Tool Contract 负责，不在 Dify 层重复实现。
+> 本文只设计 **Dify 工作流层**：入口、规则路由、Main Supervisor、Professional Sub-Agent、并行执行、结果汇合、Prompt 与会话承接。
 >
-> 本版采用 **Fast Supervisor + 多个专业 Sub-Agent**。Fast 只做快速拆分与路由；Tool 选择、参数生成、Observation 驱动的下一步由 Sub-Agent 自己完成。多个互不依赖的 Sub-Agent 由 Dify Workflow 并行执行。
+> Elasticsearch / DB 查询、指标计算、统计检验、异常检测、贡献拆解、参数合法性和大结果持久化继续由现有 Plugin Tool Contract 负责。工作流只消费 Tool Schema 与 Tool Observation，不在本方案内重复定义 Tool 内部实现。
 
 ---
 
-## 1. 最终架构
+## 1. 整体设计
 
-### 1.1 核心思路
+### 1.1 目标
 
-系统分为四层：
-
-```text
-Fast Supervisor
-├── 识别本轮需要哪些专业 Agent
-├── 将用户请求拆成彼此独立的 Agent Objective
-├── 判断 single / parallel / clarify
-└── 不调用 Tool、不生成 Tool DAG、不处理 Observation
-
-Professional Sub-Agent
-├── 理解自己的 Objective
-├── 根据 Tool Schema 选择 Tool
-├── 生成 Tool 参数
-├── 根据 Observation 决定是否继续调用 Tool
-└── 生成本 Agent 的结果
-
-Plugin Tool
-├── 查询 ES / DB
-├── 指标与统计计算
-├── 参数与业务规则校验
-└── 返回结构化事实
-
-Dify Workflow Runtime
-├── 承载 Fast Supervisor
-├── 并行启动多个 Sub-Agent
-├── 承担节点错误处理与上下文传递
-└── 多 Agent 时汇总结果
-```
-
-核心边界：
+工作流采用 **Fast Rule Router + Main Supervisor + Professional Sub-Agent** 的两级路由方式：明确、单域、可确定的请求由 Fast 直接进入对应 Sub-Agent；复杂、多目标或存在语义依赖的请求进入 Main Supervisor，由 Main Supervisor 拆成独立 Agent Objective，再由 Dify Workflow 并行执行 Professional Sub-Agent。
 
 ```text
-Fast 决定“交给谁”
-Agent 决定“调用什么 Tool、下一步做什么”
-Tool 决定“数据怎么查、指标怎么算”
-Dify 决定“这些 Agent 怎么并行执行”
-```
-
-### 1.2 系统总图
-
-```mermaid
-flowchart TB
-    U[用户]
-    S[Start]
-    G{敏感指标 Hard Gate}
-    F[Fast Supervisor\n快速拆分 + Agent 路由]
-    C[Clarify Answer]
-
-    subgraph PAR[Sub-Agent 执行层]
-        EA[Effect Agent\n推荐效果分析]
-        XA[Experiment Agent\n实验分析]
-        IA[Investigation Agent\n原因调查]
-    end
-
-    M[Multi-Agent Synthesis\n仅多 Agent 时使用]
-    A[Answer]
-
-    U --> S --> G
-    G -->|阻断| A
-    G -->|允许| F
-    F -->|缺必要信息| C --> A
-
-    F -->|effect enabled| EA
-    F -->|experiment enabled| XA
-    F -->|investigation enabled| IA
-
-    EA --> M
-    XA --> M
-    IA --> M
-    M --> A
-```
-
-实际执行时只有 Fast 选中的 Agent 会运行。Fast 同时选择两个或三个 Agent 时，三个 Agent 节点位于 Dify Parallel Branch 中并行执行。
-
-### 1.3 为什么只在 Agent 之间并行
-
-本版不再让 Fast 规划 Tool DAG。Fast 只判断专业 Agent 的归属，因此路由空间固定为三个专业域，不会随着 Tool 数量增加而膨胀。
-
-```text
-Tool 从 10 个增加到 30 个：
-Fast 的路由类别仍然只有 3 个 Agent
-
-Effect Agent 内部 Tool 增加：
-只修改 Effect Agent 的 Tool 白名单 / Prompt
-
-Experiment Agent 内部 Tool 增加：
-只修改 Experiment Agent
-```
-
-Fast 不需要知道 Tool 的完整 Schema，也不需要判断 Tool 之间的依赖关系。
-
-### 1.4 并行的前提
-
-只有 **Agent Objective 彼此独立** 时才拆成多个 Agent 并行执行。
-
-| 情况 | Fast 处理 |
-| --- | --- |
-| 两个目标可以独立完成，结果最后再汇总 | 拆到多个 Agent，并行执行 |
-| B 必须读取 A 的 Observation 才能开始 | 不跨 Agent 拆分，整条交给一个 Agent |
-| 原因调查需要先确认指标下降是否成立 | 交给 Investigation Agent 自己完成，不先跑 Effect Agent |
-| 实验原因调查需要先确认 A/B 差异 | 交给 Investigation Agent，自行调用 A/B Tool |
-| 同一专业域出现多个要求 | 合并为该 Agent 的一个 Objective，首版不生成多个同类 Agent 实例 |
-
-因此本版没有跨 Agent `depends_on`、runtime binding 或动态 DAG。
-
----
-
-## 2. 主 Chatflow
-
-### 2.1 主流程
-
-```mermaid
-flowchart TD
-    S[Start] --> G{Sensitive Gate}
-    G -->|blocked| B[Blocked Answer]
-    G -->|allowed| F[Fast Supervisor]
-
-    F -->|clarify| Q[Clarification Answer]
-    F -->|ready| P[Agent Parallel Group]
-
-    P --> E1{effect.enabled?}
-    P --> E2{experiment.enabled?}
-    P --> E3{investigation.enabled?}
-
-    E1 -->|yes| EA[Effect Agent]
-    E2 -->|yes| XA[Experiment Agent]
-    E3 -->|yes| IA[Investigation Agent]
-
-    EA --> R[Result Stage]
-    XA --> R
-    IA --> R
-
-    R --> A[Answer]
-```
-
-主 Chatflow 不再包含：
-
-```text
-通用 Planner
-Reviewer
-Compiler
-Scheduler
-Task DAG
-Runtime Binding
-Tool 级 Router
-Tool 级 Question Classifier
-```
-
-### 2.2 Dify 落地
-
-专业 Agent 建议创建为可复用的 **Roster Agent**，主 Workflow 中引用三个 Agent 节点。Dify 当前 Agent v2 的 Workflow Agent Binding 原生区分 `roster_agent` 与 `inline_agent`，因此三个专业 Agent 的 Prompt、Tool 白名单和版本可以独立维护。
-
-主 Workflow 只维护：
-
-```text
+用户请求
+  ↓
 Start
-→ Gate
-→ Fast Supervisor
-→ Parallel Branch
-   ├─ Effect Agent
-   ├─ Experiment Agent
-   └─ Investigation Agent
-→ Result Stage
-→ Answer
+  ↓
+Sensitive Metric Gate
+  ↓
+Fast Rule Router
+  ├─ 明确单域 ────────────────┐
+  │                           │
+  └─ 复杂 / 多目标 → Main Supervisor
+                              │
+                    统一 routing_result
+                              ↓
+                    Professional Agents
+                 ┌────────────┼────────────┐
+                 ↓            ↓            ↓
+             Effect       Experiment   Investigation
+              Agent          Agent          Agent
+                 └────────────┼────────────┘
+                              ↓
+                       Result Collector
+                              ↓
+                  ┌───────────┴───────────┐
+                  ↓                       ↓
+             单 Agent                多 Agent
+            直接输出              Synthesis LLM
+                  └───────────┬───────────┘
+                              ↓
+                            Answer
 ```
 
-### 2.3 单 Agent 与多 Agent 输出
-
-为减少额外模型调用：
+核心职责固定为：
 
 ```text
-只命中 1 个 Agent
-→ 直接使用该 Agent 最终答案
-
-命中 2～3 个 Agent
-→ 各 Agent 并行完成
-→ Multi-Agent Synthesis LLM 汇总
-→ Answer
+Fast：决定“明确请求可以直接交给谁”
+Main Supervisor：决定“复杂请求应拆成哪些独立 Agent Objective”
+Sub-Agent：决定“为了完成自己的 Objective 调什么 Tool、下一步做什么”
+Tool：决定“数据怎么查、指标怎么算”
+Dify Workflow：决定“Agent 节点如何并行、汇合和输出”
 ```
 
-`Multi-Agent Synthesis` 不调用 Tool、不补新事实，只负责把多个 Agent 的独立结果组织成一份回答。
+### 1.2 设计原则
 
----
-
-## 3. Fast Supervisor
-
-### 3.1 定位
-
-Fast 是 **一次性快速路由器**，不是 Planner，也不是 ReAct Agent。
-
-它只回答三个问题：
-
-```text
-1. 当前请求是否缺少必须由用户补充的信息？
-2. 当前请求需要 Effect / Experiment / Investigation 中的哪些 Agent？
-3. 每个 Agent 本轮具体负责哪一部分目标？
-```
-
-Fast 不回答：
-
-```text
-调用哪个 Tool？
-Tool 参数是什么？
-Tool A 和 Tool B 谁先执行？
-上一轮 Tool Observation 说明了什么？
-```
-
-这些全部属于 Sub-Agent。
-
-### 3.2 输入
-
-| 输入 | 用途 |
+| 原则 | 规则 |
 | --- | --- |
-| `sys.query` | 当前用户原始请求 |
-| `sys.datetime` | 相对时间理解 |
-| 当前对话历史 | 只用于明确承接式表达 |
-| `agent_catalog` | 三个 Sub-Agent 的职责说明 |
-| 少量公共业务规则 | 站点、实验和原因类问题的路由边界 |
+| 工作流只负责编排 | Fast、Main Supervisor、Agent Dispatcher、Result Collector、Synthesis 构成控制面；业务查询和计算保留在 Tool。 |
+| Fast 保守 | Fast 只处理明确单域请求；命中多个业务域、存在多目标、需要理解依赖、存在指代或不能确定归属时进入 Main Supervisor。 |
+| Main Supervisor 只拆 Agent Objective | Main Supervisor 不选择 Tool、不生成 Tool 参数、不规划 Tool DAG、不读取业务 Observation。 |
+| Agent Objective 必须独立 | 只有可以独立完成、最终再合并的目标才能拆到不同 Agent 并行执行。存在数据依赖时由一个 Agent 内部完成整条链路。 |
+| 原因类目标收敛到 Investigation | “为什么、原因、导致、是否被某因素影响”等需要 Observation 驱动取证的问题由 Investigation Agent 完成现象确认和后续调查，不先拆 Effect / Experiment 再跨 Agent 依赖。 |
+| Agent 自主 Tool Calling | Professional Agent 根据 Objective、已确认参数、Tool Schema 和 Observation 自主选择 Tool；工作流不建立 Tool 级 Router。 |
+| Agent 之间并行 | Main Supervisor 生成多个独立 Agent Objective 时，Dify Workflow 并行启动相应 Agent 节点。 |
+| 同域请求合并 | 同一轮中属于同一 Professional Agent 的多个独立要求合并为一个 Objective，首版每个 Agent 最多启动一次。 |
+| 公共业务背景单一维护 | EC10 / EC20、页面、指标、敏感项、Evidence 边界维护为 `shared_business_background`，按 Prompt 清单注入，不在各角色重复改写。 |
+| Prompt 与 Tool Schema 分工 | Prompt 定义角色、决策边界和证据规则；字段、枚举、默认值和参数上限以 Tool Schema 为准。 |
+| 当前输入优先 | 会话历史只用于用户明确承接上一轮时解析省略信息；当前请求中的新条件覆盖历史条件。 |
+| 缺口最小追问 | 只追问会改变业务语义或无法合法执行的必要事实；有 Tool 明确公开默认值时不追问。 |
+| 结果不升级 | Contribution、Anomaly、Level Shift、时间重合和局部诊断信号按原证据力度表达，不自动升级为根因。 |
+| 失败和无数据分离 | `no_data`、`partial`、`failed`、`unsupported`、`null` 与数值 0 分别解释。 |
+| 结果汇总不产生新事实 | Multi-Agent Synthesis 只组织 Sub-Agent 已取得的事实、结论和限制，不调用 Tool、不补计算、不新增原因判断。 |
 
-Fast **不读取完整 Tool Catalog / Tool Schema**。
+### 1.3 参考项目与采用方式
 
-### 3.3 Agent Catalog
+本方案只采用能够直接映射到 Dify 工作流的实现方式。
 
-```text
-effect
-- 指标查询、周期比较、趋势、异常、排名、普通流量效果分析
-- 回答“发生了什么、表现怎么样、差多少、趋势如何”
+| 参考 | 已核对的实现方式 | 本方案采用内容 |
+| --- | --- | --- |
+| Dify 官方 `langgenius/dify` | Workflow Agent 节点支持 `roster_agent` / `inline_agent`；Agent v2 由 Dify Runtime 管理 Tool Calling；Workflow 原生承担分支与并行执行 | Professional Agent 建成可复用 Roster Agent；主工作流只负责路由、并行和汇合 |
+| `svcvit/Awesome-Dify-Workflow` | Advanced Chatflow 中使用 Question Classifier、Agent、Tool、变量汇合等原生节点组合业务流程 | 采用“入口规则 / 语义节点 → Agent → Answer”的工作流组织方式，不建立独立调度服务 |
+| `BannyLon/DifyAIA` | Agent 节点直接持有多个 Tool；复杂能力由 Agent 根据当前目标调用 | Professional Agent 内部直接完成 Tool Selection，不在主工作流按 Tool 数量铺分支 |
+| `datawhalechina/self-dify` | 复杂流程使用 Dify 原生分支、变量、Iteration 等控制节点 | 并行和汇合交给 Workflow Runtime，动态业务取证仍留在 Agent 内部 |
+| `AdamPlatin123/Open-Deep-Research-workflow-on-Dify` | 预先确定的批处理步骤由 Workflow 编排；模型负责语义任务，Workflow 负责执行结构 | 只借鉴“模型决策与 Workflow 执行结构分离”，不把原因调查预先画成固定 Tool DAG |
+| Mentor Supervisor / Specialist Agent | Supervisor 负责分工，专业 Agent 负责各自业务域和 Tool 调用 | 采用 Main Supervisor + Effect / Experiment / Investigation 三类 Professional Agent 的职责边界 |
 
-experiment
-- EC10 A/B 实验效果、control/treatment 对比、实验构成与差异
-- 回答“实验表现怎么样、两组差多少”
+### 1.4 Prompt 设计标准与原则
 
-investigation
-- 指标下降/上涨原因、异常原因、实验差异原因、业务/流量/配置证据调查
-- 回答“为什么、什么导致、原因是什么”
-```
+本节规定 Prompt 的组织、装配和维护方式。节点是否调用、分支条件、输入来源和失败路径仍由对应工作流节点定义；Prompt 不替代工作流协议。
 
-### 3.4 Fast 输出协议
+#### 1.4.1 组织与维护标准
 
-Fast 只输出最多三个 Agent Request：
+| 原则 | Prompt 组织标准 | 边界 |
+| --- | --- | --- |
+| 单一职责 | 先写角色与任务，再写可信输入、处理规则、输出协议、自检 | Main Supervisor 不承担 Tool 调用；Professional Agent 不承担跨 Agent 路由；Synthesis 不承担调查 |
+| 公共和专属分离 | 公共业务背景只维护一份；各 Agent 只追加角色专属规则 | 不在 Effect / Experiment / Investigation 各复制一份站点、页面和指标口径 |
+| 指令和资料分离 | System Prompt 放稳定规则；User Prompt 只放本轮动态输入 JSON | 用户输入、历史摘要、Agent Objective、Tool Observation 不写进稳定规则正文 |
+| 输出协议自包含 | 输出字段、枚举、状态关系和示例放在同一 Prompt 的 `<output_contract>` | 不要求模型通过章节号自行查字段 |
+| 示例不创造事实 | 示例只展示结构和行为，数值、日期、ID 明确为假设值 | 不从示例补当前站点、时间、实验角色或指标值 |
+| Tool Schema 不复制 | Prompt 只说明 Tool 使用边界 | Tool 字段、枚举、默认值、TopN 限制以运行时 Tool Schema 为准 |
+| 单次调用指令完整 | 最终装配给模型的 System Prompt 必须包含角色所需全部稳定规则 | 不依赖模型读取本 MD 其他章节 |
+| 规则就近 | 路由规则放 Main Supervisor；Evidence / Completion 放 Professional Agent；整题合并规则放 Synthesis | 相似文字不跨角色删除必要约束 |
+| 自检不新增执行 | `<final_self_check>` 只检查即将输出的结构和范围 | 自检阶段不再调用 Tool、不重新规划 |
 
-```json
-{
-  "status": "ready",
-  "clarification_question": null,
-  "effect": {
-    "enabled": true,
-    "objective": "分析 EC10 最近7天购物车页 CTR、CTCVR 的当前表现和周期变化"
-  },
-  "experiment": {
-    "enabled": true,
-    "objective": "比较 EC10 实验 1001 与 1002 的效果"
-  },
-  "investigation": {
-    "enabled": false,
-    "objective": null
-  }
-}
-```
-
-追问时：
-
-```json
-{
-  "status": "clarify",
-  "clarification_question": "你要看 EC10（港台）还是 EC20（大陆）？",
-  "effect": {"enabled": false, "objective": null},
-  "experiment": {"enabled": false, "objective": null},
-  "investigation": {"enabled": false, "objective": null}
-}
-```
-
-Fast 不生成结构化 Tool arguments。每个 Sub-Agent 同时读取原始 `sys.query` 与自己的 `objective`，避免路由阶段丢失原文信息。
-
-### 3.5 拆分规则
-
-Fast 的拆分目标是 **Agent 级拆分**，不是句子级拆分。
-
-| 规则 | 处理 |
-| --- | --- |
-| 一个请求只属于一个专业域 | 只启用一个 Agent |
-| 同时存在多个独立专业目标 | 启用多个 Agent |
-| 同一专业域有多个子要求 | 合并到同一个 Objective |
-| 某要求只是原因调查的前置证据 | 不额外启用 Effect / Experiment，由 Investigation 自己完成 |
-| 无法判断内容属于哪个 Agent | `clarify`，不猜测 |
-| 某片段无法被任何 Objective 解释 | 不强行拆分，优先 `clarify` |
-
-#### 原因类优先收敛
-
-例如：
-
-```text
-“EC10 最近 CTR 掉了多少，为什么掉？”
-```
-
-不要拆成：
-
-```text
-Effect Agent：CTR 掉了多少
-Investigation Agent：为什么掉
-```
-
-因为 Investigation 必须先验证下降是否成立，两边会重复查询。
-
-正确路由：
-
-```text
-Investigation Agent：
-确认 CTR 变化幅度，并调查下降原因。
-```
-
-只有真正独立的附加交付才并行，例如：
-
-```text
-“看一下 EC10 最近整体效果；另外比较实验 1001 和 1002。”
-```
-
-拆为：
-
-```text
-Effect Agent      ─┐
-                   ├─ 并行
-Experiment Agent  ─┘
-```
-
-### 3.6 Fast Prompt 骨架
+推荐 Prompt 阅读顺序固定为：
 
 ```text
 <role>
-你是推荐分析系统的 Fast Supervisor。
-你只负责把当前请求路由到 Effect、Experiment、Investigation 三个专业 Agent。
-你不调用 Tool，不规划 Tool 顺序，不生成 Tool 参数，不分析 Observation。
-</role>
+→ {{ shared_business_background }}（需要时）
+→ <trusted_inputs>
+→ 角色处理规则
+→ <output_contract>
+→ <final_self_check>
+```
 
-<inputs>
-raw_query = {{ sys.query }}
-request_time = {{ sys.datetime }}
-conversation_context = {{ conversation context }}
-agent_catalog = {{ agent_catalog }}
-</inputs>
+#### 1.4.2 Prompt 注入清单
 
-<rules>
-1. 只在多个目标可以彼此独立完成时拆到多个 Agent。
-2. 如果一个目标依赖另一个目标的结果，不跨 Agent 拆分，把完整链路交给能够完成它的 Agent。
-3. 原因类目标优先交给 Investigation；原因调查所需的指标确认、A/B差异确认属于 Investigation 内部取证，不重复分给其他 Agent。
-4. 同一 Agent 的多个要求合并成一个 objective，保留用户要求的范围、顺序和交付内容。
-5. 站点等真正影响业务语义且无法确定时输出 clarify；可由 Sub-Agent Tool 查询确定的事实不在 Fast 阶段追问。
-6. 不因为出现多个指标、多个页面或多个店铺就自动拆成多个 Agent。
-7. 输出必须完整覆盖用户请求；存在无法解释的内容时不要强行路由。
-</rules>
+| 节点 | System Prompt | User Prompt | 公共业务背景 | Tool Schema |
+| --- | --- | --- | --- | --- |
+| Fast Rule Router | 无 | 无 | 无 | 无 |
+| Main Supervisor | `main_supervisor_prompt` | `main_supervisor_input` | 是 | 否 |
+| Effect Agent | `professional_agent_common_prompt + effect_agent_profile` | `professional_agent_input` | 是 | Dify 自动提供已授权 Tool Schema |
+| Experiment Agent | `professional_agent_common_prompt + experiment_agent_profile` | `professional_agent_input` | 是 | Dify 自动提供已授权 Tool Schema |
+| Investigation Agent | `professional_agent_common_prompt + investigation_agent_profile` | `professional_agent_input` | 是 | Dify 自动提供已授权 Tool Schema |
+| Multi-Agent Synthesis | `multi_agent_synthesis_prompt` | `multi_agent_synthesis_input` | 是 | 否 |
+| Sensitive Gate / IfElse / Result Collector / Answer | 无 | 无 | 无 | 无 |
+
+#### 1.4.3 Prompt 动态输入边界
+
+动态输入只通过 User Prompt JSON 传入，不拼接进 System Prompt 的规则段。
+
+| 动态输入 | Main Supervisor | Professional Agent | Synthesis |
+| --- | --- | --- | --- |
+| `raw_query` | 是 | 是 | 是 |
+| `request_datetime` | 是 | 是 | 是 |
+| 明确承接的会话上下文 | 是 | 按路由结果传入 | 否 |
+| `objective` | 否 | 是 | 通过 AgentResult 已包含 |
+| `known_parameters` | 否 | 是 | 否 |
+| Tool Observation | 否 | Agent Runtime 内部 | 只读取 AgentResult，不读取原始 Tool JSON |
+| Sub-Agent Results | 否 | 否 | 是 |
+
+### 1.5 `shared_business_background` 完整 Prompt
+
+```text
+<business_background>
+
+1. EC10表示港台推荐站点，EC20表示大陆推荐站点。两个站点的数据、页面映射和业务维度独立；各项分析及其结果必须保留明确的站点范围，不跨站点混合统计，也不在缺少依据时默认选择站点。
+
+2. 页面名称和编号具有站点范围。对应关系按站点分别登记如下，箭头左侧是完整页面名称，右侧是整数编号。某名称未在当前站点列出时，不得套用其他站点编号。
+
+EC10（港台推荐）：
+- 全部 → 0
+- 商品详情页 → 1
+- 商品清单页 → 2
+- 搜索页 → 3
+- 所有商品页 → 4
+- 购物车页 → 5
+- mini购物车页 → 6
+- blog页 → 7
+
+EC20（大陆推荐）：
+- 全部 → 0
+- 商品详情页 → 1
+- 商品清单页 → 2
+- mini购物车页 → 3
+- 搜索页 → 4
+- 购物车页 → 5
+- 订单完成页 → 7
+- 404页 → 8
+- 推荐落地 → 10
+
+mini购物车页和购物车页是不同页面，必须保留完整名称；不得猜测未登记名称的编号，不得根据页面名称反推站点。店铺ID本身不能证明所属站点。
+
+3. 推荐效果包括曝光、点击、转化、订单、推荐引导GMV及公开比率指标。CTR是推荐点击量除以推荐曝光量；CVR是推荐转化量除以推荐点击量；CTCVR是推荐转化量除以推荐曝光量。未限定的GMV表示rec_gmv推荐引导GMV，不扩大为店铺GMV或推荐GMV占比。
+
+4. store_gmv、store_gmv_per_user和rec_gmv_ratio是禁止公开的敏感指标。不得为其生成查询、排序、比较、归因、计算或展示任务；不得通过公开结果估算或反推，也不得替换为其他公开指标。请求命中任意一项时整轮停止，同轮公开部分也不执行。
+
+5. 页面、店铺、推荐模式、策略、召回和实验分组是不同业务维度，各个值必须保留其角色。control和treatment是用户在本次比较中明确赋予的角色，不能根据编号或结果表现猜测。策略或召回比较不自动等于A/B实验。
+
+6. 过滤限定数据范围，分组决定结果粒度，比较表达对象、角色或周期之间的对照。出现某个维度或值不自动表示按它分组或比较；用户的过滤、分组和比较要求必须分别保留。
+
+7. 整体范围与其中的具体值不能重复计入。整体比例不等于各组比例的简单平均，取决于同一统计口径下汇总的分子和分母。不同范围的结果不能仅因指标同名就合并或相互替代。
+
+8. 无数据、覆盖不足、不可计算、能力不支持、查询失败和数值0必须分别表述。null含义依据结果中的状态及原因解释，不能一律解释为0；指标被排除时不得声称已返回该指标。
+
+9. 推荐请求量/PV、系统QPS/耗时/错误、店铺局部诊断捕获具有不同统计口径，不能混算。店铺诊断来自局部Top候选捕获；未捕获不代表正常，capture_rate不是真实故障率。
+
+10. 数值来源、异常、贡献、时间重合和结构变化不能自动证明原因。尚未查询、查询失败、无数据、证据不足和已经排除是不同状态；原因结论必须有相应证据支持。
+
+11. 推荐效果指标按日T+1产出。“最近、近期、近N天”等相对时间除非明确包含今天，否则以昨天为最新完整日期；用户明确指定今天时不得改成昨天。本规则不适用于实时运行流量。无数据不构成扩大原查询窗口或改写原时间范围的依据。
+
+</business_background>
 ```
 
 ---
 
-## 4. Sub-Agent 并行执行
+## 2. 阶段一：请求接入与 Fast 路由
 
-### 4.1 并行方式
+### 2.1 Start 节点
 
-Fast 输出三个 `enabled` 标志后，主 Workflow 启动三个并行分支：
+**节点类型：** Start
 
-```text
-Fast Supervisor
-      │
-      ├───────────────┬──────────────────┐
-      ↓               ↓                  ↓
- effect branch   experiment branch   investigation branch
-      │               │                  │
- enabled?          enabled?             enabled?
-      │               │                  │
- Effect Agent    Experiment Agent   Investigation Agent
-      │               │                  │
-      └───────────────┴──────────────────┘
-                      ↓
-                  Result Stage
-```
+#### 输入协议
 
-未启用的分支直接返回 `skipped`，不执行 Agent。
+| 字段 | 来源 | 必填 | 用途 |
+| --- | --- | --- | --- |
+| `sys.query` | Dify | 是 | 当前用户原始请求 |
+| `sys.datetime` | Dify | 是 | 相对时间解析 |
+| `sys.conversation_id` | Dify | 是 | 当前会话标识 |
+| Chat History / Agent Memory | Dify 原生 | 否 | 仅在后续模型节点处理明确承接式表达 |
 
-### 4.2 并行解决什么
+#### 处理
 
-并行只优化 **同一用户请求里多个独立专业任务的总耗时**：
+Start 原样接收本轮请求，不解析业务、不拆 Agent Objective、不生成 Tool 参数。
 
-```text
-串行：Effect 8s + Experiment 10s = 18s
-并行：max(8s, 10s) ≈ 10s
-```
+#### 规则
 
-并行不解决单个 Investigation Agent 内部的 ReAct 多轮时延。单 Agent 内是否连续调用多个 Tool，由该 Agent 自己依据 Observation 决定。
-
-### 4.3 禁止跨 Agent 依赖
-
-首版不支持：
-
-```text
-Effect Agent 输出
-        ↓
-Investigation Agent 输入
-```
-
-也不支持：
-
-```text
-Experiment Agent 输出
-        ↓
-Effect Agent 继续执行
-```
-
-出现这种语义时，Fast 必须把完整任务交给一个 Agent，避免重新引入 DAG、Binding 和 Scheduler。
-
----
-
-## 5. Professional Sub-Agent
-
-### 5.1 Effect Agent
-
-#### 职责
-
-回答推荐效果的描述性与比较性问题：
-
-```text
-当前表现
-周期比较
-维度比较
-趋势 / 异常 / 变点
-多周期排名
-推荐请求量 / PV 的普通分析
-```
-
-不主动扩展到原因调查。
-
-#### 主要 Tool
-
-| Tool | 用途 |
+| 情况 | 处理 |
 | --- | --- |
-| `rec_query_metrics` | 当前区间指标、分组查询 |
-| `rec_compare_periods` | 周期 / 对象比较、贡献拆解 |
-| `rec_analyze_metric_timeseries` | 趋势、异常、变点 |
-| `rec_analyze_period_rankings` | 多周期排名轨迹 |
-| `rec_query_traffic` | 推荐请求量 / PV |
-| `rec_analyze_traffic_timeseries` | 流量趋势 / 异常 |
-| `rec_resolve_business_context` | merchant 等上下文解析 |
-| 大结果读取 Tool | 按需读取外置结果 |
+| 新问题 | 原样进入 Sensitive Metric Gate |
+| 当前输入与历史冲突 | 后续模型以当前输入为准 |
+| 用户只写“那昨天呢”“这个实验呢”等承接表达 | 保留原文，由 Main Supervisor / Professional Agent 结合会话上下文解析 |
 
-#### 停止条件
-
-用户要求的事实已经得到，或 Tool 明确返回 no_data / unsupported / failed 且继续调用不能改善结果时停止。
-
-### 5.2 Experiment Agent
-
-#### 职责
-
-处理 EC10 实验相关的效果分析：
-
-```text
-control / treatment 对比
-实验总体差异
-页面 / 店铺差异
-差异榜与构成榜
-实验元数据理解
-```
-
-不根据 ab_id 大小或表现猜 control / treatment。
-
-#### 主要 Tool
-
-| Tool | 用途 |
-| --- | --- |
-| `rec_analyze_ab_test` | A/B 主分析 |
-| `rec_list_ab_groups` | 实验组发现，按需 |
-| `rec_get_ab_meta` | 实验元数据，按需 |
-| `rec_query_metrics` | 明确需要补充实验维度事实时 |
-| `rec_analyze_metric_timeseries` | 实验时序证据，能力允许时 |
-| `rec_resolve_business_context` | 上下文解析 |
-| 大结果读取 Tool | 按需读取 |
-
-EC20 不支持 `ab_id`，Tool / Prompt 双层限制。
-
-### 5.3 Investigation Agent
-
-#### 职责
-
-处理所有原因类问题：
-
-```text
-为什么指标上涨 / 下跌
-为什么出现异常
-为什么实验组比对照组差
-是不是某页面 / 店铺 / 配置 / 流量造成
-```
-
-Investigation 是真正的动态调查 Agent。其下一步可以依赖上一轮 Observation。
-
-```text
-确认现象
-   ↓
-Observation
-   ↓
-定位时间 / 结构来源
-   ↓
-Observation
-   ↓
-必要时继续配置 / 流量 / 局部诊断
-   ↓
-证据足够 / 无法继续
-```
-
-#### 主要 Tool
-
-| Tool | 用途 |
-| --- | --- |
-| `rec_compare_periods` | 先确认变化、贡献线索 |
-| `rec_analyze_metric_timeseries` | 异常、变点、时间定位 |
-| `rec_query_metrics` | 补充维度事实 |
-| `rec_analyze_ab_test` | 实验差异确认 |
-| `rec_query_traffic` | 推荐流量事实 |
-| `rec_analyze_traffic_timeseries` | 流量趋势 / 异常 |
-| `rec_query_traffic_store_diagnostics` | 店铺局部诊断证据 |
-| `rec_analyze_traffic_store_anomalies` | 店铺流量异常诊断 |
-| 配置 / AB 元数据 Tool | 证据指向时使用 |
-| `rec_resolve_business_context` | 上下文解析 |
-| 大结果读取 Tool | 按需展开证据 |
-
-#### 调查规则
-
-```text
-1. 先确认用户描述的变化 / 差异是否成立。
-2. 再定位变化发生在何时、哪个页面 / 店铺 / 分组。
-3. Contribution 只表示“变化主要来自哪里”，不能直接写成根因。
-4. Anomaly / Level Shift 只表示“什么时候发生异常变化”。
-5. 配置变化与指标变化时间重合只是原因线索。
-6. 技术流量诊断只在用户要求或已有证据指向时进入。
-7. 证据不足时明确写“尚不能确认原因”，不强行闭环。
-```
-
----
-
-## 6. Sub-Agent 公共输入与 Prompt
-
-### 6.1 AgentInput
-
-每个 Agent 都接收：
+#### 输出协议
 
 ```json
 {
-  "objective": "Fast 分配给本 Agent 的当前目标",
-  "raw_query": "用户本轮完整原文",
-  "request_datetime": "当前时间"
+  "raw_query": "{{ sys.query }}",
+  "request_datetime": "{{ sys.datetime }}"
 }
 ```
 
-再由 Dify 提供：
+#### 样例
+
+输入：
 
 ```text
-Conversation Context / Agent Memory
-Tool Schema
-Tool Observation
-Agent System Prompt
+EC10 购物车最近 CTR 怎么样？
 ```
 
-Fast 不把 Tool arguments 提前算好；Sub-Agent 直接依据用户原文、objective、Tool Schema 和已确认上下文生成参数。
+输出：
 
-### 6.2 公共 Prompt 骨架
+```json
+{
+  "raw_query": "EC10 购物车最近 CTR 怎么样？",
+  "request_datetime": "2026-09-17T01:00:00+08:00"
+}
+```
+
+### 2.2 Sensitive Metric Gate
+
+**节点类型：** If/Else / 轻量确定性 Code
+
+#### 输入协议
+
+```text
+raw_query
+```
+
+#### 处理
+
+只检查可确定识别的敏感指标名称和固定别名；命中时整轮阻断。
+
+#### 规则
+
+| 命中内容 | 结果 |
+| --- | --- |
+| `store_gmv` / 店铺GMV | `blocked` |
+| `store_gmv_per_user` / 店铺用户人均GMV | `blocked` |
+| `rec_gmv_ratio` / 推荐GMV占比 | `blocked` |
+| 未命中 | `allowed` |
+| 难以通过确定规则识别的语义别名 | 继续执行；Professional Agent 与 Tool Validator 兜底 |
+
+#### 输出协议
+
+允许：
+
+```json
+{"allowed": true}
+```
+
+阻断：
+
+```json
+{
+  "allowed": false,
+  "message": "该请求包含当前不提供的敏感指标。"
+}
+```
+
+#### 样例
+
+```text
+用户：看一下 EC10 最近的店铺GMV和CTR。
+→ Gate命中敏感指标
+→ 整轮阻断
+→ 不进入 Fast / Main Supervisor / Sub-Agent
+```
+
+### 2.3 Fast Rule Router
+
+**节点类型：** Code / If-Else 规则组合
+
+Fast 无 Prompt。Fast 只对当前 `raw_query` 做保守、高置信度路由，最多直接选择一个 Professional Agent。
+
+#### 输入协议
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `raw_query` | string | 当前用户原文 |
+| `request_datetime` | datetime/string | 原样透传 |
+
+Fast 不读取 Tool Catalog、Tool Schema、Tool Observation，也不读取历史任务状态。
+
+#### 处理
+
+```text
+raw_query
+  ↓
+检查原因调查强信号
+  ↓ 否
+检查实验分析强信号
+  ↓ 否
+检查普通效果分析强信号
+  ↓ 否
+Main Supervisor
+```
+
+只要同时出现多个业务域、多个独立动作、指代关系、条件归属不清或规则无法唯一判断，就放弃 Fast，进入 Main Supervisor。
+
+#### 规则
+
+| 条件 | Fast 结果 | 说明 |
+| --- | --- | --- |
+| 明确出现“为什么、原因、导致、影响、是不是X造成”等原因目标 | `investigation` | 原因目标由 Investigation Agent 自己先确认现象再调查 |
+| 明确出现 control/treatment、对照组/实验组、A/B、ab_id 等实验语义，且没有原因目标 | `experiment` | 普通实验效果问题 |
+| 明确出现推荐指标查询、周期比较、趋势、异常检测、排名、普通推荐流量分析，且没有实验/原因语义 | `effect` | 普通效果分析 |
+| 同时出现普通效果目标和实验目标 | `supervisor_required` | 由 Main Supervisor 判断是否拆成两个独立 Objective |
+| 同时出现查询结果和原因目标 | `investigation` 或 `supervisor_required` | 因果目标包含现象确认时优先 Investigation；存在额外独立交付时交 Main Supervisor |
+| 多个连接词后出现不同动作或不同对象范围 | `supervisor_required` | 不用字符串规则强拆 |
+| 用户使用“这个、刚才、那个实验、继续看”等承接表达 | `supervisor_required` | 需要会话语义 |
+| 无法唯一确定 | `supervisor_required` | Fast 保守退出 |
+
+Fast 只做 Agent 级路由，不检查 Tool 必填字段是否齐全。站点、时间、实验角色等业务缺口由 Main Supervisor 或目标 Professional Agent 按各自 Prompt 处理。
+
+#### 输出协议
+
+Fast 直达：
+
+```json
+{
+  "route_status": "ready",
+  "route_source": "fast",
+  "selected_agents": ["effect"],
+  "agent_requests": [
+    {
+      "agent_key": "effect",
+      "objective": "EC10 购物车最近 CTR 怎么样？",
+      "known_parameters": {},
+      "task_input": null
+    }
+  ]
+}
+```
+
+进入 Main Supervisor：
+
+```json
+{
+  "route_status": "supervisor_required",
+  "route_source": "fast",
+  "selected_agents": [],
+  "agent_requests": []
+}
+```
+
+#### 样例
+
+| 用户请求 | Fast 结果 |
+| --- | --- |
+| “EC10 昨天购物车 CTR 多少？” | `effect` |
+| “EC10 1001 对照 1002 表现怎么样？” | `experiment` |
+| “EC10 最近 CTR 为什么下降？” | `investigation` |
+| “看一下最近 CTR，同时比较实验1001和1002” | `supervisor_required` |
+| “那刚才那个实验为什么更差？” | `supervisor_required` |
+
+---
+
+## 3. 阶段二：Main Supervisor 语义拆分
+
+### 3.1 Main Supervisor Agent
+
+**节点类型：** Dify Agent / Roster Agent
+
+Main Supervisor 只在 Fast 返回 `supervisor_required` 时执行。
+
+#### 输入协议
+
+| 输入 | 类型 | 说明 |
+| --- | --- | --- |
+| `raw_query` | string | 当前用户原始请求 |
+| `request_datetime` | string | 当前时间 |
+| `conversation_context` | string/object | Dify 提供的当前会话上下文；只用于明确承接 |
+| `shared_business_background` | prompt fragment | 公共业务口径 |
+| `agent_catalog` | system instruction | 三个 Professional Agent 的职责边界 |
+
+Main Supervisor 不接收 Tool Schema，不调用业务 Tool。
+
+#### 处理
+
+```text
+理解本轮完整目标
+  ↓
+判断是否存在必须先追问的共享事实
+  ↓
+识别独立业务目标
+  ↓
+将每个目标分配给 Effect / Experiment / Investigation
+  ↓
+同一 Agent 的目标合并
+  ↓
+检查跨 Agent 目标是否真正独立
+  ↓
+输出统一 routing_result
+```
+
+#### 规则
+
+| 规则 | 行为 |
+| --- | --- |
+| 一个目标可由一个 Agent 完整完成 | 只选择该 Agent |
+| 多个目标互不依赖 | 拆为多个 Agent Objective，允许并行 |
+| B 必须读取 A 的业务结果才能决定后续 | 不拆跨 Agent 依赖，整条交给能够完成链路的 Agent |
+| 原因问题需要先确认下降/异常是否成立 | 只交 Investigation Agent |
+| 实验原因问题需要先确认 A/B 差异 | 只交 Investigation Agent，允许其调用 A/B Tool |
+| 同一业务域包含多个要求 | 合并为一个 Agent Objective |
+| 站点缺失会同时影响多个 Objective 或改变页面映射 | 统一追问一次 |
+| control/treatment 角色无法确定 | 追问，不按 ID 大小或表现猜测 |
+| 用户只要求描述差异，没有原因目标 | Experiment Agent |
+| 用户只要求趋势、异常日期、周期比较 | Effect Agent |
+| 原因目标之外还存在明确独立的实验/效果交付 | 可拆成 Investigation + 其他 Agent，前提是两者互不依赖 |
+| 无法可靠拆分 | 保持更大的单一 Objective，不为了并行强拆 |
+
+### 3.2 Main Supervisor 完整 Prompt
+
+#### System Prompt：`main_supervisor_prompt`
 
 ```text
 <role>
-你是推荐分析系统中的专业 Sub-Agent。
-你只完成 Fast Supervisor 分配给你的 objective。
-你可以调用授权 Tool，并根据 Observation 决定下一步；不得扩大到其他 Agent 的独立业务目标。
-{{ role_policy }}
+你是推荐效果分析系统的 Main Supervisor。
+你的任务是理解当前用户请求，将可以独立完成的业务目标分配给 effect、experiment、investigation 三个 Professional Agent，并生成它们本轮唯一的 Objective。
+
+你不调用业务Tool，不选择Tool，不生成Tool参数，不规划Tool调用顺序，不读取或推断Tool Observation。你的输出只用于后续Dify Workflow选择并启动Professional Agent。
 </role>
 
 {{ shared_business_background }}
 
 <trusted_inputs>
-- objective：当前已批准目标，是本 Agent 的执行边界。
-- raw_query：用户完整原文，用于保留参数、角色和表达细节。
-- request_datetime：用于解析相对时间。
-- conversation context：只用于明确承接，不覆盖当前输入。
-- Tool Schema：正式执行契约。
-- Tool Observation：已获得的数据事实。
+1. raw_query是当前用户本轮原始请求，是本轮目标的最高优先级来源。
+2. request_datetime只用于理解相对时间，不用于创造用户没有要求的时间范围。
+3. conversation_context只在用户明确承接上一轮时用于解析省略表达；当前请求中的新条件覆盖历史条件。
+4. agent_catalog只描述Professional Agent职责，不代表当前请求一定需要对应Agent。
+5. Prompt中的示例只展示拆分方式，不是当前事实。
 </trusted_inputs>
 
-<tool_usage_rules>
-1. 只调用当前 Agent 白名单内 Tool。
-2. 参数只能来自用户原文、明确上下文、上游 Observation 或 Tool 公开默认值。
-3. 不猜 site、scene、merchant_id、ab_id、control/treatment、策略、召回或比较基准。
-4. 同一 Tool + 同一参数已有可用结果时不重复调用。
-5. 不扩大时间、页面、店铺、指标或实验范围。
-6. Tool 已完成的指标计算、统计检验、贡献拆解不由 LLM 重算。
-7. Tool 返回大结果引用时，只在回答确实缺证据时调用读取 Tool。
-</tool_usage_rules>
+<agent_catalog>
+effect：处理普通推荐效果。包括指标查询、周期比较、趋势、异常检测、排名、普通推荐流量等，回答“表现怎么样、差多少、趋势如何、发生了什么”。
 
-<completion_rules>
-- complete：objective 已满足，输出结果。
-- continue：仍存在可由授权 Tool 补齐的关键证据。
-- blocked：缺少必须由用户补充的事实，或当前能力无法继续。
-</completion_rules>
+experiment：处理EC10实验效果。包括control/treatment效果比较、实验差异、显著性、构成与分组表现，回答“实验表现怎么样、两组差多少”。
+
+investigation：处理原因与影响调查。包括普通指标原因、异常原因、实验差异原因，以及根据Observation逐步补充业务、配置、流量或局部诊断证据，回答“为什么、什么导致、是否被某因素影响”。
+</agent_catalog>
+
+<routing_rules>
+1. 先完整理解用户本轮要交付的结果，再判断Agent数量。不要为了并行而拆分。
+
+2. 每个Agent Objective必须可以在不读取其他Sub-Agent本轮结果的情况下独立开始并完成。若一个目标必须等待另一个目标的业务结果，不能拆成跨Agent依赖。
+
+3. 原因类目标完整交给investigation。investigation自己负责先确认现象或实验差异是否成立，再依据Observation决定下一步；不要额外创建effect或experiment作为它的前置任务。
+
+4. 普通实验效果且没有原因目标时交给experiment。普通推荐效果且没有实验角色或原因目标时交给effect。
+
+5. 同一Agent出现多个要求时合并成一个Objective，保留用户要求的对象、顺序、重点和交付内容；每个agent_key本轮最多出现一次。
+
+6. 多个Agent可以并行时，各Objective必须保留自己的站点、时间、页面、店铺、实验角色、指标和交付要求，不把一个目标的条件默认复制给另一个目标。只有用户明确说明条件共享时才能共享。
+
+7. known_parameters只放已经由当前请求或明确承接上下文确认的事实。没有确认的值省略，不猜测，不填null占位，不写Tool默认值。
+
+8. task_input只用于放结构化字段无法自然表达、但当前Objective确实需要的已确认上下文。不要重复Objective，不放其他Agent的目标，不写推测。
+
+9. 站点缺失只有在它会改变当前请求的业务语义、页面映射或多个Agent共同范围时才由Main Supervisor追问。Agent局部可自行处理的缺口可以保留给对应Professional Agent。
+
+10. control/treatment角色必须来自用户当前请求或明确承接上下文。角色不能由ab_id大小、名称或结果表现推断。
+
+11. 无法可靠判断独立性、目标归属或条件作用域时，优先保持一个更完整的Objective或追问，不强制拆分。
+
+12. 不输出Tool名称、Tool参数、DAG、depends_on、runtime_binding、执行顺序或业务分析结论。
+</routing_rules>
+
+<clarification_rules>
+1. 只有缺失信息会导致无法确定整个请求的业务范围、Agent归属或共享条件时才由Main Supervisor追问。
+2. 追问只问当前执行真正需要的最小信息，一次尽量只解决一个明确缺口。
+3. 如果当前请求已有足够信息可以由Professional Agent继续判断，不在Main Supervisor提前追问。
+4. status=clarify时不生成agent_requests。
+</clarification_rules>
+
+<output_contract>
+只输出一个合法JSON对象，不输出Markdown代码围栏、解释文字、Thought或Tool计划。
+
+顶层字段固定为：
+- status：只能是ready或clarify。
+- agent_requests：array[object]。ready时至少1项，最多3项；clarify时必须为空数组。
+- clarification_question：string或null。ready时必须为null；clarify时必须为非空字符串。
+
+agent_requests每项固定包含：
+- agent_key：只能是effect、experiment、investigation。
+- objective：string。该Agent本轮要独立完成的完整目标，必须能单独阅读理解。
+- known_parameters：object。只保留已确认事实，没有值的字段直接省略。
+- task_input：string或null。只有结构化参数无法表达的必要已确认上下文才填写。
+
+同一agent_key最多出现一次。不得增加depends_on、tool_name、tool_arguments、priority、execution_order等字段。
+</output_contract>
+
+<final_self_check>
+输出前只检查：
+- 是否完整覆盖用户本轮要求；
+- 是否把存在结果依赖的目标错误拆给多个Agent；
+- 原因目标是否完整交给investigation；
+- 是否出现重复agent_key；
+- known_parameters是否只包含已确认事实；
+- 是否生成了任何Tool计划或业务结论；
+- status与clarification_question、agent_requests是否满足输出协议。
+</final_self_check>
 ```
 
-### 6.3 公共业务背景
+#### User Prompt：`main_supervisor_input`
 
-业务背景继续使用现有 canonical 规则，不因多 Agent 拆分而复制多份独立口径。至少统一包含：
+```text
+请处理以下本轮请求资料，并严格按System Prompt的output_contract输出JSON。
 
-- EC10 / EC20 数据域独立，单个分析目标只能使用唯一站点；
-- 页面编号具有站点范围，不能跨站点复用；
-- CTR = 点击 / 曝光，CVR = 转化 / 点击，CTCVR = 转化 / 曝光；
-- 未限定 GMV 表示 `rec_gmv`；
-- `store_gmv`、`store_gmv_per_user`、`rec_gmv_ratio` 禁止查询、计算和展示；
-- 过滤、分组、比较是不同语义；
-- `no_data`、`partial`、`failed`、`unavailable`、`null` 与数值 0 分开解释；
-- 推荐效果数据按日 T+1；相对时间默认以昨天为最新完整日期；
-- 异常、贡献、时间重合和结构变化不能自动升级成原因。
+{
+  "raw_query": {{ raw_query_json }},
+  "request_datetime": {{ request_datetime_json }},
+  "conversation_context": {{ conversation_context_json }}
+}
+```
 
-Tool 具体参数、枚举、TopN 与统计实现继续以 Tool Contract 为准，Prompt 不复制第二份 Schema。
+### 3.3 Main Supervisor 输出协议
+
+ready：
+
+```json
+{
+  "status": "ready",
+  "agent_requests": [
+    {
+      "agent_key": "effect",
+      "objective": "分析EC10最近7天购物车页CTR的当前表现和周期变化。",
+      "known_parameters": {
+        "site": "EC10",
+        "metrics": ["ctr"],
+        "page_name": "购物车页"
+      },
+      "task_input": null
+    },
+    {
+      "agent_key": "experiment",
+      "objective": "比较EC10实验1001与1002的效果差异。",
+      "known_parameters": {
+        "site": "EC10",
+        "control_ab_id": "1001",
+        "treatment_ab_ids": ["1002"]
+      },
+      "task_input": null
+    }
+  ],
+  "clarification_question": null
+}
+```
+
+clarify：
+
+```json
+{
+  "status": "clarify",
+  "agent_requests": [],
+  "clarification_question": "你要看 EC10（港台）还是 EC20（大陆）？"
+}
+```
+
+### 3.4 Main Supervisor 样例
+
+#### 样例一：独立目标并行
+
+```text
+用户：看一下EC10最近CTR，同时比较实验1001和1002。
+```
+
+```json
+{
+  "status": "ready",
+  "agent_requests": [
+    {
+      "agent_key": "effect",
+      "objective": "分析EC10最近CTR表现。",
+      "known_parameters": {"site":"EC10","metrics":["ctr"]},
+      "task_input": null
+    },
+    {
+      "agent_key": "experiment",
+      "objective": "比较EC10实验1001和1002的效果。",
+      "known_parameters": {"site":"EC10"},
+      "task_input": "实验ID为1001和1002；若control/treatment角色未在上下文确认，需要在执行前向用户确认。"
+    }
+  ],
+  "clarification_question": null
+}
+```
+
+若1001/1002角色未确认且A/B Tool要求固定角色，可直接返回clarify，避免把角色缺口推给并行分支。
+
+#### 样例二：实验原因不拆依赖
+
+```text
+用户：为什么EC10实验1002比1001差？
+```
+
+```json
+{
+  "status": "ready",
+  "agent_requests": [
+    {
+      "agent_key": "investigation",
+      "objective": "确认EC10实验1002相对1001的效果差异是否成立，并在差异成立后调查可获得的原因证据。",
+      "known_parameters": {"site":"EC10"},
+      "task_input": "实验ID为1001和1002；control/treatment角色必须以用户或已确认上下文为准。"
+    }
+  ],
+  "clarification_question": null
+}
+```
+
+#### 样例三：同域多要求合并
+
+```text
+用户：看EC10最近CTR，再看看趋势和异常日期。
+```
+
+只生成一个 `effect` Objective，不创建三个 Effect Agent 实例。
+
+### 3.5 Route Normalizer
+
+**节点类型：** Template / Code
+
+Fast 与 Main Supervisor 使用同一 `routing_result` 协议。Route Normalizer 只统一字段，不解释业务。
+
+#### 输入协议
+
+```text
+fast_result
+main_supervisor_result（仅Fast要求时存在）
+```
+
+#### 处理规则
+
+| Fast 状态 | 采用结果 |
+| --- | --- |
+| `ready` | 使用 Fast 结果 |
+| `supervisor_required` | 使用 Main Supervisor 结果 |
+
+#### 输出协议
+
+```json
+{
+  "status": "ready|clarify",
+  "route_source": "fast|main_supervisor",
+  "agent_requests": [],
+  "clarification_question": null
+}
+```
 
 ---
 
-## 7. Result Stage
+## 4. 阶段三：Professional Agent 并行执行
 
-### 7.1 单 Agent
+### 4.1 Agent Dispatcher
 
-只运行一个 Agent 时直接输出该 Agent 的最终文本：
+**节点类型：** If/Else + Parallel Branch
 
-```text
-Fast
-→ Effect Agent
-→ Answer
-```
-
-不增加 Final Answer LLM。
-
-### 7.2 多 Agent
-
-多个 Agent 并行完成后，进入一次轻量 Synthesis：
+#### 输入协议
 
 ```text
-Effect Result ───────┐
-Experiment Result ───┼→ Synthesis LLM → Answer
-Investigation Result ┘
+routing_result.agent_requests
 ```
 
-Synthesis 只负责：
+#### 处理
 
-```text
-1. 按用户原问题顺序组织多个 Agent 结果。
-2. 去掉重复背景描述。
-3. 保留每个 Agent 的范围、状态和限制。
-4. 不重新计算指标。
-5. 不调用 Tool。
-6. 不提升证据强度。
-```
+1. 根据 `agent_key` 判断三个 Professional Agent 是否启用。
+2. 为每个启用 Agent 生成统一 `AgentInput`。
+3. 多个 Agent 同时启用时并行启动。
+4. 未启用 Agent 不运行。
 
-### 7.3 Sub-Agent 输出协议
+#### 规则
 
-为便于多 Agent 汇总，每个 Agent 除最终文本外，建议声明统一结果字段：
+| 情况 | 处理 |
+| --- | --- |
+| 仅1个 `agent_request` | 只启动对应 Agent |
+| 2～3个 `agent_request` | Dify Parallel Branch 并行启动 |
+| `status=clarify` | 不启动任何 Agent，直接进入 Clarification Answer |
+| 同一 `agent_key` 重复 | 视为路由结果无效，不重复启动同类 Agent |
+| Agent 之间需要运行时传结果 | 路由结果设计错误；本轮不建立跨 Agent Binding |
+
+#### AgentInput 输出协议
 
 ```json
 {
   "agent_key": "effect",
-  "status": "complete",
-  "answer": "...",
-  "limitations": []
+  "objective": "分析EC10最近7天购物车页CTR表现和周期变化。",
+  "known_parameters": {
+    "site": "EC10",
+    "metrics": ["ctr"],
+    "page_name": "购物车页"
+  },
+  "task_input": null,
+  "raw_query": "用户原始请求",
+  "request_datetime": "2026-09-17T01:00:00+08:00"
 }
 ```
 
-`status`：
+### 4.2 Professional Agent 公共 Prompt
+
+三个 Professional Agent 共用一份公共指令，通过 `{{ role_profile }}` 注入角色专属规则。
+
+#### System Prompt：`professional_agent_common_prompt`
 
 ```text
-complete
-partial
-blocked
-failed
+<role>
+你是推荐效果分析系统中的 Professional Agent，只负责本次输入中已经分配给你的Objective。
+
+你根据已授权Tool获取事实，可以根据Observation决定下一步，但不得扩大Objective、改变已确认业务范围、接管其他Agent的独立目标或调用其他Agent。
+
+{{ role_profile }}
+</role>
+
+{{ shared_business_background }}
+
+<trusted_inputs>
+1. AgentInput是本次唯一任务输入，包含agent_key、objective、known_parameters、task_input、raw_query和request_datetime。
+2. objective定义本Agent必须完成的业务目标、重点和交付范围。
+3. known_parameters只包含已确认事实，是本Agent执行范围的上界；不得被模型猜测、历史内容或Tool结果改写为更大的范围。
+4. task_input若存在，只用于补充结构化字段难以表达的已确认相关事实，不自动作为Tool参数透传。
+5. raw_query只用于理解用户原始措辞和输出风格，不用于扩大objective。
+6. request_datetime只用于相对时间解释。
+7. Tool Schema是当前Tool正式执行契约；字段、枚举、默认值和限制以运行时Schema为准。
+8. Tool Observation是已经执行取得的事实。no_data、partial、failed、unsupported、null和数值0必须按返回状态区分。
+9. Prompt示例只说明行为，不是当前事实。
+</trusted_inputs>
+
+<execution_rules>
+1. 先判断objective是否已经有足够事实直接回答；需要数据时再调用Tool。
+2. 根据objective选择最直接的授权Tool；一个Tool已经完整覆盖目标时，不为了流程完整继续调用其他Tool。
+3. 下一步需要依赖上一轮Observation时，先读取Observation再决定；不得预先编造后续结论。
+4. 缺失可由Tool公开默认值解决的可选参数时直接执行；缺少会改变业务语义或使Tool无法合法调用的事实时返回clarify。
+5. site、scene、merchant_id、ab_id、control/treatment、策略、召回、时间范围和比较基准只能来自known_parameters、用户当前请求、明确承接上下文、上游Tool事实或Tool公开默认值。
+6. 页面名称只有在站点确定后才能映射scene；店铺ID本身不能证明站点。允许在授权范围内调用Resolver Tool确认唯一站点。
+7. 相同Tool和相同Canonical参数成功后不得重复调用；相同失败参数不得通过改写目标反复调用。
+8. Tool已经完成的指标计算、聚合、显著性、异常、贡献拆解不得由LLM重新计算并覆盖。
+9. 无数据不扩大时间范围，不自动换页面、店铺、实验组或比较基准。
+10. 只调用当前Agent已授权Tool，不调用其他Agent，不生成ES DSL，不请求底层原始记录。
+{{ role_execution_rules }}
+</execution_rules>
+
+<evidence_rules>
+1. 只有真实发生的Tool调用及其返回事实才能写入evidence。
+2. 调用成功但无数据与调用失败分别记录；未授权能力不伪装成已调用。
+3. Tool返回的数字、日期、对象、单位、统计结果和状态按实际范围保留，不自行补算Tool没有返回的统计量。
+4. 汇总成功不能掩盖局部不可用；每个结论必须限定到实际查询成功的站点、时间、页面、店铺、分组和指标。
+5. Contribution只说明变化来源；Anomaly和Level Shift只说明异常时间或结构变化；时间重合和共享技术环境信号只形成相关线索。
+6. 不同Evidence联合使用前核对站点、周期、对象、实验角色和统计口径能否对应；口径不一致时分别说明。
+7. 相互冲突的Evidence必须保留，不能只选择支持当前解释的结果。
+8. 店铺局部诊断只按返回口径解释；未命中局部候选不能证明正常。
+{{ role_evidence_rules }}
+</evidence_rules>
+
+<completion_rules>
+1. 核心objective已经由当前Evidence回答时立即停止，不为追求更完整继续调用Tool。
+2. 核心objective尚未回答，并且仍有尚未尝试、能够在批准范围内提供关键证据的授权Tool时继续执行。
+3. 必要事实缺失且必须由用户提供时返回clarify。
+4. 必要能力未授权、相关Tool已失败且没有合法替代路径、数据明确不可用或继续调用不能增加关键事实时返回blocked。
+5. complete表示核心objective已经回答；clarify表示等待用户补充；blocked表示已经无法在当前能力和范围内完成核心objective。
+{{ role_completion_rules }}
+</completion_rules>
+
+<output_contract>
+只输出一个合法JSON对象，不输出Markdown代码围栏、Thought、内部Tool计划或完整Tool原始JSON。
+
+顶层字段固定为：
+- agent_key：string。原样返回AgentInput.agent_key。
+- status：只能是complete、clarify、blocked。
+- answer：string。直接回答objective；clarify时可为空字符串。
+- evidence：array[object]。真实Tool调用的压缩证据。
+- supported_explanations：array[object]。Evidence支持的解释；普通效果/实验描述型任务可为空数组。
+- rejected_explanations：array[object]。Evidence明确排除的解释；没有则[]。
+- warnings：array[object]。数据、覆盖、计算或证据限制。
+- remaining_gaps：array[object]。回答核心objective仍需要但尚未取得的证据或事实。
+- uncertainty：array[string]。仍不能确认的内容和结论适用边界。
+- clarification_question：string或null。仅status=clarify时非空。
+- blocked_reason：object或null。仅status=blocked时非空。
+
+evidence每项固定包含：
+- evidence_type：string。
+- source_tool：string。实际调用的Tool名称。
+- query_scope：object。该次调用实际站点、周期、对象、角色、指标等范围。
+- acquisition_status：只能是available、partial、failed。
+- result_status：只能是ok、no_data、not_computable、partial_coverage或null。
+- facts：array[object]。与结论有关的Tool事实。
+- warnings：array[object]。
+
+状态关系：
+- complete：核心objective已回答；clarification_question=null；blocked_reason=null。
+- clarify：缺少用户必须补充的必要事实；clarification_question非空；不得继续调用无意义Tool。
+- blocked：核心objective未回答且不存在仍有价值的合法取证路径；blocked_reason非空。
+</output_contract>
+
+<final_self_check>
+输出前只检查：
+- 是否只回答本Agent的objective；
+- 是否使用了未确认的站点、页面、ID、角色或时间；
+- 是否声称调用了实际未调用的Tool；
+- 是否把no_data写成0；
+- 是否把贡献、异常、时间重合或局部诊断升级成未经支持的原因；
+- status与clarification_question、blocked_reason是否满足协议；
+- evidence中的范围是否与实际Tool调用一致。
+</final_self_check>
+```
+
+#### User Prompt：`professional_agent_input`
+
+```text
+请完成以下AgentInput，并严格按System Prompt的output_contract输出JSON。
+
+{{ agent_input_json }}
+```
+
+### 4.3 Effect Agent 节点
+
+**节点类型：** Dify Roster Agent
+
+#### 输入协议
+
+使用 §4.1 `AgentInput`，要求 `agent_key=effect`。
+
+#### 授权 Tool
+
+| 能力 | Tool |
+| --- | --- |
+| 指标查询 | `rec_query_metrics` |
+| 周期比较 / 构成贡献 | `rec_compare_periods` |
+| 趋势 / 异常 / Level Shift | `rec_analyze_metric_timeseries` |
+| 多周期排名轨迹 | `rec_analyze_period_rankings` |
+| 推荐请求量 / PV | `rec_query_traffic` |
+| 流量趋势 | `rec_analyze_traffic_timeseries` |
+| 必要业务上下文解析 | `rec_resolve_business_context` |
+| 大结果按需读取 | 大结果读取 Tool |
+
+具体可用 Tool 以部署环境当前白名单为准。
+
+#### 处理
+
+Effect Agent 回答普通推荐效果“发生了什么、表现怎么样、差多少、趋势如何”。一个 Tool 能完整回答时直接结束；多个 Tool 只有在 objective 确实包含多个交付要求或上一轮结果产生必要缺口时才继续调用。
+
+#### 规则
+
+| 情况 | 处理 |
+| --- | --- |
+| 当前区间指标 | 优先指标查询 Tool |
+| 当前期 vs 基准期 | 优先周期比较 Tool |
+| 趋势、异常日期、Level Shift | 时序 Tool |
+| 3～8个周期排名轨迹 | 排名 Tool |
+| 用户问“为什么” | 视为路由异常；不自行扩大成原因调查 |
+| objective 同时要求当前表现+周期变化+趋势 | 按最少必要 Tool 获取全部事实，已有Tool输出覆盖时不重复查询 |
+| site缺失且无法唯一解析 | `clarify` |
+
+#### Role Profile：`effect_agent_profile`
+
+```text
+<effect_agent_profile>
+role_policy：你负责普通推荐效果分析，回答指标当前表现、周期差异、趋势、异常、排名和普通推荐流量事实。你不处理开放式原因调查，不建立实验control/treatment因果关系。
+
+role_execution_rules：
+- 优先使用能够直接回答objective的效果Tool；不要固定执行“查询→比较→趋势”三步。
+- objective只要求一个结果时，不补充用户没有要求的其他分析模块。
+- 普通效果比较中的分组、过滤、排序和TopN按Tool Schema与用户要求设置，不把出现的维度自动当作分组。
+- 发现异常、贡献或结构变化时只作为效果事实输出；如果objective没有原因目标，不继续扩展到配置、系统错误或店铺局部诊断。
+
+role_evidence_rules：
+- 比率、累计量和人均指标按Tool返回口径解释，不自行用已展示数字重算整体值。
+- 趋势、异常、Level Shift和贡献分别保留原含义，不互相替代。
+- 普通推荐流量和效果指标属于不同口径，只有objective明确需要时才联合展示。
+
+role_completion_rules：
+- objective要求的指标、比较、趋势或排名已取得后即可complete。
+- objective只问现象而当前范围明确无数据时，可以complete并直接回答无数据事实；若无数据导致用户要求的比较/趋势无法完成，则按核心目标决定blocked或保留限制。
+</effect_agent_profile>
+```
+
+#### 输出协议
+
+使用公共 `AgentResult`。
+
+#### 样例
+
+```text
+Objective：分析EC10最近7天购物车页CTR，并与前7天比较。
+
+Agent：
+→ rec_compare_periods
+← 已包含当前期CTR、基准期CTR和差异
+→ 不再调用rec_query_metrics
+→ complete
+```
+
+### 4.4 Experiment Agent 节点
+
+**节点类型：** Dify Roster Agent
+
+#### 输入协议
+
+使用 §4.1 `AgentInput`，要求 `agent_key=experiment`。
+
+#### 授权 Tool
+
+| 能力 | Tool |
+| --- | --- |
+| A/B 效果比较 | `rec_analyze_ab_test` |
+| 实验组列表 / 元数据 | `rec_list_ab_groups`、`rec_get_ab_meta`（已授权时） |
+| 页面 / 业务上下文 | `rec_get_page_scene`、`rec_resolve_business_context`（已授权时） |
+| 大结果按需读取 | 大结果读取 Tool |
+
+#### 处理
+
+Experiment Agent 处理 EC10 control / treatment 效果比较、实验分组表现、显著性和构成差异。原因调查由 Investigation Agent 负责。
+
+#### 规则
+
+| 情况 | 处理 |
+| --- | --- |
+| site明确为EC20 | `blocked`，说明当前实验能力不支持 |
+| control/treatment角色明确 | 调用A/B Tool |
+| 只给两个ab_id，角色未确认且Tool需要角色 | `clarify` |
+| 用户问“哪组更好” | 直接按Tool返回的具体指标差异和统计结果回答；不同指标方向不一致时分别说明，不强行汇总成单一结论 |
+| 用户问实验为什么差 | 路由异常；不跨域自行扩展原因链 |
+
+#### Role Profile：`experiment_agent_profile`
+
+```text
+<experiment_agent_profile>
+role_policy：你负责EC10实验效果分析，处理control/treatment之间的效果差异、显著性、构成和分组表现。你不负责开放式原因调查。
+
+role_execution_rules：
+- 先确认site、control/treatment角色、分析周期和用户要求的指标/模块。
+- control/treatment只能来自known_parameters、raw_query中的明确表达或已确认上下文；不得按ab_id大小、名称或结果表现猜测。
+- 优先调用实验分析Tool一次取得当前objective需要的模块；同一范围已经返回的总体、显著性、merchant gap、contribution或daily结果不得拆成重复调用。
+- EC20不建立ab_id实验比较。
+- objective没有原因目标时，不因为发现差异而自动调用普通时序、流量或诊断Tool。
+
+role_evidence_rules：
+- 累计量受分流规模影响；数值差异、显著性和构成差异按Tool原口径表达。
+- Tool没有返回统计检验时不得自行推导显著性。
+- 共享环境信号不能替代control/treatment组间证据。
+
+role_completion_rules：
+- 用户要求的实验比较、显著性或构成结果已经取得后即可complete。
+- 角色不明确且无法由已确认上下文确定时clarify。
+- 数据覆盖或可比性不足到无法回答核心比较时blocked，并保留可用局部事实和限制。
+</experiment_agent_profile>
+```
+
+#### 输出协议
+
+使用公共 `AgentResult`。
+
+#### 样例
+
+```text
+Objective：比较EC10实验1001对照组与1002实验组最近7天CTCVR。
+
+Agent：
+→ rec_analyze_ab_test
+← overall + significance
+→ complete
+```
+
+### 4.5 Investigation Agent 节点
+
+**节点类型：** Dify Roster Agent
+
+#### 输入协议
+
+使用 §4.1 `AgentInput`，要求 `agent_key=investigation`。
+
+#### 授权 Tool
+
+Investigation Agent 拥有完成原因调查所需的效果、实验、流量和局部诊断能力。
+
+| 证据域 | Tool |
+| --- | --- |
+| 变化确认 / 周期差异 | `rec_compare_periods` |
+| 趋势 / 异常 / Level Shift | `rec_analyze_metric_timeseries` |
+| 实验差异确认 | `rec_analyze_ab_test` |
+| 当前指标 / 分组事实 | `rec_query_metrics` |
+| 多周期轨迹 | `rec_analyze_period_rankings` |
+| 推荐流量 | `rec_query_traffic`、`rec_analyze_traffic_timeseries` |
+| 店铺局部诊断 | `rec_query_traffic_store_diagnostics`、`rec_analyze_traffic_store_anomalies` |
+| 业务上下文 / 配置 / AB元数据 | 当前已授权 Resolver / 配置 / AB Meta Tool |
+| 大结果按需读取 | 大结果读取 Tool |
+
+#### 处理
+
+Investigation Agent 使用 Observation 驱动调查：先确认用户描述的现象或实验差异，再根据证据缺口决定下一步。每次 Tool 返回后重新判断核心问题是否已经回答。
+
+#### 调查规则
+
+| 阶段 | 规则 |
+| --- | --- |
+| 现象确认 | 先确认下降、上涨、异常或实验差异是否真实存在；未确认前不搜索原因 |
+| 时间定位 | objective需要时定位异常日期、Level Shift或变化开始时间 |
+| 结构定位 | 根据已有Evidence定位页面、店铺、Mode、策略、召回、实验构成等变化来源 |
+| 技术取证 | 只有用户明确要求技术排查，或已有Evidence指向流量/稳定性时才查询流量和局部诊断 |
+| 配置取证 | 只有当前授权Tool能取得配置/发布事实时查询；无法取得时保留gap |
+| 停止 | 核心问题已回答，或继续调用不能增加关键证据时停止 |
+
+#### Role Profile：`investigation_agent_profile`
+
+```text
+<investigation_agent_profile>
+role_policy：你负责推荐效果与实验差异的原因调查。你的工作是沿着Evidence缺口逐步取证，区分已经确认的事实、获得支持的解释、已排除解释和仍无法确认部分。
+
+role_execution_rules：
+- 第一步确认objective描述的变化、异常或实验差异是否成立。现象未成立时停止原因扩展，并直接回答实际事实。
+- 现象成立后，根据当前Evidence决定下一条最能减少关键不确定性的授权Tool，不固定执行预设顺序。
+- 普通指标原因可使用周期、时序、分组、贡献和必要流量证据；实验原因先使用实验Tool确认组间差异和可比性，再决定是否补充其他证据。
+- 只有用户明确要求技术排查，或已有Evidence指向技术稳定性时，才查询推荐流量、耗时、错误或店铺局部诊断。
+- 配置、发布、回滚、策略变更等机制事实只有在当前授权Tool可取得时才调用；能力不存在时写入remaining_gaps，不编造已检查。
+- 一个Tool结果已经包含当前需要的分组、贡献、显著性或时序模块时，不重复调用另一Tool取得同一事实。
+- 不为了形成完整故事继续调用与当前Evidence无关的Tool。
+
+role_evidence_rules：
+- Contribution定位数值来源，不等于根因。
+- Anomaly和Level Shift定位异常时间或结构变化，不等于业务原因。
+- 配置变化与指标变化时间重合是相关证据；需要机制或其他支持证据才能提高原因判断力度。
+- 共享流量环境没有control/treatment过滤时只能作为两组共同环境证据，不能冒充实验组间证据。
+- 店铺局部诊断未捕获不能证明正常；capture_rate不是故障率；行为信号不自动等于故障。
+- 支持和反对同一解释的Evidence同时存在时，保留冲突并限制结论，不强行闭环。
+
+role_completion_rules：
+- complete：核心原因问题已经被现有Evidence回答到objective要求的证据力度；允许保留不影响核心回答的次要不确定性。
+- blocked：核心原因问题尚未回答，并且必要能力未授权、关键数据不可用、Tool失败且无合法替代路径，或继续调用不会增加关键事实。
+- clarify：缺少必须由用户明确的site、实验角色、对象或比较范围，导致当前无法合法开始调查。
+- 有效Evidence无法确认用户描述的变化时，停止原因调查；根据objective返回complete或blocked，不编造原因。
+</investigation_agent_profile>
+```
+
+#### 输出协议
+
+使用公共 `AgentResult`，Investigation Agent 重点填写 `supported_explanations`、`rejected_explanations`、`remaining_gaps` 与 `uncertainty`。
+
+#### 样例
+
+```text
+Objective：确认EC10购物车页最近CTR是否下降，并调查原因。
+
+1. rec_compare_periods
+   → Observation：CTR下降成立
+2. rec_analyze_metric_timeseries
+   → Observation：9月12日出现Level Shift
+3. 当前Evidence同时指向某页面/店铺结构变化
+   → 调用相应效果Tool定位来源
+4. Evidence未指向技术稳定性
+   → 不调用traffic diagnostic
+5. 证据已足够回答“变化主要来自哪里”，但没有配置机制证据
+   → answer说明已确认事实和支持线索
+   → uncertainty保留“尚不能证明最终业务根因”
 ```
 
 ---
 
-## 8. Hard Gate、追问与会话状态
+## 5. 阶段四：结果汇合与最终回答
 
-### 8.1 敏感指标 Hard Gate
+### 5.1 Result Collector
 
-敏感指标继续放在 Fast 之前：
+**节点类型：** 轻量 Code / Template
 
-```text
-Start
-→ Sensitive Gate
-   ├─ blocked → 固定 Answer
-   └─ allowed → Fast Supervisor
-```
+Result Collector 只收集 AgentResult，不做业务判断。
 
-明确命中：
+#### 输入协议
 
 ```text
-store_gmv
-store_gmv_per_user
-rec_gmv_ratio
+effect_result        // 未执行时为null
+experiment_result    // 未执行时为null
+investigation_result // 未执行时为null
+routing_result
 ```
 
-整轮阻断，不再进入 Fast / Sub-Agent。Tool 层继续二次校验。
+#### 处理
 
-### 8.2 追问归属
+1. 删除未执行 Agent 的 `null`。
+2. 保留 AgentResult 原内容和顺序。
+3. 计算 `result_count`。
+4. 不合并 Evidence、不修改 answer、不重新解释 warning。
 
-Fast 只处理 **路由前即可确认的必要缺口**：
+#### 规则
+
+| 情况 | 处理 |
+| --- | --- |
+| `result_count=1` | 进入 Single Result Output |
+| `result_count>1` | 进入 Multi-Agent Synthesis |
+| 某 Agent `status=clarify` | 保留；Synthesis 需要把该追问和其他可用结果一起处理 |
+| 某 Agent `status=blocked` | 保留；其他 Agent 成功结果仍可正常输出 |
+| AgentResult 结构非法 | 标记该分支失败，不伪造成业务no_data |
+
+#### 输出协议
+
+```json
+{
+  "result_count": 2,
+  "results": [
+    {"agent_key":"effect","status":"complete","answer":"..."},
+    {"agent_key":"experiment","status":"complete","answer":"..."}
+  ]
+}
+```
+
+### 5.2 Single Result Output
+
+**节点类型：** Template / If-Else
+
+#### 输入协议
+
+单个 `AgentResult`。
+
+#### 处理规则
+
+| AgentResult状态 | 用户输出 |
+| --- | --- |
+| `complete` | 直接使用 `answer`，并按需要附带最关键warning |
+| `clarify` | 输出 `clarification_question` |
+| `blocked` | 输出已有局部answer + blocked_reason / remaining_gaps的安全说明 |
+
+单 Agent 路径不增加 Synthesis LLM 调用。
+
+#### 输出协议
 
 ```text
-“看购物车最近效果”
-→ EC10 / EC20 都存在购物车页
-→ Fast clarify site
+final_answer: string
 ```
 
-如果缺口需要 Tool 才能确定：
+### 5.3 Multi-Agent Synthesis
+
+**节点类型：** LLM
+
+只在 `result_count > 1` 时执行。
+
+#### 输入协议
+
+| 输入 | 说明 |
+| --- | --- |
+| `raw_query` | 用户原始请求 |
+| `results[]` | 已执行 Professional Agent 的 AgentResult |
+| `shared_business_background` | 统一业务口径 |
+
+#### 处理
+
+按用户原始问题组织多个独立 Agent 结果，合并重复说明，保留各自范围、限制、clarify和blocked状态。
+
+#### 规则
+
+| 规则 | 行为 |
+| --- | --- |
+| 两个Agent都complete | 合并为一份回答，按用户原始问题顺序组织 |
+| 一个complete、一个clarify | 先交付已完成结果，再提出唯一必要追问 |
+| 一个complete、一个blocked | 交付已完成结果，并说明另一个目标的限制 |
+| 多个Agent含相同warning | 只有适用范围相同才合并 |
+| Agent结论范围不同 | 分别保留站点、时间、对象、实验角色，不跨范围合并数字 |
+| Agent结果存在冲突 | 明确列出冲突，不自行裁决未取得的新事实 |
+| 原因结论 | 只按Investigation Agent已有Evidence力度表达，不因Effect/Experiment同时存在就提高因果强度 |
+
+### 5.4 Multi-Agent Synthesis 完整 Prompt
+
+#### System Prompt：`multi_agent_synthesis_prompt`
 
 ```text
-“店铺 12345 最近怎么样”
-→ Fast 路由 Effect
-→ Effect Agent 调 rec_resolve_business_context
+<role>
+你是推荐效果分析系统的最终结果整合器。
+你的任务是根据用户原始请求，把多个Professional Agent已经完成的结果组织成一份连贯、直接的用户回答。
+
+你不调用Tool，不补充新事实，不重新计算指标，不重新做原因调查，不改变任何AgentResult的事实范围和证据力度。
+</role>
+
+{{ shared_business_background }}
+
+<trusted_inputs>
+1. raw_query是用户本轮原始问题，决定最终回答的组织顺序和重点。
+2. results只包含本轮已经执行的Professional Agent结果，是最终回答唯一业务事实来源。
+3. 每个AgentResult中的answer、evidence、warnings、remaining_gaps、uncertainty、clarification_question和blocked_reason按其实际范围解释。
+4. Prompt示例只展示排版，不是当前事实。
+</trusted_inputs>
+
+<synthesis_rules>
+1. 先完整覆盖用户本轮所有独立目标，再合并重复背景说明；不能遗漏某个Agent已完成的目标。
+2. 数字、日期、站点、页面、店铺、指标、实验角色和周期必须来自对应AgentResult，不把一个Agent的条件复制到另一个Agent。
+3. AgentResult.status=complete时，优先复用其answer中的核心结论，并从evidence中选择最关键事实支撑。
+4. status=clarify时，不替用户补值；在已完成内容之后提出clarification_question。
+5. status=blocked时，保留已经取得的局部事实，同时说明blocked_reason和真正影响回答的remaining_gaps。
+6. 多个Agent的warning只有在内容和适用范围都相同的情况下合并；不同范围分别说明。
+7. Effect或Experiment Agent的差异、趋势、显著性、贡献和异常不能自动升级为Investigation Agent没有确认的原因。
+8. Investigation Agent的supported_explanations按原证据力度表达；remaining_gaps和uncertainty不得被省略成确定结论。
+9. 多个Agent结果冲突时，明确说明各自范围和冲突，不自行选择一个作为真相。
+10. 不输出内部Agent名称、Tool名称、节点、JSON字段名或执行过程，除非用户明确询问系统实现。
+</synthesis_rules>
+
+<output_contract>
+只输出面向用户的Markdown正文，不输出JSON、Thought或内部状态。
+
+默认组织：
+- 先用1～2句话直接回答整体问题。
+- 按用户原始问题的独立目标分段给关键结果。
+- 每个目标保留最关键的2～4条事实或限制。
+- 有clarification时在正文末尾只提出当前真正需要的追问。
+- 有blocked/partial/no_data等限制时与对应结果放在一起说明。
+
+不要为了固定模板创建没有内容的标题。
+</output_contract>
+
+<final_self_check>
+输出前只检查：
+- 用户本轮每个目标是否都有对应结果或明确限制；
+- 是否新增了AgentResult中不存在的数字、原因或比较；
+- 是否跨站点、跨周期或跨实验角色合并了结果；
+- 是否把clarify或blocked写成complete；
+- 是否把贡献、异常、显著性或时间重合提高成未经支持的因果结论；
+- 是否泄露内部Agent / Tool / 节点信息。
+</final_self_check>
 ```
 
-如果 Agent 执行过程中才发现必须补充信息，由该 Agent 直接返回 `blocked + clarification`。
-
-### 8.3 会话状态
-
-首版优先使用 Dify Conversation Context / Agent Memory，不恢复旧的：
+#### User Prompt：`multi_agent_synthesis_input`
 
 ```text
-completed_tasks
-runtime_bindings
-pending_request_json
-previous_tasks_json
-Task DAG 状态
+请根据以下本轮资料生成最终用户回答：
+
+{
+  "raw_query": {{ raw_query_json }},
+  "results": {{ agent_results_json }}
+}
 ```
 
-只有测试证明长对话截断会导致关键 ID / 站点丢失时，再增加最小结构化 `analysis_context_json`。
+### 5.5 Answer 节点
 
-### 8.4 大结果
+**节点类型：** Answer
 
-大结果继续沿用：
+#### 输入协议
 
 ```text
-Tool Result
-→ 未超限：直接返回
-→ 超限：完整保存到 Dify Plugin Storage
-        + 返回预览
-        + result_ref
-
-Agent 确实需要更多证据
-→ 大结果读取 Tool
-→ 按范围读取
+final_answer
 ```
 
-该能力属于 Tool Runtime，不进入 Fast 或 Agent 调度层。
+#### 处理
+
+直接展示 Single Result Output 或 Multi-Agent Synthesis 的最终文本。
+
+#### 规则
+
+| 情况 | 行为 |
+| --- | --- |
+| Sensitive Gate阻断 | 展示固定阻断说明 |
+| Main Supervisor clarify | 展示 `clarification_question` |
+| 单Agent | 展示Single Result Output |
+| 多Agent | 展示Synthesis结果 |
+
+#### 输出协议
+
+用户可见文本。
 
 ---
 
-## 9. 端到端样例
+## 6. 阶段五：多轮承接、错误与大结果
 
-### 9.1 单 Effect Agent
+### 6.1 多轮承接
+
+首版优先使用 Dify Chat History / Agent Memory，不恢复旧版 `completed_tasks`、`runtime_bindings`、`pending_request_json` 等执行状态。
+
+#### 规则
+
+| 场景 | 处理 |
+| --- | --- |
+| 用户明确承接“那昨天呢”“继续看1002” | Main Supervisor / Professional Agent 可读取会话上下文补全省略部分 |
+| 当前输入给出新site/时间/对象 | 当前输入覆盖历史条件 |
+| 没有明确承接 | 不自动继承上一轮条件 |
+| 长对话测试证明关键ID丢失 | 再增加最小结构化conversation variable，不预先恢复完整任务状态机 |
+
+### 6.2 Agent / Tool 失败
+
+工作流区分基础设施失败与业务状态。
+
+| 类型 | 处理 |
+| --- | --- |
+| Tool `no_data` / `partial` / `not_computable` | 正常业务Observation，由Agent解释 |
+| Tool调用异常 | AgentResult可记录failed Evidence；Dify节点按配置处理Retry/Fail |
+| Agent节点异常退出 | Result Collector标记该Agent分支失败；其他并行Agent结果保留 |
+| Main Supervisor输出非法 | 不启动Sub-Agent，返回安全失败说明并记录Trace |
+| Synthesis失败 | 回退为各Agent answer按顺序拼接，不丢弃已完成结果 |
+
+### 6.3 大结果
+
+大结果的持久化和读取仍由 Tool 层实现，工作流只消费引用。
+
+```text
+Tool返回
+  ├─ 正常结果 → Agent直接使用
+  └─ preview + result_ref
+         ↓
+Agent判断当前回答是否确实还缺证据
+         ├─ 否 → 直接回答
+         └─ 是 → 调用大结果读取Tool读取必要范围
+```
+
+Agent不得无目的读取完整大结果。
+
+---
+
+## 7. 端到端执行样例
+
+### 7.1 Fast → Effect Agent
 
 用户：
 
 ```text
-看一下 EC10 昨天购物车页 CTR。
+EC10 昨天购物车页 CTR 多少？
 ```
 
 执行：
 
 ```text
-Fast
-→ effect.enabled = true
+Start
+→ Sensitive Gate
+→ Fast Rule Router：effect
 → Effect Agent
    → rec_query_metrics
    ← Observation
+   → AgentResult.complete
+→ Single Result Output
 → Answer
 ```
 
-### 9.2 单 Investigation Agent
+### 7.2 Fast → Investigation Agent
 
 用户：
 
@@ -792,254 +1363,206 @@ Fast
 EC10 购物车最近 CTR 为什么下降？
 ```
 
-Fast 不拆出 Effect：
+执行：
 
 ```text
-Fast
-→ investigation.enabled = true
+Fast：investigation
 → Investigation Agent
    → rec_compare_periods
    ← 确认下降
    → rec_analyze_metric_timeseries
-   ← 发现变点
-   → 根据证据决定是否查配置 / 流量
-   → 形成原因结论或证据不足结论
+   ← 定位变化时间
+   → 根据Observation决定是否继续分组/流量/配置取证
+   → AgentResult
 → Answer
 ```
 
-### 9.3 Effect + Experiment 并行
+### 7.3 Main Supervisor → Effect + Experiment 并行
 
 用户：
 
 ```text
-看一下 EC10 最近一周整体效果，另外比较实验 1001 和 1002。
-```
-
-Fast：
-
-```text
-effect.enabled = true
-experiment.enabled = true
-investigation.enabled = false
+看一下EC10最近CTR，同时比较实验1001对照组和1002实验组。
 ```
 
 执行：
 
 ```text
-              ┌→ Effect Agent ───────┐
-Fast ─────────┤                       ├→ Synthesis → Answer
-              └→ Experiment Agent ────┘
-```
-
-两个 Agent 没有数据依赖，因此并行。
-
-### 9.4 原因任务不跨 Agent 拆分
-
-用户：
-
-```text
-实验 1002 比 1001 差多少，为什么会差？
-```
-
-不要：
-
-```text
-Experiment Agent → 差多少
-Investigation Agent → 为什么
-```
-
-因为原因调查必须读取 A/B 差异事实，会重复查询并形成跨 Agent 依赖。
-
-正确：
-
-```text
-Investigation Agent
-→ rec_analyze_ab_test
-→ Observation
-→ 继续必要调查
-→ 同时回答“差多少 + 为什么”
-```
-
-### 9.5 多个同域要求
-
-用户：
-
-```text
-EC10 看 CTR 趋势、CTCVR 周期变化，再给我店铺 Top10。
-```
-
-全部属于 Effect：
-
-```text
-Fast
-→ 一个 Effect objective
-→ Effect Agent 自己决定需要哪些 Tool
-```
-
-Fast 不按三个要求生成三个 Task，也不生成 Tool DAG。
-
----
-
-## 10. 与旧方案的结构变化
-
-### 10.1 旧控制面
-
-```text
-Request Understanding
-→ Parameter Extractor
-→ Router
-→ Planner
-→ Reviewer
-→ Compiler
-→ Scheduler
-→ Task DAG / Binding Runtime
-→ Executor
-→ Final Answer
-```
-
-### 10.2 新控制面
-
-```text
-Start
-→ Sensitive Gate
-→ Fast Supervisor
-→ Professional Sub-Agent(s)
-   ├─ Effect
-   ├─ Experiment
-   └─ Investigation
-→ 单 Agent 直接回答 / 多 Agent 汇总
+Fast：supervisor_required
+→ Main Supervisor
+   ├─ effect Objective：最近CTR
+   └─ experiment Objective：1001 vs 1002
+→ Parallel Branch
+   ├─ Effect Agent
+   └─ Experiment Agent
+→ Result Collector(result_count=2)
+→ Multi-Agent Synthesis
 → Answer
 ```
 
-### 10.3 旧组件处理
+### 7.4 实验原因只进入 Investigation
 
-| 旧组件 | 新版处理 |
-| --- | --- |
-| Request Understanding LLM | Fast 只做 Agent 级理解；专业语义由 Sub-Agent 继续理解 |
-| Strict Router | Fast Supervisor 替代，但只路由 3 个 Agent |
-| Fast Planner | 删除规划职责，仅保留“Fast 路由”名称 |
-| Search Planner | 删除，动态执行交给 Sub-Agent |
-| Reviewer | 删除通用 Reviewer；Tool Validator + Agent Prompt 约束 |
-| Compiler | 删除 |
-| Scheduler | 删除；跨 Agent 并行交给 Dify Workflow Runtime |
-| Task DAG | 删除 |
-| Runtime Binding | 删除 |
-| Final Answer LLM | 单 Agent 删除；仅多 Agent 时使用 Synthesis |
-| Pending Runtime | 默认删除，优先 Dify Conversation Context |
-| 两个原因调查 Agent | 收敛为一个 Investigation Agent，内部依据 objective 区分指标变化 / 实验差异 |
+用户：
 
-### 10.4 保留内容
+```text
+为什么EC10实验1002比1001差？
+```
 
-| 保留 | 位置 |
-| --- | --- |
-| 敏感指标 Gate | 主 Workflow |
-| `shared_business_background` | Fast 少量引用；Sub-Agent 完整引用 |
-| Tool Contract | Plugin Tool |
-| Evidence Rules | Investigation Agent 为主，其他 Agent 共用基础版 |
-| Resolver | Agent Tool |
-| 大结果外置与按需读取 | Tool Runtime |
-| 多轮会话 | Dify Conversation Context / Agent Memory |
+执行：
 
----
+```text
+Fast / Main Supervisor
+→ Investigation Agent
+   → A/B Tool确认差异
+   → Observation
+   → 再决定时序、构成、配置或流量证据
+→ Answer
+```
 
-## 11. Dify 实施顺序
+不建立：
 
-### 第一阶段：建立三个 Roster Agent
+```text
+Experiment Agent → Investigation Agent
+```
+
+本轮没有跨 Agent 结果依赖。
+
+### 7.5 Agent 局部追问
+
+用户：
+
+```text
+看一下购物车最近CTR。
+```
+
+Fast 可明确路由到 Effect Agent，但站点无法唯一确定：
 
 ```text
 Effect Agent
-Experiment Agent
-Investigation Agent
+→ status=clarify
+→ clarification_question="你要看EC10（港台）还是EC20（大陆）？"
+→ Answer
 ```
 
-为每个 Agent 配置：
-
-```text
-System Prompt
-Tool 白名单
-最大迭代次数
-统一输出字段
-```
-
-先单独测试每个 Agent，不接 Fast。
-
-### 第二阶段：Fast Supervisor
-
-Fast 只输出：
-
-```text
-status
-clarification_question
-effect.enabled + objective
-experiment.enabled + objective
-investigation.enabled + objective
-```
-
-测试重点：
-
-- 单 Agent 路由是否稳定；
-- 原因类是否被 Investigation 正确吸收；
-- 同域多个要求是否不会过度拆分；
-- 无法解释的请求是否会保守追问。
-
-### 第三阶段：Agent 并行
-
-在主 Workflow 中配置三个 Parallel Branch。
-
-测试：
-
-```text
-Effect + Experiment
-Effect + 独立 Investigation
-Experiment + 独立其他目标
-```
-
-重点观察：
-
-```text
-总耗时
-重复 Tool 调用
-失败分支是否影响其他分支
-Synthesis 是否改变证据强度
-```
-
-### 第四阶段：会话与异常路径
-
-验证：
-
-```text
-缺站点追问
-merchant 反查站点
-Agent blocked
-Tool no_data / partial / failed
-长结果 result_ref
-多轮承接
-```
-
-首版不重新加入 Planner、DAG、Scheduler、Binding Runtime。
+下一轮用户回复站点后重新进入当前工作流。
 
 ---
 
-## 12. 最终结论
+## 8. 实施与验收
 
-最终架构收敛为：
+### 8.1 Dify 节点清单
+
+| 阶段 | 节点 | 类型 |
+| --- | --- | --- |
+| 请求接入 | Start | Start |
+| 硬约束 | Sensitive Metric Gate | If/Else / Code |
+| 快速路由 | Fast Rule Router | Code / If-Else |
+| 复杂拆分 | Main Supervisor | Roster Agent |
+| 路由统一 | Route Normalizer | Template / Code |
+| Agent分发 | Agent Dispatcher | If/Else + Parallel Branch |
+| 普通效果 | Effect Agent | Roster Agent |
+| 实验效果 | Experiment Agent | Roster Agent |
+| 原因调查 | Investigation Agent | Roster Agent |
+| 结果收集 | Result Collector | Template / Code |
+| 多结果整合 | Multi-Agent Synthesis | LLM |
+| 用户输出 | Answer | Answer |
+
+### 8.2 首版实现顺序
+
+```text
+第一步
+建立3个Roster Agent
+→ Tool白名单
+→ 公共Prompt
+→ 三份role profile
+
+第二步
+实现Main Supervisor
+→ 完整Prompt
+→ routing_result输出校验
+
+第三步
+实现Fast Rule Router
+→ 只覆盖高置信单域请求
+→ 其余全部进入Main Supervisor
+
+第四步
+接Parallel Branch与Result Collector
+→ 单Agent直接输出
+→ 多Agent进入Synthesis
+
+第五步
+回放真实问题
+→ 单Effect
+→ 单Experiment
+→ 原因调查多轮Tool Calling
+→ 多Agent并行
+→ 缺site / 缺实验角色
+→ Tool no_data / partial / failed
+→ 多轮承接
+```
+
+### 8.3 Prompt 验收
+
+| Prompt | 核心验收项 |
+| --- | --- |
+| Main Supervisor | 不输出Tool计划；原因目标不拆前置Agent；独立目标可并行；同域目标合并；缺共享事实最小追问 |
+| Effect Agent | 不自动扩展原因调查；一个Tool足够时停止；结果范围正确 |
+| Experiment Agent | control/treatment不猜测；EC20不执行A/B；没有原因目标不扩展调查 |
+| Investigation Agent | 先确认现象；Observation驱动下一步；Contribution/Anomaly不升级根因；证据足够即停止 |
+| Synthesis | 不新增事实；不跨范围合并；complete/clarify/blocked保持原状态；不泄露内部实现 |
+
+### 8.4 架构验收
+
+首版通过以下检查后再增加能力：
+
+1. Fast 路由错误时能够稳定回退 Main Supervisor，不因为 Fast 覆盖率追求而扩大规则。
+2. Main Supervisor 只输出 Agent Objective，不出现 Tool、参数、DAG 或依赖字段。
+3. 多个独立 Agent 可以并行执行；存在业务结果依赖的问题只进入一个能够完成链路的 Agent。
+4. Professional Agent 自己完成 Tool Selection 和 Observation 循环。
+5. Tool 数量增加时不需要修改 Fast 的 Agent 类别数量和主 Workflow 拓扑。
+6. 单 Agent 请求不额外调用 Synthesis LLM。
+7. 多 Agent Synthesis 不产生任何新的业务事实。
+8. 敏感指标、站点、页面映射、实验角色和 Evidence 边界在所有 Prompt 中保持统一。
+
+---
+
+## 9. 最终工作流
 
 ```text
 Dify Chatflow
-└── Sensitive Gate
-    └── Fast Supervisor
-        ├── Clarify
-        └── Professional Agent Parallel Group
-            ├── Effect Agent
-            ├── Experiment Agent
-            └── Investigation Agent
-                ↓
-        单 Agent：直接 Answer
-        多 Agent：Synthesis → Answer
+│
+├─ Start
+│
+├─ Sensitive Metric Gate
+│
+├─ Fast Rule Router
+│    ├─ effect ───────────────┐
+│    ├─ experiment ───────────┤
+│    ├─ investigation ────────┤
+│    └─ supervisor_required   │
+│             ↓               │
+│       Main Supervisor       │
+│             └───────────────┘
+│                    ↓
+│             Route Normalizer
+│                    ↓
+│             Agent Dispatcher
+│        ┌───────────┼───────────┐
+│        ↓           ↓           ↓
+│   Effect Agent  Experiment  Investigation
+│        │           Agent        Agent
+│        └───────────┼───────────┘
+│                    ↓
+│             Result Collector
+│                    ↓
+│             result_count == 1 ?
+│              ├─ 是 → 直接输出
+│              └─ 否 → Multi-Agent Synthesis
+│                    ↓
+└───────────────── Answer
 ```
 
-核心原则：
+核心边界：
 
-> **Fast 只拆 Agent，不拆 Tool；独立 Agent 并行执行，存在数据依赖的链路留在一个 Agent 内部完成。**
->
-> **这样既保留 mentor 的 Supervisor + Specialist Agent 结构，也避免重新维护 Planner、DAG、Scheduler 和 Binding Runtime。**
+> **Fast 只做确定性的 Agent 级快速路由；Main Supervisor 只做复杂请求的 Agent Objective 拆分；Professional Agent 负责 Tool Calling 与 Observation 驱动的业务执行；Dify Workflow 负责 Agent 并行和结果汇合。**
