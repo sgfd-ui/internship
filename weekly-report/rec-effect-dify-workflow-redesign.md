@@ -10,44 +10,49 @@
 
 ### 1.1 目标
 
-工作流采用 **Fast Rule Router + Main Supervisor + Professional Sub-Agent** 的两级路由方式：明确、单域、可确定的请求由 Fast 直接进入对应 Sub-Agent；复杂、多目标或存在语义依赖的请求进入 Main Supervisor，由 Main Supervisor 拆成独立 Agent Objective，再由 Dify Workflow 并行执行 Professional Sub-Agent。
+工作流采用 **Fast Signal Extractor + Fast Rule Router + Main Supervisor + Professional Sub-Agent** 的分层方式。入口先由 Code 节点只提取可确定识别的显式信号，再由 Fast Rule Router 基于这些信号进行保守路由；明确、单域、可确定的请求直接进入对应 Sub-Agent，复杂、多目标、存在指代或需要语义理解的请求进入 Main Supervisor，由 Main Supervisor 拆成独立 Agent Objective，再由 Dify Workflow 并行执行 Professional Sub-Agent。
 
 ```text
 用户请求
   ↓
 Start
   ↓
+Fast Signal Extractor（Code）
+  ↓
 Sensitive Metric Gate
   ↓
 Fast Rule Router
-  ├─ 明确单域 ────────────────┐
-  │                           │
-  └─ 复杂 / 多目标 → Main Supervisor
-                              │
-                    统一 routing_result
-                              ↓
-                    Professional Agents
-                 ┌────────────┼────────────┐
-                 ↓            ↓            ↓
-             Effect       Experiment   Investigation
-              Agent          Agent          Agent
-                 └────────────┼────────────┘
-                              ↓
-                       Result Collector
-                              ↓
-                  ┌───────────┴───────────┐
-                  ↓                       ↓
-             单 Agent                多 Agent
-            直接输出              Synthesis LLM
-                  └───────────┬───────────┘
-                              ↓
-                            Answer
+  ├─ 明确 effect ──────────────┐
+  ├─ 明确 experiment ──────────┤
+  ├─ 明确 investigation ───────┤
+  │                            │
+  └─ 复杂 / 多目标 / 无法确定 → Main Supervisor
+                               │
+                     统一 routing_result
+                               ↓
+                     Professional Agents
+                  ┌────────────┼────────────┐
+                  ↓            ↓            ↓
+              Effect       Experiment   Investigation
+               Agent          Agent          Agent
+                  └────────────┼────────────┘
+                               ↓
+                        Result Collector
+                               ↓
+                   ┌───────────┴───────────┐
+                   ↓                       ↓
+              单 Agent                多 Agent
+             直接输出              Synthesis LLM
+                   └───────────┬───────────┘
+                               ↓
+                             Answer
 ```
 
 核心职责固定为：
 
 ```text
-Fast：决定“明确请求可以直接交给谁”
+Fast Signal Extractor：决定“原文中有哪些可以由代码确定识别的显式信号”
+Fast Rule Router：决定“这些显式信号是否足以直接交给某个专业 Agent”
 Main Supervisor：决定“复杂请求应拆成哪些独立 Agent Objective”
 Sub-Agent：决定“为了完成自己的 Objective 调什么 Tool、下一步做什么”
 Tool：决定“数据怎么查、指标怎么算”
@@ -58,8 +63,9 @@ Dify Workflow：决定“Agent 节点如何并行、汇合和输出”
 
 | 原则 | 规则 |
 | --- | --- |
-| 工作流只负责编排 | Fast、Main Supervisor、Agent Dispatcher、Result Collector、Synthesis 构成控制面；业务查询和计算保留在 Tool。 |
-| Fast 保守 | Fast 只处理明确单域请求；命中多个业务域、存在多目标、需要理解依赖、存在指代或不能确定归属时进入 Main Supervisor。 |
+| 工作流只负责编排 | Fast Signal Extractor、Fast Rule Router、Main Supervisor、Agent Dispatcher、Result Collector、Synthesis 构成控制面；业务查询和计算保留在 Tool。 |
+| Signal Extractor 只做确定识别 | Code 只通过固定词典、正则和确定映射提取显式 site、指标 token、ID、强意图信号等 `fast_hints`；不做开放式语义理解，不补默认值，不生成正式 Tool 参数。 |
+| Fast 保守 | Fast Rule Router 只消费 `fast_hints` 与原始请求做高置信单域路由；命中多个业务域、存在多目标、需要理解依赖、存在指代或不能确定归属时进入 Main Supervisor。 |
 | Main Supervisor 只拆 Agent Objective | Main Supervisor 不选择 Tool、不生成 Tool 参数、不规划 Tool DAG、不读取业务 Observation。 |
 | Agent Objective 必须独立 | 只有可以独立完成、最终再合并的目标才能拆到不同 Agent 并行执行。存在数据依赖时由一个 Agent 内部完成整条链路。 |
 | 原因类目标收敛到 Investigation | “为什么、原因、导致、是否被某因素影响”等需要 Observation 驱动取证的问题由 Investigation Agent 完成现象确认和后续调查，不先拆 Effect / Experiment 再跨 Agent 依赖。 |
@@ -82,7 +88,7 @@ Dify Workflow：决定“Agent 节点如何并行、汇合和输出”
 | --- | --- | --- |
 | Dify 官方 `langgenius/dify` | Workflow Agent 节点支持 `roster_agent` / `inline_agent`；Agent v2 由 Dify Runtime 管理 Tool Calling；Workflow 原生承担分支与并行执行 | Professional Agent 建成可复用 Roster Agent；主工作流只负责路由、并行和汇合 |
 | `svcvit/Awesome-Dify-Workflow` | Advanced Chatflow 中使用 Question Classifier、Agent、Tool、变量汇合等原生节点组合业务流程 | 采用“入口规则 / 语义节点 → Agent → Answer”的工作流组织方式，不建立独立调度服务 |
-| `BannyLon/DifyAIA` | Agent 节点直接持有多个 Tool；复杂能力由 Agent 根据当前目标调用 | Professional Agent 内部直接完成 Tool Selection，不在主工作流按 Tool 数量铺分支 |
+| `BannyLon/DifyAIA` | Agent 型应用可直接由 Agent 理解用户请求并生成 Tool 参数；Workflow 中的 Code 节点用于确定性转换和结构整理，不要求所有 Agent 前统一增加一次 LLM Parameter Extractor | 入口只用 Code 提取 Fast 所需显式信号；复杂语义和真正 Tool 参数交给 Main / Professional Agent |
 | `datawhalechina/self-dify` | 复杂流程使用 Dify 原生分支、变量、Iteration 等控制节点 | 并行和汇合交给 Workflow Runtime，动态业务取证仍留在 Agent 内部 |
 | `AdamPlatin123/Open-Deep-Research-workflow-on-Dify` | 预先确定的批处理步骤由 Workflow 编排；模型负责语义任务，Workflow 负责执行结构 | 只借鉴“模型决策与 Workflow 执行结构分离”，不把原因调查预先画成固定 Tool DAG |
 | Mentor Supervisor / Specialist Agent | Supervisor 负责分工，专业 Agent 负责各自业务域和 Tool 调用 | 采用 Main Supervisor + Effect / Experiment / Investigation 三类 Professional Agent 的职责边界 |
@@ -120,6 +126,7 @@ Dify Workflow：决定“Agent 节点如何并行、汇合和输出”
 
 | 节点 | System Prompt | User Prompt | 公共业务背景 | Tool Schema |
 | --- | --- | --- | --- | --- |
+| Fast Signal Extractor | 无 | 无 | 无 | 无 |
 | Fast Rule Router | 无 | 无 | 无 | 无 |
 | Main Supervisor | `main_supervisor_prompt` | `main_supervisor_input` | 是 | 否 |
 | Effect Agent | `professional_agent_common_prompt + effect_agent_profile` | `professional_agent_input` | 是 | Dify 自动提供已授权 Tool Schema |
@@ -135,6 +142,7 @@ Dify Workflow：决定“Agent 节点如何并行、汇合和输出”
 | 动态输入 | Main Supervisor | Professional Agent | Synthesis |
 | --- | --- | --- | --- |
 | `raw_query` | 是 | 是 | 是 |
+| `fast_hints` | 是 | 是 | 否 |
 | `request_datetime` | 是 | 是 | 是 |
 | 明确承接的会话上下文 | 是 | 按路由结果传入 | 否 |
 | `objective` | 否 | 是 | 通过 AgentResult 已包含 |
@@ -197,7 +205,7 @@ mini购物车页和购物车页是不同页面，必须保留完整名称；不�
 
 ---
 
-## 2. 阶段一：请求接入与 Fast 路由
+## 2. 阶段一：请求预处理
 
 ### 2.1 Start 节点
 
@@ -208,9 +216,9 @@ mini购物车页和购物车页是不同页面，必须保留完整名称；不�
 | 字段 | 来源 | 必填 | 用途 |
 | --- | --- | --- | --- |
 | `sys.query` | Dify | 是 | 当前用户原始请求 |
-| `sys.datetime` | Dify | 是 | 相对时间解析 |
+| `sys.datetime` | Dify | 是 | 相对时间解释 |
 | `sys.conversation_id` | Dify | 是 | 当前会话标识 |
-| Chat History / Agent Memory | Dify 原生 | 否 | 仅在后续模型节点处理明确承接式表达 |
+| Chat History / Agent Memory | Dify 原生 | 否 | 后续模型节点处理明确承接式表达 |
 
 #### 处理
 
@@ -220,9 +228,9 @@ Start 原样接收本轮请求，不解析业务、不拆 Agent Objective、不�
 
 | 情况 | 处理 |
 | --- | --- |
-| 新问题 | 原样进入 Sensitive Metric Gate |
+| 新问题 | 原样进入 Fast Signal Extractor |
 | 当前输入与历史冲突 | 后续模型以当前输入为准 |
-| 用户只写“那昨天呢”“这个实验呢”等承接表达 | 保留原文，由 Main Supervisor / Professional Agent 结合会话上下文解析 |
+| 用户只写“那昨天呢”“这个实验呢”等承接表达 | 保留原文和会话上下文，不在 Start 补参数 |
 
 #### 输出协议
 
@@ -238,27 +246,159 @@ Start 原样接收本轮请求，不解析业务、不拆 Agent Objective、不�
 输入：
 
 ```text
-EC10 购物车最近 CTR 怎么样？
+EC10 购物车最近 CTR 为什么下降？
 ```
 
 输出：
 
 ```json
 {
-  "raw_query": "EC10 购物车最近 CTR 怎么样？",
-  "request_datetime": "2026-09-17T01:00:00+08:00"
+  "raw_query": "EC10 购物车最近 CTR 为什么下降？",
+  "request_datetime": "2026-09-17T02:00:00+08:00"
 }
 ```
 
-### 2.2 Sensitive Metric Gate
+### 2.2 Fast Signal Extractor
 
-**节点类型：** If/Else / 轻量确定性 Code
+**节点类型：** Code
+
+该节点只为 Fast Rule Router 准备确定性 `fast_hints`。它不是通用参数提取器，不调用 LLM，也不替 Main / Professional Agent 理解完整用户语义。
 
 #### 输入协议
 
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `raw_query` | string | 当前用户原始请求 |
+| `request_datetime` | string | 原样透传；仅确定日期表达需要时使用 |
+
+#### 处理
+
+Code 通过固定词典、正则、明确格式和无歧义映射识别显式信号，并统一大小写、数组类型和空值。无法确定的内容保持未识别，不尝试补全。
+
 ```text
 raw_query
+  ↓
+固定词典 / 正则匹配
+  ↓
+值标准化 + 去重
+  ↓
+fast_hints
 ```
+
+#### 规则
+
+| 信号 | 可识别内容 | 处理规则 |
+| --- | --- | --- |
+| `explicit_site` | 明确出现 `EC10` / `EC20` | 标准化为大写；未出现则不填 |
+| `explicit_metrics` | CTR、CVR、CTCVR、GMV、曝光、点击、转化等登记指标名称 | 只做登记词到 canonical token 的确定映射；去重 |
+| `explicit_page_names` | 完整登记页面名称，如“购物车页”“mini购物车页” | 保留页面名称；不在此转换 `scene` |
+| `explicit_merchant_ids` | 明确带“店铺/merchant”角色的 ID | 只在角色明确时提取；裸数字不猜角色 |
+| `explicit_ab_ids` | 明确带“实验/ab/流量组”等角色的 ID | 只在角色明确时提取 |
+| `explicit_control_ab_id` | 明确写出“对照/control”对应的 ab_id | 不按 ID 大小或结果猜角色 |
+| `explicit_treatment_ab_ids` | 明确写出“实验组/treatment”对应的 ab_id | 可为数组 |
+| `reason_signal` | 明确原因问法，如“为什么”“原因”“什么导致”“是不是…造成” | 只匹配强原因表达；存在否定/引用等歧义时不直接置真 |
+| `experiment_signal` | A/B、对照组/实验组、control/treatment、明确 ab_id 语义 | 只产生域信号，不生成实验 Tool 参数 |
+| `effect_signal` | 明确效果指标、趋势、周期比较、排名、推荐流量等登记表达 | 只产生域信号 |
+| `reference_signal` | “这个、刚才、那个实验、继续看”等明显承接词 | 标记需要上下文语义理解，Fast 不直达 |
+| `multi_clause_signal` | 明确的多动作连接形式，且两侧都命中不同强域信号 | 只作为 Fast 放弃直达的信号，不负责拆句 |
+| 时间表达 | 仅保留明显原始片段或确定日期 | 不把“最近”“之前”“同期”等模糊表达擅自解析成正式时间范围 |
+
+Code 只允许做确定性规范化：
+
+```text
+大小写统一
+canonical token 映射
+数组去重
+空字符串 → 未识别
+明确 ID 类型标准化
+固定词典命中
+```
+
+Code 不允许做：
+
+```text
+merchant_id → 猜 site
+page_name → 在 site 未确认时转 scene
+两个 ab_id → 猜 control / treatment
+“最近” → 自动补 7 天
+根据用户句意拆 Agent Objective
+选择 Tool 或生成 Tool arguments
+```
+
+#### 输出协议
+
+```json
+{
+  "raw_query": "...",
+  "request_datetime": "...",
+  "fast_hints": {
+    "explicit_site": "EC10",
+    "explicit_metrics": ["ctr"],
+    "explicit_page_names": ["购物车页"],
+    "explicit_merchant_ids": [],
+    "explicit_ab_ids": [],
+    "explicit_control_ab_id": null,
+    "explicit_treatment_ab_ids": [],
+    "reason_signal": true,
+    "experiment_signal": false,
+    "effect_signal": true,
+    "reference_signal": false,
+    "multi_clause_signal": false,
+    "raw_time_expressions": ["最近"]
+  }
+}
+```
+
+未识别字段使用固定空值：标量为 `null`，数组为 `[]`，布尔信号为 `false`。该输出只供工作流规则和下游 Agent 参考，不代表正式业务参数已经确认完整。
+
+#### 样例
+
+输入：
+
+```text
+EC10 购物车最近 CTR 为什么下降？
+```
+
+输出：
+
+```json
+{
+  "fast_hints": {
+    "explicit_site": "EC10",
+    "explicit_metrics": ["ctr"],
+    "explicit_page_names": ["购物车页"],
+    "explicit_merchant_ids": [],
+    "explicit_ab_ids": [],
+    "explicit_control_ab_id": null,
+    "explicit_treatment_ab_ids": [],
+    "reason_signal": true,
+    "experiment_signal": false,
+    "effect_signal": true,
+    "reference_signal": false,
+    "multi_clause_signal": false,
+    "raw_time_expressions": ["最近"]
+  }
+}
+```
+
+输入：
+
+```text
+看看 12345 最近是不是有问题。
+```
+
+Code 不知道 `12345` 是 merchant_id、ab_id 还是其他 ID，因此不赋角色；后续 Fast 不能直达，交 Main Supervisor 处理。
+
+### 2.3 Sensitive Metric Gate
+
+**节点类型：** If/Else / Code
+
+#### 输入协议
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `raw_query` | string | 用于固定名称 / 别名匹配 |
+| `fast_hints.explicit_metrics` | array[string] | 已确定识别的指标 token，可辅助判断 |
 
 #### 处理
 
@@ -272,7 +412,9 @@ raw_query
 | `store_gmv_per_user` / 店铺用户人均GMV | `blocked` |
 | `rec_gmv_ratio` / 推荐GMV占比 | `blocked` |
 | 未命中 | `allowed` |
-| 难以通过确定规则识别的语义别名 | 继续执行；Professional Agent 与 Tool Validator 兜底 |
+| 难以通过确定规则识别的语义别名 | 继续执行；Main / Professional Agent 与 Tool Validator 继续兜底 |
+
+Gate 不把敏感指标替换成其他公开指标，也不执行同轮剩余公开分析。
 
 #### 输出协议
 
@@ -295,56 +437,70 @@ raw_query
 
 ```text
 用户：看一下 EC10 最近的店铺GMV和CTR。
-→ Gate命中敏感指标
+→ Fast Signal Extractor识别显式指标词
+→ Sensitive Metric Gate命中店铺GMV
 → 整轮阻断
-→ 不进入 Fast / Main Supervisor / Sub-Agent
+→ 不进入 Fast Rule Router / Main Supervisor / Sub-Agent
 ```
 
-### 2.3 Fast Rule Router
+---
+
+## 3. 阶段二：快速路由
+
+### 3.1 Fast Rule Router
 
 **节点类型：** Code / If-Else 规则组合
 
-Fast 无 Prompt。Fast 只对当前 `raw_query` 做保守、高置信度路由，最多直接选择一个 Professional Agent。
+Fast Rule Router 无 Prompt。它只消费 `fast_hints` 做保守、高置信度 Agent 级路由；它不负责完整参数提取、任务拆分或语义推理。
 
 #### 输入协议
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| `raw_query` | string | 当前用户原文 |
-| `request_datetime` | datetime/string | 原样透传 |
+| `raw_query` | string | 原样透传给最终 Agent |
+| `request_datetime` | string | 原样透传 |
+| `fast_hints` | object | Fast Signal Extractor 的确定性显式信号 |
 
 Fast 不读取 Tool Catalog、Tool Schema、Tool Observation，也不读取历史任务状态。
 
 #### 处理
 
 ```text
-raw_query
+fast_hints
   ↓
-检查原因调查强信号
-  ↓ 否
-检查实验分析强信号
-  ↓ 否
-检查普通效果分析强信号
-  ↓ 否
-Main Supervisor
+存在 reference / 多域 / 多动作 / 不确定信号？
+  ├─ 是 → Main Supervisor
+  └─ 否
+       ↓
+   reason_signal ?
+       ├─ 是 → Investigation Agent
+       └─ 否
+            ↓
+        experiment_signal ?
+            ├─ 是 → Experiment Agent
+            └─ 否
+                 ↓
+             effect_signal ?
+                 ├─ 是 → Effect Agent
+                 └─ 否 → Main Supervisor
 ```
 
-只要同时出现多个业务域、多个独立动作、指代关系、条件归属不清或规则无法唯一判断，就放弃 Fast，进入 Main Supervisor。
+Fast 只要不能唯一证明是单域请求，就退出到 Main Supervisor。
 
 #### 规则
 
 | 条件 | Fast 结果 | 说明 |
 | --- | --- | --- |
-| 明确出现“为什么、原因、导致、影响、是不是X造成”等原因目标 | `investigation` | 原因目标由 Investigation Agent 自己先确认现象再调查 |
-| 明确出现 control/treatment、对照组/实验组、A/B、ab_id 等实验语义，且没有原因目标 | `experiment` | 普通实验效果问题 |
-| 明确出现推荐指标查询、周期比较、趋势、异常检测、排名、普通推荐流量分析，且没有实验/原因语义 | `effect` | 普通效果分析 |
-| 同时出现普通效果目标和实验目标 | `supervisor_required` | 由 Main Supervisor 判断是否拆成两个独立 Objective |
-| 同时出现查询结果和原因目标 | `investigation` 或 `supervisor_required` | 因果目标包含现象确认时优先 Investigation；存在额外独立交付时交 Main Supervisor |
-| 多个连接词后出现不同动作或不同对象范围 | `supervisor_required` | 不用字符串规则强拆 |
-| 用户使用“这个、刚才、那个实验、继续看”等承接表达 | `supervisor_required` | 需要会话语义 |
-| 无法唯一确定 | `supervisor_required` | Fast 保守退出 |
+| `reference_signal=true` | `supervisor_required` | 需要会话语义 |
+| `multi_clause_signal=true` | `supervisor_required` | 不用 Code 强拆多个目标 |
+| 同时出现多个互相独立的强业务域信号 | `supervisor_required` | 由 Main 判断是否拆为并行 Objective |
+| `reason_signal=true` 且没有额外独立域目标 | `investigation` | 原因目标完整交 Investigation |
+| `experiment_signal=true` 且 `reason_signal=false`、无其他独立目标 | `experiment` | 普通实验效果 |
+| `effect_signal=true` 且实验/原因信号均为 false | `effect` | 普通效果分析 |
+| 无任何强信号或出现无法解释的关键片段 | `supervisor_required` | Fast 保守退出 |
+| Signal Extractor 未识别某个 ID / 时间 /对象角色 | 不自行补全 | 专业 Agent 或 Main 结合原文处理 |
 
-Fast 只做 Agent 级路由，不检查 Tool 必填字段是否齐全。站点、时间、实验角色等业务缺口由 Main Supervisor 或目标 Professional Agent 按各自 Prompt 处理。
+Fast 不检查所有 Tool 必填字段是否齐全。站点、时间、实验角色等业务缺口由目标 Professional Agent 或 Main Supervisor 按职责处理。
 
 #### 输出协议
 
@@ -354,17 +510,23 @@ Fast 直达：
 {
   "route_status": "ready",
   "route_source": "fast",
-  "selected_agents": ["effect"],
+  "selected_agents": ["investigation"],
   "agent_requests": [
     {
-      "agent_key": "effect",
-      "objective": "EC10 购物车最近 CTR 怎么样？",
-      "known_parameters": {},
+      "agent_key": "investigation",
+      "objective": "EC10 购物车最近 CTR 为什么下降？",
+      "known_parameters": {
+        "site": "EC10",
+        "metrics": ["ctr"],
+        "page_names": ["购物车页"]
+      },
       "task_input": null
     }
   ]
 }
 ```
+
+Fast 直达时 `objective` 默认保留当前 `raw_query` 的完整目标；`known_parameters` 只可由 `fast_hints` 中已经确定识别的显式事实映射，不把 raw time expression、推断值或模糊词写入正式参数。
 
 进入 Main Supervisor：
 
@@ -379,19 +541,20 @@ Fast 直达：
 
 #### 样例
 
-| 用户请求 | Fast 结果 |
-| --- | --- |
-| “EC10 昨天购物车 CTR 多少？” | `effect` |
-| “EC10 1001 对照 1002 表现怎么样？” | `experiment` |
-| “EC10 最近 CTR 为什么下降？” | `investigation` |
-| “看一下最近 CTR，同时比较实验1001和1002” | `supervisor_required` |
-| “那刚才那个实验为什么更差？” | `supervisor_required` |
+| 用户请求 | fast_hints 关键值 | Fast 结果 |
+| --- | --- | --- |
+| “EC10 昨天购物车 CTR 多少？” | `effect=true` | `effect` |
+| “EC10 1001 对照 1002 表现怎么样？” | `experiment=true` | `experiment` |
+| “EC10 最近 CTR 为什么下降？” | `reason=true` | `investigation` |
+| “看一下最近 CTR，同时比较实验1001和1002” | 多域 / 多动作 | `supervisor_required` |
+| “那刚才那个实验为什么更差？” | `reference=true` | `supervisor_required` |
+| “看看12345最近是不是有问题” | ID角色未识别 | `supervisor_required` |
 
 ---
 
-## 3. 阶段二：Main Supervisor 语义拆分
+## 4. 阶段三：Main Supervisor 语义拆分
 
-### 3.1 Main Supervisor Agent
+### 4.1 Main Supervisor Agent
 
 **节点类型：** Dify Agent / Roster Agent
 
@@ -403,6 +566,7 @@ Main Supervisor 只在 Fast 返回 `supervisor_required` 时执行。
 | --- | --- | --- |
 | `raw_query` | string | 当前用户原始请求 |
 | `request_datetime` | string | 当前时间 |
+| `fast_hints` | object | Code 已确定识别的显式信号；仅作辅助，不覆盖 raw_query |
 | `conversation_context` | string/object | Dify 提供的当前会话上下文；只用于明确承接 |
 | `shared_business_background` | prompt fragment | 公共业务口径 |
 | `agent_catalog` | system instruction | 三个 Professional Agent 的职责边界 |
@@ -444,7 +608,7 @@ Main Supervisor 不接收 Tool Schema，不调用业务 Tool。
 | 原因目标之外还存在明确独立的实验/效果交付 | 可拆成 Investigation + 其他 Agent，前提是两者互不依赖 |
 | 无法可靠拆分 | 保持更大的单一 Objective，不为了并行强拆 |
 
-### 3.2 Main Supervisor 完整 Prompt
+### 4.2 Main Supervisor 完整 Prompt
 
 #### System Prompt：`main_supervisor_prompt`
 
@@ -461,9 +625,10 @@ Main Supervisor 不接收 Tool Schema，不调用业务 Tool。
 <trusted_inputs>
 1. raw_query是当前用户本轮原始请求，是本轮目标的最高优先级来源。
 2. request_datetime只用于理解相对时间，不用于创造用户没有要求的时间范围。
-3. conversation_context只在用户明确承接上一轮时用于解析省略表达；当前请求中的新条件覆盖历史条件。
-4. agent_catalog只描述Professional Agent职责，不代表当前请求一定需要对应Agent。
-5. Prompt中的示例只展示拆分方式，不是当前事实。
+3. fast_hints来自确定性Code，只表示原文中已识别的显式信号。它可以帮助定位明确site、指标、ID和强意图，但不是完整参数集；当fast_hints与raw_query语义不一致时，以raw_query为准，不扩大或猜测。
+4. conversation_context只在用户明确承接上一轮时用于解析省略表达；当前请求中的新条件覆盖历史条件。
+5. agent_catalog只描述Professional Agent职责，不代表当前请求一定需要对应Agent。
+6. Prompt中的示例只展示拆分方式，不是当前事实。
 </trusted_inputs>
 
 <agent_catalog>
@@ -544,11 +709,12 @@ agent_requests每项固定包含：
 {
   "raw_query": {{ raw_query_json }},
   "request_datetime": {{ request_datetime_json }},
+  "fast_hints": {{ fast_hints_json }},
   "conversation_context": {{ conversation_context_json }}
 }
 ```
 
-### 3.3 Main Supervisor 输出协议
+### 4.3 Main Supervisor 输出协议
 
 ready：
 
@@ -591,7 +757,7 @@ clarify：
 }
 ```
 
-### 3.4 Main Supervisor 样例
+### 4.4 Main Supervisor 样例
 
 #### 样例一：独立目标并行
 
@@ -651,7 +817,7 @@ clarify：
 
 只生成一个 `effect` Objective，不创建三个 Effect Agent 实例。
 
-### 3.5 Route Normalizer
+### 4.5 Route Normalizer
 
 **节点类型：** Template / Code
 
@@ -684,9 +850,9 @@ main_supervisor_result（仅Fast要求时存在）
 
 ---
 
-## 4. 阶段三：Professional Agent 并行执行
+## 5. 阶段四：Professional Agent 并行执行
 
-### 4.1 Agent Dispatcher
+### 5.1 Agent Dispatcher
 
 **节点类型：** If/Else + Parallel Branch
 
@@ -726,11 +892,12 @@ routing_result.agent_requests
   },
   "task_input": null,
   "raw_query": "用户原始请求",
-  "request_datetime": "2026-09-17T01:00:00+08:00"
+  "fast_hints": {"explicit_site":"EC10","explicit_metrics":["ctr"]},
+  "request_datetime": "2026-09-17T02:00:00+08:00"
 }
 ```
 
-### 4.2 Professional Agent 公共 Prompt
+### 5.2 Professional Agent 公共 Prompt
 
 三个 Professional Agent 共用一份公共指令，通过 `{{ role_profile }}` 注入角色专属规则。
 
@@ -748,15 +915,16 @@ routing_result.agent_requests
 {{ shared_business_background }}
 
 <trusted_inputs>
-1. AgentInput是本次唯一任务输入，包含agent_key、objective、known_parameters、task_input、raw_query和request_datetime。
+1. AgentInput是本次唯一任务输入，包含agent_key、objective、known_parameters、task_input、raw_query、fast_hints和request_datetime。
 2. objective定义本Agent必须完成的业务目标、重点和交付范围。
 3. known_parameters只包含已确认事实，是本Agent执行范围的上界；不得被模型猜测、历史内容或Tool结果改写为更大的范围。
 4. task_input若存在，只用于补充结构化字段难以表达的已确认相关事实，不自动作为Tool参数透传。
-5. raw_query只用于理解用户原始措辞和输出风格，不用于扩大objective。
-6. request_datetime只用于相对时间解释。
-7. Tool Schema是当前Tool正式执行契约；字段、枚举、默认值和限制以运行时Schema为准。
-8. Tool Observation是已经执行取得的事实。no_data、partial、failed、unsupported、null和数值0必须按返回状态区分。
-9. Prompt示例只说明行为，不是当前事实。
+5. raw_query用于理解用户原始措辞、参数语义和输出风格，但不得扩大objective。
+6. fast_hints只表示入口Code已经确定识别的显式信号，可作为辅助事实；它不是完整Tool参数，不得因为某字段为空就认定用户没有提供相关语义。
+7. request_datetime只用于相对时间解释。
+8. Tool Schema是当前Tool正式执行契约；字段、枚举、默认值和限制以运行时Schema为准。
+9. Tool Observation是已经执行取得的事实。no_data、partial、failed、unsupported、null和数值0必须按返回状态区分。
+10. Prompt示例只说明行为，不是当前事实。
 </trusted_inputs>
 
 <execution_rules>
@@ -845,13 +1013,13 @@ evidence每项固定包含：
 {{ agent_input_json }}
 ```
 
-### 4.3 Effect Agent 节点
+### 5.3 Effect Agent 节点
 
 **节点类型：** Dify Roster Agent
 
 #### 输入协议
 
-使用 §4.1 `AgentInput`，要求 `agent_key=effect`。
+使用 §5.1 `AgentInput`，要求 `agent_key=effect`。
 
 #### 授权 Tool
 
@@ -923,13 +1091,13 @@ Agent：
 → complete
 ```
 
-### 4.4 Experiment Agent 节点
+### 5.4 Experiment Agent 节点
 
 **节点类型：** Dify Roster Agent
 
 #### 输入协议
 
-使用 §4.1 `AgentInput`，要求 `agent_key=experiment`。
+使用 §5.1 `AgentInput`，要求 `agent_key=experiment`。
 
 #### 授权 Tool
 
@@ -994,13 +1162,13 @@ Agent：
 → complete
 ```
 
-### 4.5 Investigation Agent 节点
+### 5.5 Investigation Agent 节点
 
 **节点类型：** Dify Roster Agent
 
 #### 输入协议
 
-使用 §4.1 `AgentInput`，要求 `agent_key=investigation`。
+使用 §5.1 `AgentInput`，要求 `agent_key=investigation`。
 
 #### 授权 Tool
 
@@ -1088,9 +1256,9 @@ Objective：确认EC10购物车页最近CTR是否下降，并调查原因。
 
 ---
 
-## 5. 阶段四：结果汇合与最终回答
+## 6. 阶段五：结果汇合与最终回答
 
-### 5.1 Result Collector
+### 6.1 Result Collector
 
 **节点类型：** 轻量 Code / Template
 
@@ -1134,7 +1302,7 @@ routing_result
 }
 ```
 
-### 5.2 Single Result Output
+### 6.2 Single Result Output
 
 **节点类型：** Template / If-Else
 
@@ -1158,7 +1326,7 @@ routing_result
 final_answer: string
 ```
 
-### 5.3 Multi-Agent Synthesis
+### 6.3 Multi-Agent Synthesis
 
 **节点类型：** LLM
 
@@ -1188,7 +1356,7 @@ final_answer: string
 | Agent结果存在冲突 | 明确列出冲突，不自行裁决未取得的新事实 |
 | 原因结论 | 只按Investigation Agent已有Evidence力度表达，不因Effect/Experiment同时存在就提高因果强度 |
 
-### 5.4 Multi-Agent Synthesis 完整 Prompt
+### 6.4 Multi-Agent Synthesis 完整 Prompt
 
 #### System Prompt：`multi_agent_synthesis_prompt`
 
@@ -1257,7 +1425,7 @@ final_answer: string
 }
 ```
 
-### 5.5 Answer 节点
+### 6.5 Answer 节点
 
 **节点类型：** Answer
 
@@ -1286,9 +1454,9 @@ final_answer
 
 ---
 
-## 6. 阶段五：多轮承接、错误与大结果
+## 7. 阶段六：多轮承接、错误与大结果
 
-### 6.1 多轮承接
+### 7.1 多轮承接
 
 首版优先使用 Dify Chat History / Agent Memory，不恢复旧版 `completed_tasks`、`runtime_bindings`、`pending_request_json` 等执行状态。
 
@@ -1301,7 +1469,7 @@ final_answer
 | 没有明确承接 | 不自动继承上一轮条件 |
 | 长对话测试证明关键ID丢失 | 再增加最小结构化conversation variable，不预先恢复完整任务状态机 |
 
-### 6.2 Agent / Tool 失败
+### 7.2 Agent / Tool 失败
 
 工作流区分基础设施失败与业务状态。
 
@@ -1313,7 +1481,7 @@ final_answer
 | Main Supervisor输出非法 | 不启动Sub-Agent，返回安全失败说明并记录Trace |
 | Synthesis失败 | 回退为各Agent answer按顺序拼接，不丢弃已完成结果 |
 
-### 6.3 大结果
+### 7.3 大结果
 
 大结果的持久化和读取仍由 Tool 层实现，工作流只消费引用。
 
@@ -1331,9 +1499,9 @@ Agent不得无目的读取完整大结果。
 
 ---
 
-## 7. 端到端执行样例
+## 8. 端到端执行样例
 
-### 7.1 Fast → Effect Agent
+### 8.1 Fast → Effect Agent
 
 用户：
 
@@ -1345,6 +1513,7 @@ EC10 昨天购物车页 CTR 多少？
 
 ```text
 Start
+→ Fast Signal Extractor（Code）
 → Sensitive Gate
 → Fast Rule Router：effect
 → Effect Agent
@@ -1355,7 +1524,7 @@ Start
 → Answer
 ```
 
-### 7.2 Fast → Investigation Agent
+### 8.2 Fast → Investigation Agent
 
 用户：
 
@@ -1366,7 +1535,9 @@ EC10 购物车最近 CTR 为什么下降？
 执行：
 
 ```text
-Fast：investigation
+Fast Signal Extractor（Code）
+→ Sensitive Gate
+→ Fast：investigation
 → Investigation Agent
    → rec_compare_periods
    ← 确认下降
@@ -1377,7 +1548,7 @@ Fast：investigation
 → Answer
 ```
 
-### 7.3 Main Supervisor → Effect + Experiment 并行
+### 8.3 Main Supervisor → Effect + Experiment 并行
 
 用户：
 
@@ -1388,7 +1559,9 @@ Fast：investigation
 执行：
 
 ```text
-Fast：supervisor_required
+Fast Signal Extractor（Code）
+→ Sensitive Gate
+→ Fast：supervisor_required
 → Main Supervisor
    ├─ effect Objective：最近CTR
    └─ experiment Objective：1001 vs 1002
@@ -1400,7 +1573,7 @@ Fast：supervisor_required
 → Answer
 ```
 
-### 7.4 实验原因只进入 Investigation
+### 8.4 实验原因只进入 Investigation
 
 用户：
 
@@ -1427,7 +1600,7 @@ Experiment Agent → Investigation Agent
 
 本轮没有跨 Agent 结果依赖。
 
-### 7.5 Agent 局部追问
+### 8.5 Agent 局部追问
 
 用户：
 
@@ -1448,13 +1621,14 @@ Effect Agent
 
 ---
 
-## 8. 实施与验收
+## 9. 实施与验收
 
-### 8.1 Dify 节点清单
+### 9.1 Dify 节点清单
 
 | 阶段 | 节点 | 类型 |
 | --- | --- | --- |
 | 请求接入 | Start | Start |
+| 显式信号提取 | Fast Signal Extractor | Code |
 | 硬约束 | Sensitive Metric Gate | If/Else / Code |
 | 快速路由 | Fast Rule Router | Code / If-Else |
 | 复杂拆分 | Main Supervisor | Roster Agent |
@@ -1467,7 +1641,7 @@ Effect Agent
 | 多结果整合 | Multi-Agent Synthesis | LLM |
 | 用户输出 | Answer | Answer |
 
-### 8.2 首版实现顺序
+### 9.2 首版实现顺序
 
 ```text
 第一步
@@ -1482,8 +1656,9 @@ Effect Agent
 → routing_result输出校验
 
 第三步
-实现Fast Rule Router
-→ 只覆盖高置信单域请求
+实现Fast Signal Extractor + Fast Rule Router
+→ Code只提取确定显式信号
+→ Fast只覆盖高置信单域请求
 → 其余全部进入Main Supervisor
 
 第四步
@@ -1502,7 +1677,7 @@ Effect Agent
 → 多轮承接
 ```
 
-### 8.3 Prompt 验收
+### 9.3 Prompt 验收
 
 | Prompt | 核心验收项 |
 | --- | --- |
@@ -1512,11 +1687,11 @@ Effect Agent
 | Investigation Agent | 先确认现象；Observation驱动下一步；Contribution/Anomaly不升级根因；证据足够即停止 |
 | Synthesis | 不新增事实；不跨范围合并；complete/clarify/blocked保持原状态；不泄露内部实现 |
 
-### 8.4 架构验收
+### 9.4 架构验收
 
 首版通过以下检查后再增加能力：
 
-1. Fast 路由错误时能够稳定回退 Main Supervisor，不因为 Fast 覆盖率追求而扩大规则。
+1. Fast Signal Extractor 只输出可确定显式信号；Fast 路由无法唯一判断时稳定回退 Main Supervisor，不因为覆盖率追求而扩大 Code 语义规则。
 2. Main Supervisor 只输出 Agent Objective，不出现 Tool、参数、DAG 或依赖字段。
 3. 多个独立 Agent 可以并行执行；存在业务结果依赖的问题只进入一个能够完成链路的 Agent。
 4. Professional Agent 自己完成 Tool Selection 和 Observation 循环。
@@ -1527,12 +1702,14 @@ Effect Agent
 
 ---
 
-## 9. 最终工作流
+## 10. 最终工作流
 
 ```text
 Dify Chatflow
 │
 ├─ Start
+│
+├─ Fast Signal Extractor（Code）
 │
 ├─ Sensitive Metric Gate
 │
