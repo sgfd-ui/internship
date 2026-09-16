@@ -136,56 +136,171 @@ DeepResearch 则在真正需要“多轮检索 + 状态累积”时使用 Iterat
 
 推荐效果分析并不是 DeepResearch 型通用研究系统，大部分问题有明确的业务 Tool。因此首版主要采用 **Agent Tool Calling + Workflow as Tool**，只在必要的固定组合能力内部使用 Parallel / Iteration。
 
-### 1.5 新版 Dify 工作流总览
+### 1.5 新版 Dify 执行架构
 
-主应用采用 Chatflow / Advanced Chat，主图收敛为：
+这一版不再用一张图同时表达“主流程、Agent 可用能力、Workflow 内部并行”。三者必须分开看，否则会误以为 Agent 会把所有 Tool 并行执行。
+
+#### 1.5.1 系统总架构
+
+系统只保留 **一个对话入口 Agent**。Agent 面向两类执行能力：原子 Plugin Tool 与固定组合 Workflow Tool。Workflow Tool 内部仍可复用 Plugin Tool；ES / DB 只由 Plugin Tool 访问。
+
+```mermaid
+flowchart TB
+    U[用户]
+
+    subgraph CHAT[主 Chatflow]
+        S[Start]
+        G{硬 Gate\n仅确定性阻断}
+        A[推荐效果分析 Agent]
+        R[Answer]
+        S --> G
+        G -->|正常| A
+        G -->|阻断| R
+        A --> R
+    end
+
+    subgraph CAP[Agent 可调用能力]
+        P[原子 Plugin Tools\n查询 / 比较 / 时序 / A-B / 流量 / Resolver]
+        W[Workflow Tools\n固定组合能力]
+    end
+
+    subgraph DATA[确定性数据与计算]
+        ES[(Elasticsearch / DB)]
+    end
+
+    U --> S
+    A -->|按需调用| P
+    P -->|Observation| A
+    A -->|按需调用| W
+    W -->|Observation| A
+    W -->|内部复用| P
+    P --> ES
+```
+
+图中两条“按需调用”表示 **Agent 的能力选择关系**，不是同时执行关系。一次用户请求可以只调用一个 Plugin Tool，也可以先调用一个 Tool、读取 Observation 后再决定下一步；只有某个固定组合确实需要并发时，才进入 Workflow Tool，由 Workflow 自己负责 Parallel / Iteration。
+
+整体职责可以压缩成一句话：
+
+```text
+Agent 决定“做什么、下一步做什么”
+Workflow Tool 决定“固定流程怎么跑”
+Plugin Tool 决定“数据怎么查、指标怎么算”
+Dify Runtime 负责“怎么执行这些节点”
+```
+
+#### 1.5.2 主 Chatflow
+
+主 Chatflow 不承载业务 Router、Planner、Scheduler 或结果汇总器，只负责进入 Agent 和返回答案。
 
 ```mermaid
 flowchart LR
-    A[Start] --> B{敏感指标硬 Gate}
-    B -->|命中| X[固定阻断 Answer]
-    B -->|未命中| C[推荐效果分析 Agent]
-    C --> D[Answer]
-
-    C -. Tool Calling .-> T1[Plugin Tools]
-    C -. Tool Calling .-> W1[Workflow Tools]
+    S[Start\nsys.query] --> G{硬 Gate}
+    G -->|敏感指标等确定性阻断| X[固定 Answer]
+    G -->|通过| A[推荐效果分析 Agent]
+    A --> R[Answer\n直接输出 Agent 最终答案]
 ```
 
-其中：
-
-```text
-Plugin Tools
-├── rec_query_metrics
-├── rec_compare_periods
-├── rec_analyze_metric_timeseries
-├── rec_analyze_period_rankings
-├── rec_analyze_ab_test
-├── rec_query_traffic
-├── rec_analyze_traffic_timeseries
-├── rec_query_traffic_store_diagnostics
-├── rec_analyze_traffic_store_anomalies
-├── rec_resolve_business_context
-└── 其他已经批准的配置 / 元数据 Tool
-
-Workflow Tools（按需要建立，不预建一堆）
-└── rec_effect_overview_workflow   # 候选：固定综合效果组合
-```
-
-主图中**不再存在**：
+主图中明确**不存在**：
 
 ```text
 请求理解 LLM
-Parameter Extractor
-Question Classifier
-Fast / Search Planner
-Reviewer
-Compiler
-Scheduler
-确定性业务分支大图
-Variable Aggregator
-最终回答 LLM
-会话状态 Assigner
-两个独立原因 Agent
+→ Parameter Extractor
+→ Question Classifier
+→ Planner
+→ Reviewer
+→ Compiler
+→ Scheduler
+→ Variable Aggregator
+→ Final Answer LLM
+```
+
+这些控制职责要么由 Agent + Tool Schema 直接承担，要么由 Dify Workflow Runtime 原生承担。
+
+#### 1.5.3 Agent 动态执行
+
+Agent 处理的是“下一步取决于上一轮结果”的动态过程。其运行逻辑不是预先画出的并行 DAG，而是 Observation 驱动的 Tool Calling 循环。
+
+```mermaid
+flowchart TD
+    Q[用户目标] --> A1[Agent 理解目标与当前约束]
+    A1 --> J{现有信息足够直接回答?}
+    J -->|是| OUT[生成最终回答]
+    J -->|否| SEL[选择一个最合适的 Tool / Workflow Tool]
+    SEL --> CALL[执行调用]
+    CALL --> OBS[读取 Observation]
+    OBS --> K{证据是否足够?}
+    K -->|是| OUT
+    K -->|否| N{是否还能在原目标内继续取证?}
+    N -->|是| SEL
+    N -->|否| OUT
+```
+
+例如“为什么最近购物车页 CTR 下降”：
+
+```text
+Agent
+→ rec_compare_periods
+→ Observation：下降成立
+→ rec_analyze_metric_timeseries
+→ Observation：9 月 12 日发生 level shift
+→ 配置 / 流量 Tool（仅在证据指向时）
+→ Agent 汇总证据并回答
+```
+
+这里不要求并行，因为后续调用依赖前一个 Observation。也不需要 Planner、Task DAG、runtime_bindings 或 Scheduler。
+
+#### 1.5.4 Workflow Tool 固定执行
+
+Workflow Tool 只承载“执行步骤在设计时已经确定”的组合能力。它与 Agent 的动态调查是两个不同层次。
+
+以候选的 `rec_effect_overview_workflow` 为例：如果产品定义“综合效果”固定需要当前期效果、周期比较和趋势摘要，则可以封装成一个 Workflow Tool：
+
+```mermaid
+flowchart TD
+    I[Workflow Input\nsite / time / scope / metrics] --> Q[当前期指标 Tool]
+    I --> C[周期比较 Tool]
+    I --> T[趋势 Tool]
+
+    Q --> M[Template / Output 组装]
+    C --> M
+    T --> M
+    M --> O[Workflow Output]
+```
+
+当 Q、C、T 互不依赖时，在 Dify Workflow 中使用 **Parallel Branch** 保证并发；如果是同一 Tool 对 N 个店铺 / 周期执行相同逻辑，则使用 **Iteration + Parallel Mode**。
+
+```text
+固定不同任务并发：Parallel Branch
+同类数组批处理：Iteration + Parallel Mode
+依赖 Observation 的调查：Agent Tool Calling
+```
+
+Workflow Tool 内部的结果汇合也不默认使用 Variable Aggregator。Variable Aggregator 主要用于互斥分支输出统一；并行结果需要共同组成输出时，直接使用 Template / 必要时轻量 Code 组织结构化结果。
+
+#### 1.5.5 执行模式选择
+
+每个能力只按下面四种情况选择 Dify 原生执行方式，不再设计第五套调度机制：
+
+| 问题特征 | 执行方式 | 示例 |
+| --- | --- | --- |
+| 单个确定性能力即可完成 | Agent → Plugin Tool | “查昨天 EC10 CTR” |
+| 下一步取决于上一轮 Observation | Agent 连续 Tool Calling | “为什么 CTR 下降” |
+| 多个步骤固定且彼此独立 | Workflow Tool + Parallel Branch | 固定综合效果包 |
+| 同一能力作用于一组对象 | Workflow Tool + Iteration Parallel | 对多个店铺执行同类分析 |
+
+因此真正的系统主干不是“多个业务分支并行的大图”，而是：
+
+```text
+用户
+  ↓
+主 Chatflow
+  ↓
+一个核心 Agent
+  ├─ 动态选择原子 Plugin Tool
+  └─ 动态选择已封装的 Workflow Tool
+          └─ 固定流程内部才使用 Parallel / Iteration
+  ↓
+Answer
 ```
 
 ### 1.6 执行职责边界
