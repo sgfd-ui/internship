@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#5f6368"/>
+    </marker>
+    <style>
+      .title{font:700 26px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#202124}
+      .section{font:700 18px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#202124}
+      .text{font:15px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#202124}
+      .small{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#5f6368}
+      .box{rx:10;ry:10;stroke:#9aa0a6;stroke-width:1.4}
+      .line{stroke:#5f6368;stroke-width:1.6;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1280" height="760" fill="#ffffff"/>
+  <text x="40" y="48" class="title">推荐工程整体架构</text>
+
+  <text x="40" y="95" class="section">业务入口</text>
+  <rect x="40" y="115" width="190" height="170" class="box" fill="#f8f9fa"/>
+  <text x="60" y="148" class="text">商品详情页</text>
+  <text x="60" y="178" class="text">商品清单页 / 搜索页</text>
+  <text x="60" y="208" class="text">所有商品页</text>
+  <text x="60" y="238" class="text">购物车 / mini购物车</text>
+  <text x="60" y="268" class="text">其他推荐场景</text>
+
+  <text x="300" y="95" class="section">在线推荐</text>
+  <rect x="290" y="115" width="650" height="350" class="box" fill="#f8fbff"/>
+  <rect x="320" y="145" width="150" height="60" class="box" fill="#e8f0fe"/>
+  <text x="349" y="181" class="text">页面 → Scene</text>
+  <rect x="505" y="145" width="170" height="60" class="box" fill="#e8f0fe"/>
+  <text x="533" y="171" class="text">实验 / 方案选择</text>
+  <text x="529" y="191" class="small">店铺 / FK / 场景</text>
+  <rect x="710" y="145" width="180" height="60" class="box" fill="#e8f0fe"/>
+  <text x="739" y="171" class="text">策略选择</text>
+  <text x="729" y="191" class="small">店铺 / FK / 基础策略</text>
+
+  <rect x="320" y="255" width="115" height="62" class="box" fill="#e6f4ea"/>
+  <text x="350" y="292" class="text">召回</text>
+  <rect x="465" y="255" width="125" height="62" class="box" fill="#e6f4ea"/>
+  <text x="493" y="282" class="text">过滤 / 补全</text>
+  <text x="501" y="302" class="small">Filter / Complement</text>
+  <rect x="620" y="255" width="115" height="62" class="box" fill="#e6f4ea"/>
+  <text x="650" y="292" class="text">精排</text>
+  <rect x="765" y="255" width="125" height="62" class="box" fill="#e6f4ea"/>
+  <text x="791" y="282" class="text">重排 / 合并</text>
+  <text x="803" y="302" class="small">Rerank / Merge</text>
+
+  <rect x="455" y="370" width="320" height="58" class="box" fill="#fff4e5"/>
+  <text x="510" y="395" class="text">星图在线推荐服务</text>
+  <text x="493" y="416" class="small">按 Scene、实验、策略执行完整推荐链路</text>
+
+  <path d="M230 195 L320 175" class="line"/>
+  <path d="M470 175 L505 175" class="line"/>
+  <path d="M675 175 L710 175" class="line"/>
+  <path d="M800 205 L800 230 L378 230 L378 255" class="line"/>
+  <path d="M435 286 L465 286" class="line"/>
+  <path d="M590 286 L620 286" class="line"/>
+  <path d="M735 286 L765 286" class="line"/>
+  <path d="M827 317 L827 399 L775 399" class="line"/>
+
+  <text x="985" y="95" class="section">配置控制</text>
+  <rect x="980" y="115" width="255" height="170" class="box" fill="#fef7e0"/>
+  <text x="1005" y="150" class="text">RAP</text>
+  <text x="1005" y="178" class="small">场景 / 实验 / 店铺绑定 / FK绑定</text>
+  <text x="1005" y="205" class="text">Nacos</text>
+  <text x="1005" y="233" class="small">Scene / Strategy / Service 配置</text>
+  <text x="1005" y="260" class="text">Redis</text>
+  <text x="1060" y="260" class="small">定制策略在线读取</text>
+  <path d="M980 210 L940 210" class="line"/>
+
+  <text x="40" y="525" class="section">离线数据</text>
+  <rect x="40" y="545" width="770" height="150" class="box" fill="#f7f7f7"/>
+  <rect x="70" y="585" width="150" height="60" class="box" fill="#e8eaed"/>
+  <text x="91" y="611" class="text">商品 / 店铺 / 用户特征</text>
+  <text x="101" y="632" class="small">召回数据、特征数据</text>
+  <rect x="270" y="585" width="105" height="60" class="box" fill="#fff4e5"/>
+  <text x="304" y="622" class="text">Kafka</text>
+  <rect x="425" y="585" width="145" height="60" class="box" fill="#e8f0fe"/>
+  <text x="452" y="611" class="text">ysearch / tahm</text>
+  <text x="461" y="632" class="small">离线同步处理</text>
+  <rect x="620" y="585" width="155" height="60" class="box" fill="#e6f4ea"/>
+  <text x="648" y="611" class="text">Redis / 数据服务</text>
+  <text x="651" y="632" class="small">供在线召回与特征读取</text>
+  <path d="M220 615 L270 615" class="line"/>
+  <path d="M375 615 L425 615" class="line"/>
+  <path d="M570 615 L620 615" class="line"/>
+  <path d="M697 585 L697 465" class="line"/>
+
+  <text x="855" y="525" class="section">效果与稳定性</text>
+  <rect x="850" y="545" width="385" height="150" class="box" fill="#fce8e6"/>
+  <text x="880" y="582" class="text">效果数据</text>
+  <text x="960" y="582" class="small">曝光、点击、转化、推荐引导 GMV</text>
+  <text x="880" y="614" class="text">监控</text>
+  <text x="960" y="614" class="small">店铺 / Scene 效果曲线与突变感知</text>
+  <text x="880" y="646" class="text">稳定性</text>
+  <text x="960" y="646" class="small">限流降级、缓存、跳过精排、扩缩容</text>
+  <path d="M940 399 L1110 399 L1110 545" class="line"/>
+</svg>
