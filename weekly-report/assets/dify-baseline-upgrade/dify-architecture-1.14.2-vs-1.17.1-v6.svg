@@ -1,0 +1,211 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+  <defs>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;fill:#172033}
+      .title{font-size:31px;font-weight:700}
+      .panel-title{font-size:23px;font-weight:700}
+      .panel-sub{font-size:15px;fill:#536179}
+      .layer-title{font-size:18px;font-weight:700}
+      .name{font-size:14px;font-weight:700}
+      .small{font-size:12px;fill:#5f6b7d}
+      .tiny{font-size:11px;fill:#657084}
+      .arrow{stroke:#506176;stroke-width:2;fill:none;marker-end:url(#arrow)}
+      .arrow2{stroke:#8b96a8;stroke-width:1.7;fill:none;marker-end:url(#arrow)}
+      .icon{fill:none;stroke:#4f73a9;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    </style>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5 0 9Z" fill="#506176"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#24324a" flood-opacity=".10"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="980" fill="#ffffff"/>
+  <text x="24" y="42" class="title">Dify 架构对比：1.14.2（旧） vs 1.17.1（新）</text>
+
+  <!-- panels -->
+  <rect x="22" y="62" width="716" height="842" rx="18" fill="#f8fbff" stroke="#d8e3f1"/>
+  <rect x="762" y="62" width="816" height="842" rx="18" fill="#f8fbff" stroke="#d8e3f1"/>
+
+  <text x="380" y="91" text-anchor="middle" class="panel-title">1.14.2 架构（现状）</text>
+  <text x="380" y="116" text-anchor="middle" class="panel-sub">公司深度改造，Worker 直接调用旧版 Generator</text>
+  <text x="1170" y="91" text-anchor="middle" class="panel-title">1.17.1 架构（迁移后）</text>
+  <text x="1170" y="116" text-anchor="middle" class="panel-sub">保留公司调度能力，重新适配 1.17.1 官方执行链路</text>
+
+  <!-- LEFT ENTRY -->
+  <g filter="url(#shadow)">
+    <rect x="44" y="132" width="150" height="54" rx="9" fill="#eaf3ff" stroke="#70a7f2"/>
+    <rect x="208" y="132" width="150" height="54" rx="9" fill="#eaf3ff" stroke="#70a7f2"/>
+    <rect x="372" y="132" width="150" height="54" rx="9" fill="#eaf3ff" stroke="#70a7f2"/>
+    <rect x="536" y="132" width="150" height="54" rx="9" fill="#eaf3ff" stroke="#70a7f2"/>
+  </g>
+  <g transform="translate(62 149)">
+    <rect x="0" y="0" width="22" height="15" rx="2" class="icon"/><path d="M6 20h10M11 15v5" class="icon"/>
+  </g>
+  <text x="125" y="153" text-anchor="middle" class="name">WebApp</text><text x="125" y="173" text-anchor="middle" class="small">前端</text>
+  <g transform="translate(226 148)"><path d="M2 3h19v18H2zM6 8h11M6 13h7" class="icon"/></g>
+  <text x="289" y="153" text-anchor="middle" class="name">Service API</text><text x="289" y="173" text-anchor="middle" class="small">外部调用</text>
+  <g transform="translate(390 147)"><rect x="1" y="3" width="22" height="17" rx="2" class="icon"/><path d="M6 8h12M6 13h9" class="icon"/></g>
+  <text x="453" y="153" text-anchor="middle" class="name">Console</text><text x="453" y="173" text-anchor="middle" class="small">调试</text>
+  <g transform="translate(554 146)"><circle cx="12" cy="12" r="10" class="icon"/><path d="M12 6v7l5 3" class="icon"/></g>
+  <text x="617" y="153" text-anchor="middle" class="name">定时触发</text><text x="617" y="173" text-anchor="middle" class="small">Schedule</text>
+
+  <!-- LEFT ADMISSION -->
+  <rect x="44" y="214" width="642" height="102" rx="12" fill="#fff0f1" stroke="#f08b96"/>
+  <text x="365" y="240" text-anchor="middle" class="layer-title" fill="#a61b29">公司网关与准入控制</text>
+  <rect x="62" y="254" width="137" height="46" rx="8" fill="#fff8f8" stroke="#efa0a7"/>
+  <rect x="215" y="254" width="137" height="46" rx="8" fill="#fff8f8" stroke="#efa0a7"/>
+  <rect x="368" y="254" width="137" height="46" rx="8" fill="#fff8f8" stroke="#efa0a7"/>
+  <rect x="521" y="254" width="137" height="46" rx="8" fill="#fff8f8" stroke="#efa0a7"/>
+  <text x="130" y="273" text-anchor="middle" class="name">应用策略</text><text x="130" y="290" text-anchor="middle" class="small">Policy</text>
+  <text x="283" y="273" text-anchor="middle" class="name">优先级</text><text x="283" y="290" text-anchor="middle" class="small">0～99</text>
+  <text x="436" y="273" text-anchor="middle" class="name">队列限制</text><text x="436" y="290" text-anchor="middle" class="small">租户 / 全局</text>
+  <text x="589" y="273" text-anchor="middle" class="name">输入快照</text><text x="589" y="290" text-anchor="middle" class="small">Audit</text>
+
+  <!-- LEFT SCHEDULER -->
+  <rect x="44" y="338" width="642" height="104" rx="12" fill="#f3edff" stroke="#b59be6"/>
+  <text x="365" y="365" text-anchor="middle" class="layer-title" fill="#5e35b1">公司调度中心</text>
+  <rect x="62" y="379" width="137" height="47" rx="8" fill="#fbf9ff" stroke="#c6b6eb"/>
+  <rect x="215" y="379" width="137" height="47" rx="8" fill="#fbf9ff" stroke="#c6b6eb"/>
+  <rect x="368" y="379" width="137" height="47" rx="8" fill="#fbf9ff" stroke="#c6b6eb"/>
+  <rect x="521" y="379" width="137" height="47" rx="8" fill="#fbf9ff" stroke="#c6b6eb"/>
+  <text x="130" y="406" text-anchor="middle" class="name">Job 管理</text>
+  <text x="283" y="399" text-anchor="middle" class="name">Scheduler</text><text x="283" y="416" text-anchor="middle" class="small">扫描 / 排序 / 派发</text>
+  <text x="436" y="399" text-anchor="middle" class="name">Lease / Slot</text><text x="436" y="416" text-anchor="middle" class="small">认领 / 超时</text>
+  <text x="589" y="399" text-anchor="middle" class="name">Outbox</text><text x="589" y="416" text-anchor="middle" class="small">事件通知</text>
+
+  <!-- LEFT QUEUES/WORKERS -->
+  <rect x="132" y="467" width="210" height="48" rx="8" fill="#edf9ef" stroke="#83c98d"/>
+  <rect x="390" y="467" width="210" height="48" rx="8" fill="#fff8df" stroke="#e7b44a"/>
+  <text x="237" y="488" text-anchor="middle" class="name">Standard 队列</text><text x="237" y="505" text-anchor="middle" class="small">普通任务</text>
+  <text x="495" y="488" text-anchor="middle" class="name">Critical 队列</text><text x="495" y="505" text-anchor="middle" class="small">重要任务</text>
+  <rect x="132" y="536" width="210" height="54" rx="8" fill="#e5f7e8" stroke="#72c17e"/>
+  <rect x="390" y="536" width="210" height="54" rx="8" fill="#fff1bc" stroke="#e0a92f"/>
+  <text x="237" y="557" text-anchor="middle" class="name">Standard Worker</text><text x="237" y="576" text-anchor="middle" class="small">公司实现</text>
+  <text x="495" y="557" text-anchor="middle" class="name">Critical Worker</text><text x="495" y="576" text-anchor="middle" class="small">公司实现</text>
+
+  <!-- LEFT RUNTIME -->
+  <rect x="44" y="623" width="642" height="116" rx="12" fill="#eaf4ff" stroke="#78aef2"/>
+  <text x="365" y="650" text-anchor="middle" class="layer-title" fill="#1d5ea8">Dify 1.14.2 执行层</text>
+  <rect x="62" y="672" width="190" height="50" rx="8" fill="#f7fbff" stroke="#aad0fa"/>
+  <rect x="269" y="672" width="190" height="50" rx="8" fill="#f7fbff" stroke="#aad0fa"/>
+  <rect x="476" y="672" width="190" height="50" rx="8" fill="#f7fbff" stroke="#aad0fa"/>
+  <text x="157" y="702" text-anchor="middle" class="name">WorkflowAppGenerator</text>
+  <text x="364" y="693" text-anchor="middle" class="name">Chat / Completion</text><text x="364" y="711" text-anchor="middle" class="small">Generator</text>
+  <text x="571" y="693" text-anchor="middle" class="name">Agent</text><text x="571" y="711" text-anchor="middle" class="small">AGENT_CHAT Generator</text>
+
+  <!-- LEFT DB -->
+  <rect x="44" y="767" width="642" height="112" rx="12" fill="#eef5fd" stroke="#8ab2de"/>
+  <text x="365" y="794" text-anchor="middle" class="layer-title">数据库（1.14.2 Schema + 公司扩展）</text>
+  <g transform="translate(93 824)"><ellipse cx="55" cy="0" rx="55" ry="12" fill="#fff" stroke="#7fa6d0"/><path d="M0 0v26c0 7 25 12 55 12s55-5 55-12V0" fill="#fff" stroke="#7fa6d0"/><ellipse cx="55" cy="26" rx="55" ry="12" fill="#f5f9fe" stroke="#7fa6d0"/></g>
+  <text x="148" y="858" text-anchor="middle" class="small">Dify 官方表</text>
+  <g transform="translate(244 824)"><ellipse cx="55" cy="0" rx="55" ry="12" fill="#fff" stroke="#7fa6d0"/><path d="M0 0v26c0 7 25 12 55 12s55-5 55-12V0" fill="#fff" stroke="#7fa6d0"/><ellipse cx="55" cy="26" rx="55" ry="12" fill="#f5f9fe" stroke="#7fa6d0"/></g>
+  <text x="299" y="858" text-anchor="middle" class="small">app_execution_*</text>
+  <g transform="translate(395 824)"><ellipse cx="55" cy="0" rx="55" ry="12" fill="#fff" stroke="#7fa6d0"/><path d="M0 0v26c0 7 25 12 55 12s55-5 55-12V0" fill="#fff" stroke="#7fa6d0"/><ellipse cx="55" cy="26" rx="55" ry="12" fill="#f5f9fe" stroke="#7fa6d0"/></g>
+  <text x="450" y="858" text-anchor="middle" class="small">Job / Policy / Lease</text>
+  <g transform="translate(546 824)"><ellipse cx="55" cy="0" rx="55" ry="12" fill="#fff" stroke="#7fa6d0"/><path d="M0 0v26c0 7 25 12 55 12s55-5 55-12V0" fill="#fff" stroke="#7fa6d0"/><ellipse cx="55" cy="26" rx="55" ry="12" fill="#f5f9fe" stroke="#7fa6d0"/></g>
+  <text x="601" y="858" text-anchor="middle" class="small">历史业务数据</text>
+
+  <!-- LEFT arrows -->
+  <path d="M119 186V205H130V214" class="arrow2"/><path d="M283 186V205H283V214" class="arrow2"/><path d="M447 186V205H447V214" class="arrow2"/><path d="M611 186V205H589V214" class="arrow2"/>
+  <path d="M365 316V338" class="arrow"/><path d="M283 442V458H237V467" class="arrow"/><path d="M436 442V458H495V467" class="arrow"/>
+  <path d="M237 515V536" class="arrow"/><path d="M495 515V536" class="arrow"/><path d="M237 590V610H300V623" class="arrow"/><path d="M495 590V610H430V623" class="arrow"/><path d="M365 739V767" class="arrow"/>
+
+  <!-- RIGHT ENTRY -->
+  <g filter="url(#shadow)">
+    <rect x="784" y="132" width="170" height="54" rx="9" fill="#eaf3ff" stroke="#70a7f2"/>
+    <rect x="968" y="132" width="170" height="54" rx="9" fill="#eaf3ff" stroke="#70a7f2"/>
+    <rect x="1152" y="132" width="170" height="54" rx="9" fill="#eaf3ff" stroke="#70a7f2"/>
+    <rect x="1336" y="132" width="170" height="54" rx="9" fill="#eaf3ff" stroke="#70a7f2"/>
+  </g>
+  <text x="869" y="153" text-anchor="middle" class="name">WebApp</text><text x="869" y="173" text-anchor="middle" class="small">前端</text>
+  <text x="1053" y="153" text-anchor="middle" class="name">Service API</text><text x="1053" y="173" text-anchor="middle" class="small">外部调用</text>
+  <text x="1237" y="153" text-anchor="middle" class="name">Console</text><text x="1237" y="173" text-anchor="middle" class="small">调试</text>
+  <text x="1421" y="153" text-anchor="middle" class="name">定时触发</text><text x="1421" y="173" text-anchor="middle" class="small">Schedule</text>
+
+  <!-- RIGHT ADMISSION -->
+  <rect x="784" y="214" width="722" height="102" rx="12" fill="#fff0f1" stroke="#f08b96"/>
+  <text x="1145" y="240" text-anchor="middle" class="layer-title" fill="#a61b29">公司网关与准入控制（保留）</text>
+  <rect x="804" y="254" width="155" height="46" rx="8" fill="#fff8f8" stroke="#efa0a7"/>
+  <rect x="979" y="254" width="155" height="46" rx="8" fill="#fff8f8" stroke="#efa0a7"/>
+  <rect x="1154" y="254" width="155" height="46" rx="8" fill="#fff8f8" stroke="#efa0a7"/>
+  <rect x="1329" y="254" width="155" height="46" rx="8" fill="#fff8f8" stroke="#efa0a7"/>
+  <text x="881" y="273" text-anchor="middle" class="name">应用策略</text><text x="881" y="290" text-anchor="middle" class="small">Policy</text>
+  <text x="1056" y="273" text-anchor="middle" class="name">优先级</text><text x="1056" y="290" text-anchor="middle" class="small">0～99</text>
+  <text x="1231" y="273" text-anchor="middle" class="name">队列限制</text><text x="1231" y="290" text-anchor="middle" class="small">租户 / 全局</text>
+  <text x="1406" y="273" text-anchor="middle" class="name">输入快照</text><text x="1406" y="290" text-anchor="middle" class="small">Audit</text>
+
+  <!-- RIGHT SCHEDULER -->
+  <rect x="784" y="338" width="722" height="104" rx="12" fill="#f3edff" stroke="#b59be6"/>
+  <text x="1145" y="365" text-anchor="middle" class="layer-title" fill="#5e35b1">公司调度中心（保留）</text>
+  <rect x="804" y="379" width="155" height="47" rx="8" fill="#fbf9ff" stroke="#c6b6eb"/>
+  <rect x="979" y="379" width="155" height="47" rx="8" fill="#fbf9ff" stroke="#c6b6eb"/>
+  <rect x="1154" y="379" width="155" height="47" rx="8" fill="#fbf9ff" stroke="#c6b6eb"/>
+  <rect x="1329" y="379" width="155" height="47" rx="8" fill="#fbf9ff" stroke="#c6b6eb"/>
+  <text x="881" y="406" text-anchor="middle" class="name">Job 管理</text>
+  <text x="1056" y="399" text-anchor="middle" class="name">Scheduler</text><text x="1056" y="416" text-anchor="middle" class="small">扫描 / 排序 / 派发</text>
+  <text x="1231" y="399" text-anchor="middle" class="name">Lease / Slot</text><text x="1231" y="416" text-anchor="middle" class="small">认领 / 超时</text>
+  <text x="1406" y="399" text-anchor="middle" class="name">Outbox</text><text x="1406" y="416" text-anchor="middle" class="small">事件通知</text>
+
+  <!-- RIGHT QUEUES/WORKERS -->
+  <rect x="890" y="467" width="230" height="48" rx="8" fill="#edf9ef" stroke="#83c98d"/>
+  <rect x="1170" y="467" width="230" height="48" rx="8" fill="#fff8df" stroke="#e7b44a"/>
+  <text x="1005" y="488" text-anchor="middle" class="name">Standard 队列</text><text x="1005" y="505" text-anchor="middle" class="small">普通任务</text>
+  <text x="1285" y="488" text-anchor="middle" class="name">Critical 队列</text><text x="1285" y="505" text-anchor="middle" class="small">重要任务</text>
+  <rect x="890" y="536" width="230" height="54" rx="8" fill="#e5f7e8" stroke="#72c17e"/>
+  <rect x="1170" y="536" width="230" height="54" rx="8" fill="#fff1bc" stroke="#e0a92f"/>
+  <text x="1005" y="557" text-anchor="middle" class="name">Standard Worker</text><text x="1005" y="576" text-anchor="middle" class="small">适配新版</text>
+  <text x="1285" y="557" text-anchor="middle" class="name">Critical Worker</text><text x="1285" y="576" text-anchor="middle" class="small">适配新版</text>
+
+  <!-- RIGHT EXECUTION -->
+  <rect x="784" y="623" width="590" height="140" rx="12" fill="#eaf4ff" stroke="#78aef2"/>
+  <text x="1079" y="650" text-anchor="middle" class="layer-title" fill="#1d5ea8">1.17.1 执行服务（官方）</text>
+  <rect x="804" y="669" width="165" height="42" rx="8" fill="#f7fbff" stroke="#aad0fa"/>
+  <rect x="987" y="669" width="190" height="42" rx="8" fill="#f7fbff" stroke="#aad0fa"/>
+  <rect x="1195" y="669" width="159" height="42" rx="8" fill="#f7fbff" stroke="#aad0fa"/>
+  <text x="886" y="695" text-anchor="middle" class="name">AppExecutionParams</text>
+  <text x="1082" y="687" text-anchor="middle" class="name">workflow_based_</text><text x="1082" y="703" text-anchor="middle" class="small">app_execution_task</text>
+  <text x="1274" y="695" text-anchor="middle" class="name">_AppRunner</text>
+  <rect x="804" y="722" width="123" height="29" rx="7" fill="#f7fbff" stroke="#aad0fa"/>
+  <rect x="939" y="722" width="123" height="29" rx="7" fill="#f7fbff" stroke="#aad0fa"/>
+  <rect x="1074" y="722" width="137" height="29" rx="7" fill="#f7fbff" stroke="#aad0fa"/>
+  <rect x="1223" y="722" width="131" height="29" rx="7" fill="#f7fbff" stroke="#aad0fa"/>
+  <text x="865" y="741" text-anchor="middle" class="small">Workflow</text>
+  <text x="1000" y="741" text-anchor="middle" class="small">Chatflow</text>
+  <text x="1142" y="741" text-anchor="middle" class="small">Chat / Completion</text>
+  <text x="1288" y="741" text-anchor="middle" class="small">Agent</text>
+
+  <!-- RIGHT CAPABILITIES -->
+  <rect x="1390" y="623" width="116" height="140" rx="12" fill="#e9f3ff" stroke="#92baf0"/>
+  <text x="1448" y="646" text-anchor="middle" class="name">官方能力</text>
+  <rect x="1401" y="658" width="94" height="18" rx="5" fill="#fff" stroke="#b9d0ef"/><text x="1448" y="671" text-anchor="middle" class="tiny">WorkflowRun</text>
+  <rect x="1401" y="682" width="94" height="18" rx="5" fill="#fff" stroke="#b9d0ef"/><text x="1448" y="695" text-anchor="middle" class="tiny">Message</text>
+  <rect x="1401" y="706" width="94" height="18" rx="5" fill="#fff" stroke="#b9d0ef"/><text x="1448" y="719" text-anchor="middle" class="tiny">Human Input</text>
+  <rect x="1401" y="730" width="94" height="18" rx="5" fill="#fff" stroke="#b9d0ef"/><text x="1448" y="743" text-anchor="middle" class="tiny">SSE / Events</text>
+  <rect x="1401" y="754" width="94" height="18" rx="5" fill="#fff" stroke="#b9d0ef"/><text x="1448" y="767" text-anchor="middle" class="tiny">Session</text>
+
+  <!-- RIGHT DB -->
+  <rect x="784" y="793" width="722" height="86" rx="12" fill="#eef5fd" stroke="#8ab2de"/>
+  <text x="1145" y="817" text-anchor="middle" class="layer-title">数据库（1.17.1 Schema + 公司扩展）</text>
+  <g transform="translate(828 842)"><ellipse cx="65" cy="0" rx="65" ry="11" fill="#fff" stroke="#7fa6d0"/><path d="M0 0v22c0 6 28 10 65 10s65-4 65-10V0" fill="#fff" stroke="#7fa6d0"/></g>
+  <text x="893" y="868" text-anchor="middle" class="small">Dify 官方表（1.17.1）</text>
+  <g transform="translate(1000 842)"><ellipse cx="65" cy="0" rx="65" ry="11" fill="#fff" stroke="#7fa6d0"/><path d="M0 0v22c0 6 28 10 65 10s65-4 65-10V0" fill="#fff" stroke="#7fa6d0"/></g>
+  <text x="1065" y="868" text-anchor="middle" class="small">app_execution_*</text>
+  <g transform="translate(1172 842)"><ellipse cx="65" cy="0" rx="65" ry="11" fill="#fff" stroke="#7fa6d0"/><path d="M0 0v22c0 6 28 10 65 10s65-4 65-10V0" fill="#fff" stroke="#7fa6d0"/></g>
+  <text x="1237" y="868" text-anchor="middle" class="small">Job / Policy / Lease</text>
+  <g transform="translate(1344 842)"><ellipse cx="65" cy="0" rx="65" ry="11" fill="#fff" stroke="#7fa6d0"/><path d="M0 0v22c0 6 28 10 65 10s65-4 65-10V0" fill="#fff" stroke="#7fa6d0"/></g>
+  <text x="1409" y="868" text-anchor="middle" class="small">历史业务数据</text>
+
+  <!-- RIGHT arrows -->
+  <path d="M869 186V205H881V214" class="arrow2"/><path d="M1053 186V205H1056V214" class="arrow2"/><path d="M1237 186V205H1231V214" class="arrow2"/><path d="M1421 186V205H1406V214" class="arrow2"/>
+  <path d="M1145 316V338" class="arrow"/><path d="M1056 442V458H1005V467" class="arrow"/><path d="M1231 442V458H1285V467" class="arrow"/>
+  <path d="M1005 515V536" class="arrow"/><path d="M1285 515V536" class="arrow"/><path d="M1005 590V610H1035V623" class="arrow"/><path d="M1285 590V610H1255V623" class="arrow"/>
+  <path d="M969 690H987" class="arrow2"/><path d="M1177 690H1195" class="arrow2"/><path d="M1374 693H1390" class="arrow2"/><path d="M1145 763V793" class="arrow"/>
+
+  <!-- compact footer -->
+  <rect x="22" y="920" width="1556" height="42" rx="10" fill="#f4f6f9" stroke="#e0e5ec"/>
+  <circle cx="48" cy="941" r="6" fill="#6fbf78"/><text x="62" y="946" class="small">保留：Policy / Admission / Job / Scheduler / Standard-Critical</text>
+  <circle cx="568" cy="941" r="6" fill="#e2aa3a"/><text x="582" y="946" class="small">变化：Worker 不再直接调用旧 Generator，改接 1.17.1 官方执行链路</text>
+  <circle cx="1138" cy="941" r="6" fill="#5f95d8"/><text x="1152" y="946" class="small">官方：WorkflowRun / Message / Human Input / SSE / Session</text>
+</svg>
