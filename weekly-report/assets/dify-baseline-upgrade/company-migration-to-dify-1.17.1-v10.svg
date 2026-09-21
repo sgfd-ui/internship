@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+<defs>
+<style>
+text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;fill:#11213f}
+.title{font-size:31px;font-weight:800}.sub{font-size:15px;fill:#65738a}.pt{font-size:22px;font-weight:800}.ps{font-size:13px;fill:#6b778c}
+.section{font-size:17px;font-weight:800}.node{font-size:12px;font-weight:700}.hint{font-size:11px;fill:#65738a}.badge{font-size:12px;font-weight:800;fill:#fff}
+.arrow{stroke:#4e69d8;stroke-width:3;fill:none;marker-end:url(#a)}.hot{stroke:#e85b42;stroke-width:3;fill:none;marker-end:url(#h)}
+</style>
+<marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L9 5 0 10Z" fill="#4e69d8"/></marker>
+<marker id="h" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L9 5 0 10Z" fill="#e85b42"/></marker>
+<filter id="sh"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#24324a" flood-opacity=".12"/></filter>
+<linearGradient id="lb" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#eef8ff"/><stop offset="1" stop-color="#dfefff"/></linearGradient>
+<linearGradient id="mid" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff5f1"/><stop offset="1" stop-color="#ffe8df"/></linearGradient>
+<linearGradient id="rt" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f3efff"/><stop offset="1" stop-color="#e7ddff"/></linearGradient>
+</defs>
+<rect width="1600" height="980" fill="#fff"/>
+<text x="28" y="40" class="title">公司能力迁移到 Dify 1.17.1</text>
+<text x="28" y="66" class="sub">从左到右：当前公司能力 → 迁移适配点 → 1.17.1 官方落点；组件用 icon + 名称表达，不再用大段文字框</text>
+
+<!-- columns -->
+<g filter="url(#sh)"><rect x="24" y="92" width="485" height="818" rx="18" fill="#fbfdff" stroke="#d9e7f6"/></g>
+<g filter="url(#sh)"><rect x="558" y="92" width="484" height="818" rx="18" fill="#fffaf8" stroke="#f3d1c7"/></g>
+<g filter="url(#sh)"><rect x="1090" y="92" width="486" height="818" rx="18" fill="#faf9ff" stroke="#ddd5f5"/></g>
+<text x="266" y="128" text-anchor="middle" class="pt">当前公司能力</text><text x="266" y="150" text-anchor="middle" class="ps">原 1.14.2 公司扩展</text>
+<text x="800" y="128" text-anchor="middle" class="pt">迁移适配点</text><text x="800" y="150" text-anchor="middle" class="ps">真正需要重接的地方</text>
+<text x="1333" y="128" text-anchor="middle" class="pt">Dify 1.17.1 官方落点</text><text x="1333" y="150" text-anchor="middle" class="ps">最终接入的官方组件</text>
+
+<!-- LEFT module 1 -->
+<g filter="url(#sh)"><rect x="48" y="178" width="437" height="120" rx="14" fill="url(#lb)" stroke="#8dbbef"/><rect x="48" y="178" width="437" height="8" rx="8" fill="#6ea9ec"/></g>
+<circle cx="74" cy="204" r="16" fill="#2f80ed"/><text x="74" y="209" text-anchor="middle" class="badge">01</text>
+<path d="M104 191l11 4v10c0 7-6 12-11 15-6-3-11-8-11-15v-10z" fill="#2f80ed"/>
+<text x="132" y="204" class="section">准入与策略</text>
+<g transform="translate(72 229)">
+  <g><rect width="72" height="49" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="36" y="21" text-anchor="middle" class="node">Policy</text><text x="36" y="37" text-anchor="middle" class="hint">策略</text></g>
+  <g transform="translate(82)"><rect width="72" height="49" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="36" y="21" text-anchor="middle" class="node">Admission</text><text x="36" y="37" text-anchor="middle" class="hint">准入</text></g>
+  <g transform="translate(164)"><rect width="72" height="49" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="36" y="21" text-anchor="middle" class="node">Priority</text><text x="36" y="37" text-anchor="middle" class="hint">优先级</text></g>
+  <g transform="translate(246)"><rect width="72" height="49" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="36" y="21" text-anchor="middle" class="node">Queue</text><text x="36" y="37" text-anchor="middle" class="hint">限制</text></g>
+  <g transform="translate(328)"><rect width="72" height="49" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="36" y="21" text-anchor="middle" class="node">Snapshot</text><text x="36" y="37" text-anchor="middle" class="hint">快照</text></g>
+</g>
+
+<!-- LEFT module 2 -->
+<g filter="url(#sh)"><rect x="48" y="320" width="437" height="146" rx="14" fill="url(#lb)" stroke="#8dbbef"/><rect x="48" y="320" width="437" height="8" rx="8" fill="#6ea9ec"/></g>
+<circle cx="74" cy="346" r="16" fill="#2f80ed"/><text x="74" y="351" text-anchor="middle" class="badge">02</text>
+<rect x="94" y="335" width="26" height="20" rx="3" fill="none" stroke="#2f80ed" stroke-width="2"/><path d="M99 341h16M99 347h12" stroke="#2f80ed" stroke-width="2"/>
+<text x="132" y="346" class="section">托管调度</text>
+<g transform="translate(72 374)">
+  <g><rect width="85" height="52" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="42" y="22" text-anchor="middle" class="node">Job</text><text x="42" y="39" text-anchor="middle" class="hint">任务</text></g>
+  <g transform="translate(95)"><rect width="85" height="52" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="42" y="22" text-anchor="middle" class="node">Scheduler</text><text x="42" y="39" text-anchor="middle" class="hint">调度器</text></g>
+  <g transform="translate(190)"><rect width="85" height="52" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="42" y="22" text-anchor="middle" class="node">Lease</text><text x="42" y="39" text-anchor="middle" class="hint">认领</text></g>
+  <g transform="translate(285)"><rect width="85" height="52" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="42" y="22" text-anchor="middle" class="node">Outbox</text><text x="42" y="39" text-anchor="middle" class="hint">事件</text></g>
+</g>
+<g transform="translate(112 434)">
+  <ellipse cx="18" cy="8" rx="12" ry="4" fill="#24905b"/><rect x="6" y="8" width="24" height="17" fill="#24905b"/><ellipse cx="18" cy="25" rx="12" ry="4" fill="#1d7548"/><text x="90" y="15" class="node">Standard Queue</text>
+  <path d="M252 1l5 10 11 2-8 8 2 11-10-5-10 5 2-11-8-8 11-2z" fill="#e1a22c"/><text x="277" y="15" class="node">Critical Queue</text>
+</g>
+
+<!-- LEFT module 3 -->
+<g filter="url(#sh)"><rect x="48" y="488" width="437" height="176" rx="14" fill="url(#lb)" stroke="#8dbbef"/><rect x="48" y="488" width="437" height="8" rx="8" fill="#6ea9ec"/></g>
+<circle cx="74" cy="514" r="16" fill="#2f80ed"/><text x="74" y="519" text-anchor="middle" class="badge">03</text>
+<path d="M95 504h22M106 493v22" stroke="#2f80ed" stroke-width="2.4"/><text x="132" y="514" class="section">执行与调试接管</text>
+<g transform="translate(70 544)">
+  <g><rect width="78" height="48" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="39" y="20" text-anchor="middle" class="node">Workflow</text><text x="39" y="36" text-anchor="middle" class="hint">工作流</text></g>
+  <g transform="translate(88)"><rect width="78" height="48" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="39" y="20" text-anchor="middle" class="node">Chatflow</text><text x="39" y="36" text-anchor="middle" class="hint">对话流</text></g>
+  <g transform="translate(176)"><rect width="78" height="48" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="39" y="20" text-anchor="middle" class="node">Chat</text><text x="39" y="36" text-anchor="middle" class="hint">对话</text></g>
+  <g transform="translate(264)"><rect width="78" height="48" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="39" y="20" text-anchor="middle" class="node">Completion</text><text x="39" y="36" text-anchor="middle" class="hint">补全</text></g>
+</g>
+<g transform="translate(70 600)">
+  <g><rect width="88" height="46" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="44" y="19" text-anchor="middle" class="node">AGENT_CHAT</text><text x="44" y="35" text-anchor="middle" class="hint">Agent</text></g>
+  <g transform="translate(98)"><rect width="88" height="46" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="44" y="19" text-anchor="middle" class="node">Console</text><text x="44" y="35" text-anchor="middle" class="hint">Debug</text></g>
+  <g transform="translate(196)"><rect width="88" height="46" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="44" y="19" text-anchor="middle" class="node">Human Input</text><text x="44" y="35" text-anchor="middle" class="hint">暂停/恢复</text></g>
+  <g transform="translate(294)"><rect width="88" height="46" rx="8" fill="#fff" stroke="#b5d3f5"/><text x="44" y="19" text-anchor="middle" class="node">Schedule</text><text x="44" y="35" text-anchor="middle" class="hint">定时</text></g>
+</g>
+
+<!-- LEFT module 4 -->
+<g filter="url(#sh)"><rect x="48" y="686" width="437" height="104" rx="14" fill="url(#lb)" stroke="#8dbbef"/><rect x="48" y="686" width="437" height="8" rx="8" fill="#6ea9ec"/></g>
+<circle cx="74" cy="712" r="16" fill="#2f80ed"/><text x="74" y="717" text-anchor="middle" class="badge">04</text>
+<path d="M96 704l12-7 12 7-12 7zM96 712l12 7 12-7" fill="#2f80ed"/><text x="132" y="712" class="section">企业基础能力</text>
+<text x="267" y="748" text-anchor="middle" class="node">SkyOA　·　Workspace　·　KMS　·　S3</text>
+<text x="267" y="772" text-anchor="middle" class="hint">Audit　·　OTel　·　Task Management　·　Redis Event Bus</text>
+
+<!-- LEFT module 5 -->
+<g filter="url(#shadow)"><rect x="48" y="812" width="437" height="74" rx="14" fill="url(#lb)" stroke="#8dbbef"/></g>
+<circle cx="74" cy="838" r="16" fill="#2f80ed"/><text x="74" y="843" text-anchor="middle" class="badge">05</text>
+<ellipse cx="108" cy="832" rx="13" ry="5" fill="#2f80ed"/><rect x="95" y="832" width="26" height="19" fill="#2f80ed"/><ellipse cx="108" cy="851" rx="13" ry="5" fill="#1f66bd"/>
+<text x="132" y="838" class="section">数据与历史兼容</text>
+<text x="267" y="868" text-anchor="middle" class="hint">app_execution_*　·　历史文件路径　·　租户私钥　·　旧任务 / 历史数据</text>
+
+<!-- CENTER hotspot 1 -->
+<g filter="url(#sh)"><rect x="584" y="178" width="432" height="116" rx="14" fill="url(#mid)" stroke="#e98d73"/><rect x="584" y="178" width="432" height="8" rx="8" fill="#e85b42"/></g>
+<circle cx="612" cy="205" r="16" fill="#e85b42"/><text x="612" y="210" text-anchor="middle" class="badge">01</text>
+<path d="M642 199l8 6-8 6M674 199l-8 6 8 6" fill="none" stroke="#e85b42" stroke-width="2.5"/><text x="694" y="206" class="section">Worker → Runtime 对接</text>
+<g transform="translate(620 231)">
+  <rect width="80" height="42" rx="8" fill="#fff" stroke="#f0b4a5"/><text x="40" y="25" text-anchor="middle" class="node">执行入口</text>
+  <rect x="90" width="80" height="42" rx="8" fill="#fff" stroke="#f0b4a5"/><text x="130" y="25" text-anchor="middle" class="node">AppMode</text>
+  <rect x="180" width="80" height="42" rx="8" fill="#fff" stroke="#f0b4a5"/><text x="220" y="25" text-anchor="middle" class="node">Session</text>
+  <rect x="270" width="80" height="42" rx="8" fill="#fff" stroke="#f0b4a5"/><text x="310" y="25" text-anchor="middle" class="node">输入参数</text>
+</g>
+
+<!-- CENTER 2 -->
+<g filter="url(#sh)"><rect x="584" y="316" width="432" height="116" rx="14" fill="url(#mid)" stroke="#e98d73"/><rect x="584" y="316" width="432" height="8" rx="8" fill="#e85b42"/></g>
+<circle cx="612" cy="343" r="16" fill="#e85b42"/><text x="612" y="348" text-anchor="middle" class="badge">02</text>
+<ellipse cx="651" cy="337" rx="11" ry="4" fill="#d77925"/><rect x="640" y="337" width="22" height="18" fill="#d77925"/><ellipse cx="651" cy="355" rx="11" ry="4" fill="#b65e13"/>
+<text x="680" y="344" class="section">Job ↔ 官方执行状态</text>
+<g transform="translate(620 369)">
+  <rect width="94" height="42" rx="8" fill="#fff" stroke="#f0b4a5"/><text x="47" y="25" text-anchor="middle" class="node">job_id</text>
+  <rect x="104" width="108" height="42" rx="8" fill="#fff" stroke="#f0b4a5"/><text x="158" y="25" text-anchor="middle" class="node">workflow_run_id</text>
+  <rect x="222" width="94" height="42" rx="8" fill="#fff" stroke="#f0b4a5"/><text x="269" y="25" text-anchor="middle" class="node">task_id</text>
+  <rect x="326" width="64" height="42" rx="8" fill="#fff" stroke="#f0b4a5"/><text x="358" y="25" text-anchor="middle" class="node">Result</text>
+</g>
+
+<!-- CENTER 3 -->
+<g filter="url(#sh)"><rect x="584" y="454" width="432" height="108" rx="14" fill="url(#mid)" stroke="#e98d73"/></g>
+<circle cx="612" cy="481" r="16" fill="#e85b42"/><text x="612" y="486" text-anchor="middle" class="badge">03</text>
+<circle cx="652" cy="481" r="10" fill="#e85b42"/><rect x="647" y="476" width="10" height="10" rx="1" fill="#fff"/>
+<text x="680" y="482" class="section">Stop / Cancel / Retry</text>
+<text x="800" y="524" text-anchor="middle" class="node">queued / running　·　generation　·　fence　·　迟到结果收敛</text>
+
+<!-- CENTER 4 -->
+<g filter="url(#sh)"><rect x="584" y="584" width="432" height="146" rx="14" fill="url(#mid)" stroke="#e98d73"/></g>
+<circle cx="612" cy="611" r="16" fill="#e85b42"/><text x="612" y="616" text-anchor="middle" class="badge">04</text>
+<path d="M644 602h15v15h-15zM651 595v7M637 609h7M659 609h7" fill="none" stroke="#e85b42" stroke-width="2"/>
+<text x="680" y="612" class="section">特殊执行链路</text>
+<g transform="translate(620 641)">
+  <rect width="122" height="62" rx="9" fill="#fff" stroke="#f0b4a5"/><text x="61" y="23" text-anchor="middle" class="node">Console</text><text x="61" y="42" text-anchor="middle" class="hint">单节点 / Iteration / Loop</text>
+  <rect x="134" width="122" height="62" rx="9" fill="#fff" stroke="#f0b4a5"/><text x="195" y="23" text-anchor="middle" class="node">Human Input</text><text x="195" y="42" text-anchor="middle" class="hint">Pause / Resume / Retry</text>
+  <rect x="268" width="122" height="62" rx="9" fill="#fff" stroke="#f0b4a5"/><text x="329" y="23" text-anchor="middle" class="node">Schedule</text><text x="329" y="42" text-anchor="middle" class="hint">正式触发 / 草稿调试</text>
+</g>
+
+<!-- CENTER 5 -->
+<g filter="url(#sh)"><rect x="584" y="752" width="432" height="92" rx="14" fill="#eef6ff" stroke="#8fb7ef"/></g>
+<circle cx="612" cy="779" r="16" fill="#2f80ed"/><text x="612" y="784" text-anchor="middle" class="badge">05</text>
+<path d="M644 772l12-7 12 7-12 7zM644 780l12 7 12-7" fill="#2f80ed"/><text x="680" y="780" class="section">企业能力接入</text>
+<text x="800" y="817" text-anchor="middle" class="node">SkyOA · Workspace · KMS · S3 · OTel · Redis Event Bus · Deployment</text>
+
+<g filter="url(#sh)"><rect x="584" y="862" width="432" height="48" rx="13" fill="#eef5fd" stroke="#9bb9df"/></g>
+<text x="800" y="891" text-anchor="middle" class="node">Schema / Storage / Redis / 历史数据兼容</text>
+
+<!-- RIGHT official 1 -->
+<g filter="url(#sh)"><rect x="1116" y="178" width="436" height="134" rx="14" fill="url(#rt)" stroke="#ad95e6"/><rect x="1116" y="178" width="436" height="8" rx="8" fill="#8060dd"/></g>
+<circle cx="1144" cy="205" r="16" fill="#8060dd"/><text x="1144" y="210" text-anchor="middle" class="badge">01</text>
+<path d="M1172 191l12-7 12 7v14l-12 7-12-7z" fill="#4f6de1"/><text x="1210" y="206" class="section">AppGenerateService / Session</text>
+<g transform="translate(1144 232)">
+  <g><rect width="78" height="50" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="39" y="22" text-anchor="middle" class="node">Workflow</text><text x="39" y="38" text-anchor="middle" class="hint">工作流</text></g>
+  <g transform="translate(86)"><rect width="78" height="50" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="39" y="22" text-anchor="middle" class="node">Chatflow</text><text x="39" y="38" text-anchor="middle" class="hint">对话流</text></g>
+  <g transform="translate(172)"><rect width="78" height="50" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="39" y="22" text-anchor="middle" class="node">Chat</text><text x="39" y="38" text-anchor="middle" class="hint">对话</text></g>
+  <g transform="translate(258)"><rect width="78" height="50" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="39" y="22" text-anchor="middle" class="node">Completion</text><text x="39" y="38" text-anchor="middle" class="hint">补全</text></g>
+</g>
+
+<!-- RIGHT 2 -->
+<g filter="url(#sh)"><rect x="1116" y="334" width="436" height="134" rx="14" fill="url(#rt)" stroke="#ad95e6"/></g>
+<circle cx="1144" cy="361" r="16" fill="#8060dd"/><text x="1144" y="366" text-anchor="middle" class="badge">02</text>
+<path d="M1174 350h22v22h-22zM1185 342v8" fill="none" stroke="#4f6de1" stroke-width="2.3"/><text x="1210" y="362" class="section">官方执行主链</text>
+<g transform="translate(1146 392)">
+  <g><rect width="112" height="54" rx="8" fill="#fff" stroke="#c8b9ef"/><path d="M17 15l9-5 9 5v10l-9 5-9-5z" fill="#4f6de1"/><text x="70" y="22" text-anchor="middle" class="node">AppExecution</text><text x="70" y="39" text-anchor="middle" class="hint">Params</text></g>
+  <g transform="translate(122)"><rect width="142" height="54" rx="8" fill="#fff" stroke="#c8b9ef"/><rect x="18" y="13" width="18" height="24" rx="2" fill="#4f6de1"/><text x="89" y="22" text-anchor="middle" class="node">workflow_based</text><text x="89" y="39" text-anchor="middle" class="hint">execution_task</text></g>
+  <g transform="translate(274)"><rect width="110" height="54" rx="8" fill="#fff" stroke="#c8b9ef"/><circle cx="26" cy="25" r="10" fill="#4f6de1"/><path d="M23 20l8 5-8 5z" fill="#fff"/><text x="70" y="22" text-anchor="middle" class="node">_AppRunner</text><text x="70" y="39" text-anchor="middle" class="hint">Runtime</text></g>
+</g>
+
+<!-- RIGHT 3 -->
+<g filter="url(#sh)"><rect x="1116" y="490" width="436" height="118" rx="14" fill="url(#rt)" stroke="#ad95e6"/></g>
+<circle cx="1144" cy="517" r="16" fill="#8060dd"/><text x="1144" y="522" text-anchor="middle" class="badge">03</text>
+<rect x="1172" y="506" width="5" height="18" fill="#4f6de1"/><rect x="1180" y="500" width="5" height="24" fill="#4f6de1"/><rect x="1188" y="493" width="5" height="31" fill="#4f6de1"/><text x="1210" y="518" class="section">状态与结果</text>
+<g transform="translate(1148 548)">
+  <g><rect width="82" height="40" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="41" y="24" text-anchor="middle" class="hint">WorkflowRun</text></g>
+  <g transform="translate(90)"><rect width="82" height="40" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="41" y="24" text-anchor="middle" class="hint">Message</text></g>
+  <g transform="translate(180)"><rect width="82" height="40" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="41" y="24" text-anchor="middle" class="hint">SSE / Events</text></g>
+  <g transform="translate(270)"><rect width="82" height="40" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="41" y="24" text-anchor="middle" class="hint">Session</text></g>
+</g>
+
+<!-- RIGHT 4 -->
+<g filter="url(#sh)"><rect x="1116" y="630" width="436" height="120" rx="14" fill="url(#rt)" stroke="#ad95e6"/></g>
+<circle cx="1144" cy="657" r="16" fill="#8060dd"/><text x="1144" y="662" text-anchor="middle" class="badge">04</text>
+<circle cx="1183" cy="651" r="7" fill="#4f6de1"/><path d="M1173 669c1-9 19-9 20 0" fill="#4f6de1"/><text x="1210" y="658" class="section">Human Input / Resume</text>
+<g transform="translate(1150 690)">
+  <rect width="112" height="40" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="56" y="24" text-anchor="middle" class="hint">WorkflowPause</text>
+  <rect x="122" width="132" height="40" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="66" y="24" text-anchor="middle" class="hint">ResumptionContext</text>
+  <rect x="264" width="112" height="40" rx="8" fill="#fff" stroke="#c8b9ef"/><text x="56" y="24" text-anchor="middle" class="hint">Resume Task</text>
+</g>
+
+<!-- RIGHT 5 -->
+<g filter="url(#sh)"><rect x="1116" y="772" width="436" height="116" rx="14" fill="url(#rt)" stroke="#ad95e6"/></g>
+<circle cx="1144" cy="799" r="16" fill="#8060dd"/><text x="1144" y="804" text-anchor="middle" class="badge">05</text>
+<ellipse cx="1182" cy="792" rx="11" ry="4" fill="#4f6de1"/><rect x="1171" y="792" width="22" height="18" fill="#4f6de1"/><ellipse cx="1182" cy="810" rx="11" ry="4" fill="#354fc3"/><text x="1210" y="800" class="section">基础设施与企业落点</text>
+<text x="1334" y="838" text-anchor="middle" class="node">PostgreSQL · Redis · Storage · Trace</text>
+<text x="1334" y="862" text-anchor="middle" class="hint">SkyOA · Workspace · KMS · S3 · OTel · Redis Event Bus · Deployment</text>
+
+<!-- arrows left-to-center-to-right -->
+<path d="M509 238H558" class="arrow"/><path d="M1042 238H1090" class="hot"/>
+<path d="M509 393H558" class="arrow"/><path d="M1042 393H1090" class="hot"/>
+<path d="M509 576H558" class="arrow"/><path d="M1042 551H1090" class="hot"/>
+<path d="M509 738H558" class="arrow"/><path d="M1042 690H1090" class="hot"/>
+<path d="M509 850H558" class="arrow"/><path d="M1042 830H1090" class="hot"/>
+
+<rect x="24" y="930" width="1552" height="22" rx="9" fill="#f4f6f9" stroke="#e2e7ee"/>
+<text x="800" y="945" text-anchor="middle" class="hint">第二张图才表达迁移：左边“现有能力”，中间“要重接的地方”，右边“最终落到 1.17.1 哪些官方组件”。</text>
+</svg>
