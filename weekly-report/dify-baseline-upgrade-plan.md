@@ -50,13 +50,13 @@
 
 #### 当前架构 vs Dify 1.17.1 官方架构
 
-![当前架构 vs Dify 1.17.1 官方架构](assets/dify-baseline-upgrade/current-vs-dify-1.17.1-official-v9.svg)
+![当前架构 vs Dify 1.17.1 官方架构](assets/dify-baseline-upgrade/current-vs-dify-1.17.1-official-v10.svg)
 
 第一张图只做架构对比：**左边是当前公司现状架构，右边是 Dify 1.17.1 官方架构**。
 
 #### 公司能力迁移内容
 
-![公司能力迁移到 Dify 1.17.1](assets/dify-baseline-upgrade/company-migration-to-dify-1.17.1-v9.svg)
+![公司能力迁移到 Dify 1.17.1](assets/dify-baseline-upgrade/company-migration-to-dify-1.17.1-v10.svg)
 
 第二张图才是 **本次实际迁移内容**：左边是当前公司能力，中间是迁移适配点，右边是最终接入的 Dify 1.17.1 官方能力。
 
