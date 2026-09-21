@@ -14,7 +14,7 @@
   </defs>
   <rect width="1600" height="760" fill="#fbfcfe"/>
   <text x="70" y="70" class="title">Dify 基线升级与发布流程</text>
-  <text x="70" y="105" class="sub">先在隔离环境完成兼容验证，再切换运行组件；共享数据不作为试错环境</text>
+  <text x="70" y="105" class="sub">先完成数据备份和 Schema Migration，再发布新版运行组件并执行验收</text>
 
   <g transform="translate(80,185)">
     <rect x="0" y="0" rx="18" ry="18" width="240" height="165" fill="#eef4ff" stroke="#9ebcff" stroke-width="2"/>
@@ -28,10 +28,10 @@
 
     <rect x="330" y="0" rx="18" ry="18" width="240" height="165" fill="#f7f3ff" stroke="#c7a7ff" stroke-width="2"/>
     <circle cx="366" cy="36" r="22" fill="#7f56d9"/><text x="366" y="43" text-anchor="middle" class="n">2</text>
-    <text x="402" y="42" class="h">隔离迁移验证</text>
-    <text x="358" y="84" class="t">数据库副本验证</text>
-    <text x="358" y="112" class="t">隔离 Redis / 队列</text>
-    <text x="358" y="140" class="t">历史文件与暂停数据抽样</text>
+    <text x="402" y="42" class="h">备份与迁移</text>
+    <text x="358" y="84" class="t">PostgreSQL 全库备份</text>
+    <text x="358" y="112" class="t">执行 Schema Migration</text>
+    <text x="358" y="140" class="t">记录 Alembic 与关键数据</text>
 
     <path d="M580 82 L650 82" class="arrow"/>
 
@@ -63,8 +63,8 @@
 
   <rect x="110" y="435" rx="22" ry="22" width="1380" height="205" fill="#ffffff" stroke="#d0d5dd" stroke-width="2"/>
   <text x="145" y="478" class="h">发布原则</text>
-  <text x="145" y="520" class="t">① 共享数据库、队列和调度器不用于迁移试跑；测试阶段使用隔离资源或数据副本。</text>
-  <text x="145" y="556" class="t">② 数据迁移先做兼容性新增和校正验证，保留旧 revision、历史 ID、文件引用和必要回滚依据。</text>
-  <text x="145" y="592" class="t">③ 切换时确保同一类调度任务只有一个执行方，避免旧 Worker / Beat / Scheduler 与新版同时消费。</text>
-  <text x="145" y="628" class="t">④ 回滚优先恢复旧版本进程和入口；涉及历史数据转换的步骤必须有快照或可逆校正方案。</text>
+  <text x="145" y="520" class="t">① 发布前完成 PostgreSQL 全库备份，并验证备份文件可读取。</text>
+  <text x="145" y="556" class="t">② Schema Migration 只执行一次，完成后检查 Alembic revision、默认工作空间和关键历史数据。</text>
+  <text x="145" y="592" class="t">③ 切换时保证同一类任务只有一个执行方，避免旧 Worker / Beat / Scheduler 与新版同时消费。</text>
+  <text x="145" y="628" class="t">④ 回滚先恢复旧版本构建；数据库不兼容时使用发布前备份恢复。</text>
 </svg>
