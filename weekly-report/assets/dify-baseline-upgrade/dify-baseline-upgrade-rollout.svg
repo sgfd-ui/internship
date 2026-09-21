@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760">
+  <defs>
+    <style>
+      .title{font:700 34px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#17223b}
+      .sub{font:400 18px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#667085}
+      .n{font:700 18px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#fff}
+      .h{font:700 20px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#344054}
+      .t{font:400 16px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#667085}
+      .arrow{stroke:#98a2b3;stroke-width:2.2;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#98a2b3"/>
+    </marker>
+  </defs>
+  <rect width="1600" height="760" fill="#fbfcfe"/>
+  <text x="70" y="70" class="title">Dify 基线升级与发布流程</text>
+  <text x="70" y="105" class="sub">先在隔离环境完成兼容验证，再切换运行组件；共享数据不作为试错环境</text>
+
+  <g transform="translate(80,185)">
+    <rect x="0" y="0" rx="18" ry="18" width="240" height="165" fill="#eef4ff" stroke="#9ebcff" stroke-width="2"/>
+    <circle cx="36" cy="36" r="22" fill="#2e6ff2"/><text x="36" y="43" text-anchor="middle" class="n">1</text>
+    <text x="72" y="42" class="h">基线准备</text>
+    <text x="28" y="84" class="t">确定 1.17.1 基线</text>
+    <text x="28" y="112" class="t">完成构建与启动入口</text>
+    <text x="28" y="140" class="t">冻结旧版迁移范围</text>
+
+    <path d="M250 82 L320 82" class="arrow"/>
+
+    <rect x="330" y="0" rx="18" ry="18" width="240" height="165" fill="#f7f3ff" stroke="#c7a7ff" stroke-width="2"/>
+    <circle cx="366" cy="36" r="22" fill="#7f56d9"/><text x="366" y="43" text-anchor="middle" class="n">2</text>
+    <text x="402" y="42" class="h">隔离迁移验证</text>
+    <text x="358" y="84" class="t">数据库副本验证</text>
+    <text x="358" y="112" class="t">隔离 Redis / 队列</text>
+    <text x="358" y="140" class="t">历史文件与暂停数据抽样</text>
+
+    <path d="M580 82 L650 82" class="arrow"/>
+
+    <rect x="660" y="0" rx="18" ry="18" width="240" height="165" fill="#effaf5" stroke="#9dd9b7" stroke-width="2"/>
+    <circle cx="696" cy="36" r="22" fill="#12b76a"/><text x="696" y="43" text-anchor="middle" class="n">3</text>
+    <text x="732" y="42" class="h">功能联调</text>
+    <text x="688" y="84" class="t">账号与工作空间</text>
+    <text x="688" y="112" class="t">执行引擎与应用链路</text>
+    <text x="688" y="140" class="t">存储、监控与管理端</text>
+
+    <path d="M910 82 L980 82" class="arrow"/>
+
+    <rect x="990" y="0" rx="18" ry="18" width="240" height="165" fill="#fff7ed" stroke="#f7c78d" stroke-width="2"/>
+    <circle cx="1026" cy="36" r="22" fill="#f79009"/><text x="1026" y="43" text-anchor="middle" class="n">4</text>
+    <text x="1062" y="42" class="h">发布切换</text>
+    <text x="1018" y="84" class="t">停旧调度入口</text>
+    <text x="1018" y="112" class="t">启动新版组件</text>
+    <text x="1018" y="140" class="t">核心链路验收后放量</text>
+
+    <path d="M1240 82 L1310 82" class="arrow"/>
+
+    <rect x="1320" y="0" rx="18" ry="18" width="200" height="165" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+    <circle cx="1356" cy="36" r="22" fill="#475467"/><text x="1356" y="43" text-anchor="middle" class="n">5</text>
+    <text x="1392" y="42" class="h">观察与收敛</text>
+    <text x="1348" y="84" class="t">任务与 Worker 健康</text>
+    <text x="1348" y="112" class="t">登录、执行、文件验证</text>
+    <text x="1348" y="140" class="t">异常时按回滚点恢复</text>
+  </g>
+
+  <rect x="110" y="435" rx="22" ry="22" width="1380" height="205" fill="#ffffff" stroke="#d0d5dd" stroke-width="2"/>
+  <text x="145" y="478" class="h">发布原则</text>
+  <text x="145" y="520" class="t">① 共享数据库、队列和调度器不用于迁移试跑；测试阶段使用隔离资源或数据副本。</text>
+  <text x="145" y="556" class="t">② 数据迁移先做兼容性新增和校正验证，保留旧 revision、历史 ID、文件引用和必要回滚依据。</text>
+  <text x="145" y="592" class="t">③ 切换时确保同一类调度任务只有一个执行方，避免旧 Worker / Beat / Scheduler 与新版同时消费。</text>
+  <text x="145" y="628" class="t">④ 回滚优先恢复旧版本进程和入口；涉及历史数据转换的步骤必须有快照或可逆校正方案。</text>
+</svg>
