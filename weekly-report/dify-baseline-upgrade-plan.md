@@ -50,13 +50,13 @@
 
 #### 1.14.2 与 1.17.1 架构对比
 
-![托管执行迁移前后架构](assets/dify-baseline-upgrade/dify-managed-execution-before-after-v4.svg)
+![Dify 1.14.2 与 1.17.1 架构对比](assets/dify-baseline-upgrade/dify-architecture-1.14.2-vs-1.17.1-v6.svg)
 
 这张图直接对比 **Dify 1.14.2 与 1.17.1 的执行架构**：公司调度能力继续保留，主要变化集中在 Worker 与新版官方执行链路的连接方式。
 
 #### 高工作量分布
 
-![高工作量迁移分布](assets/dify-baseline-upgrade/dify-heavy-migration-hotspots-v4.svg)
+![高工作量迁移分布](assets/dify-baseline-upgrade/dify-heavy-migration-hotspots-v6.svg)
 
 高工作量主要集中在三处：**Worker 与 Runtime 对接、执行状态和结果协议、Console / Human Input / Schedule 等特殊执行链路。**
 
