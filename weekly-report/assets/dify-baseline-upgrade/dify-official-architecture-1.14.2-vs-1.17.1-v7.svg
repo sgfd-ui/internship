@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920">
+<defs>
+<style>
+text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;fill:#172033}
+.title{font-size:31px;font-weight:700}.pt{font-size:22px;font-weight:700}.ps{font-size:15px;fill:#5b6779}
+.lt{font-size:18px;font-weight:700}.n{font-size:14px;font-weight:700}.s{font-size:12px;fill:#667085}.tiny{font-size:11px;fill:#667085}
+.line{stroke:#536176;stroke-width:2;fill:none;marker-end:url(#a)}
+</style>
+<marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#536176"/></marker>
+<filter id="sh"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#24324a" flood-opacity=".09"/></filter>
+</defs>
+<rect width="1600" height="920" fill="#fff"/>
+<text x="24" y="42" class="title">Dify 官方执行架构对比：1.14.2 vs 1.17.1</text>
+
+<rect x="22" y="62" width="755" height="805" rx="18" fill="#f8fbff" stroke="#d9e4f1"/>
+<rect x="823" y="62" width="755" height="805" rx="18" fill="#f8fbff" stroke="#d9e4f1"/>
+<text x="400" y="94" text-anchor="middle" class="pt">Dify 1.14.2 官方架构</text>
+<text x="400" y="119" text-anchor="middle" class="ps">按 AppMode 分发；Workflow / Chatflow Streaming 已走异步执行任务</text>
+<text x="1200" y="94" text-anchor="middle" class="pt">Dify 1.17.1 官方架构</text>
+<text x="1200" y="119" text-anchor="middle" class="ps">延续官方执行主链，并强化 Session、Agent 与 Human Input 恢复能力</text>
+
+<!-- left entry -->
+<g filter="url(#sh)">
+<rect x="50" y="145" width="160" height="52" rx="9" fill="#eaf3ff" stroke="#72a9ef"/>
+<rect x="230" y="145" width="160" height="52" rx="9" fill="#eaf3ff" stroke="#72a9ef"/>
+<rect x="410" y="145" width="160" height="52" rx="9" fill="#eaf3ff" stroke="#72a9ef"/>
+<rect x="590" y="145" width="160" height="52" rx="9" fill="#eaf3ff" stroke="#72a9ef"/>
+</g>
+<text x="130" y="168" text-anchor="middle" class="n">WebApp</text><text x="130" y="185" text-anchor="middle" class="s">前端调用</text>
+<text x="310" y="168" text-anchor="middle" class="n">Service API</text><text x="310" y="185" text-anchor="middle" class="s">外部调用</text>
+<text x="490" y="168" text-anchor="middle" class="n">Console</text><text x="490" y="185" text-anchor="middle" class="s">调试</text>
+<text x="670" y="168" text-anchor="middle" class="n">Trigger / Schedule</text><text x="670" y="185" text-anchor="middle" class="s">官方触发入口</text>
+
+<!-- left service -->
+<rect x="50" y="225" width="700" height="78" rx="12" fill="#fff0f1" stroke="#ef8c96"/>
+<text x="400" y="252" text-anchor="middle" class="lt" fill="#a61b29">AppGenerateService</text>
+<rect x="95" y="266" width="135" height="25" rx="6" fill="#fff" stroke="#efb2b8"/><text x="162" y="283" text-anchor="middle" class="s">COMPLETION</text>
+<rect x="240" y="266" width="135" height="25" rx="6" fill="#fff" stroke="#efb2b8"/><text x="307" y="283" text-anchor="middle" class="s">CHAT</text>
+<rect x="385" y="266" width="135" height="25" rx="6" fill="#fff" stroke="#efb2b8"/><text x="452" y="283" text-anchor="middle" class="s">AGENT_CHAT</text>
+<rect x="530" y="266" width="175" height="25" rx="6" fill="#fff" stroke="#efb2b8"/><text x="617" y="283" text-anchor="middle" class="s">WORKFLOW / CHATFLOW</text>
+
+<!-- left execution split -->
+<rect x="50" y="334" width="330" height="215" rx="12" fill="#f3edff" stroke="#b79ee7"/>
+<text x="215" y="362" text-anchor="middle" class="lt" fill="#5e35b1">Message-based Apps</text>
+<rect x="76" y="389" width="278" height="45" rx="8" fill="#fff" stroke="#ccbdec"/>
+<text x="215" y="407" text-anchor="middle" class="n">Completion / Chat / AGENT_CHAT</text>
+<text x="215" y="424" text-anchor="middle" class="s">直接调用各自 AppGenerator</text>
+<rect x="76" y="451" width="278" height="72" rx="8" fill="#fff" stroke="#ccbdec"/>
+<text x="215" y="472" text-anchor="middle" class="n">Generator → QueueManager</text>
+<text x="215" y="490" text-anchor="middle" class="s">Thread / Stream / Message</text>
+<text x="215" y="508" text-anchor="middle" class="s">Conversation / Message 落库</text>
+
+<rect x="400" y="334" width="350" height="215" rx="12" fill="#eaf4ff" stroke="#7faef0"/>
+<text x="575" y="362" text-anchor="middle" class="lt" fill="#1d5ea8">Workflow-based Apps</text>
+<rect x="425" y="389" width="300" height="45" rx="8" fill="#fff" stroke="#b4d2f8"/>
+<text x="575" y="407" text-anchor="middle" class="n">Workflow / Advanced Chat</text>
+<text x="575" y="424" text-anchor="middle" class="s">Streaming</text>
+<rect x="425" y="451" width="300" height="72" rx="8" fill="#fff" stroke="#b4d2f8"/>
+<text x="575" y="472" text-anchor="middle" class="n">AppExecutionParams</text>
+<text x="575" y="490" text-anchor="middle" class="s">workflow_based_app_execution_task</text>
+<text x="575" y="508" text-anchor="middle" class="s">_AppRunner → Generator</text>
+
+<!-- left runtime state -->
+<rect x="50" y="580" width="700" height="124" rx="12" fill="#eaf8ef" stroke="#81c795"/>
+<text x="400" y="608" text-anchor="middle" class="lt" fill="#237a44">官方 Runtime / 状态</text>
+<rect x="75" y="630" width="145" height="46" rx="8" fill="#fff" stroke="#a9dab7"/><text x="147" y="657" text-anchor="middle" class="n">WorkflowRun</text>
+<rect x="236" y="630" width="145" height="46" rx="8" fill="#fff" stroke="#a9dab7"/><text x="308" y="657" text-anchor="middle" class="n">Message</text>
+<rect x="397" y="630" width="145" height="46" rx="8" fill="#fff" stroke="#a9dab7"/><text x="469" y="649" text-anchor="middle" class="n">PauseState</text><text x="469" y="666" text-anchor="middle" class="s">Persistence Layer</text>
+<rect x="558" y="630" width="165" height="46" rx="8" fill="#fff" stroke="#a9dab7"/><text x="640" y="649" text-anchor="middle" class="n">SSE / Redis Events</text><text x="640" y="666" text-anchor="middle" class="s">Streaming</text>
+
+<rect x="50" y="735" width="700" height="95" rx="12" fill="#eef5fd" stroke="#8ab2de"/>
+<text x="400" y="763" text-anchor="middle" class="lt">PostgreSQL / Redis / Storage</text>
+<rect x="92" y="781" width="170" height="31" rx="7" fill="#fff" stroke="#b6cce5"/><text x="177" y="801" text-anchor="middle" class="s">Workflow / Message 数据</text>
+<rect x="291" y="781" width="170" height="31" rx="7" fill="#fff" stroke="#b6cce5"/><text x="376" y="801" text-anchor="middle" class="s">Pause / Event 状态</text>
+<rect x="490" y="781" width="170" height="31" rx="7" fill="#fff" stroke="#b6cce5"/><text x="575" y="801" text-anchor="middle" class="s">文件 / 配置 / Trace</text>
+
+<!-- left arrows -->
+<path d="M130 197V215H400V225" class="line"/><path d="M310 197V215H400V225" class="line"/><path d="M490 197V215H400V225" class="line"/><path d="M670 197V215H400V225" class="line"/>
+<path d="M300 303V322H215V334" class="line"/><path d="M600 303V322H575V334" class="line"/>
+<path d="M215 549V568H325V580" class="line"/><path d="M575 549V568H475V580" class="line"/><path d="M400 704V735" class="line"/>
+
+<!-- RIGHT entry -->
+<g filter="url(#sh)">
+<rect x="850" y="145" width="160" height="52" rx="9" fill="#eaf3ff" stroke="#72a9ef"/>
+<rect x="1030" y="145" width="160" height="52" rx="9" fill="#eaf3ff" stroke="#72a9ef"/>
+<rect x="1210" y="145" width="160" height="52" rx="9" fill="#eaf3ff" stroke="#72a9ef"/>
+<rect x="1390" y="145" width="160" height="52" rx="9" fill="#eaf3ff" stroke="#72a9ef"/>
+</g>
+<text x="930" y="168" text-anchor="middle" class="n">WebApp</text><text x="930" y="185" text-anchor="middle" class="s">前端调用</text>
+<text x="1110" y="168" text-anchor="middle" class="n">Service API</text><text x="1110" y="185" text-anchor="middle" class="s">外部调用</text>
+<text x="1290" y="168" text-anchor="middle" class="n">Console</text><text x="1290" y="185" text-anchor="middle" class="s">调试</text>
+<text x="1470" y="168" text-anchor="middle" class="n">Trigger / Schedule</text><text x="1470" y="185" text-anchor="middle" class="s">官方触发入口</text>
+
+<!-- RIGHT service -->
+<rect x="850" y="225" width="700" height="78" rx="12" fill="#fff0f1" stroke="#ef8c96"/>
+<text x="1200" y="252" text-anchor="middle" class="lt" fill="#a61b29">AppGenerateService + Session</text>
+<rect x="882" y="266" width="118" height="25" rx="6" fill="#fff" stroke="#efb2b8"/><text x="941" y="283" text-anchor="middle" class="s">COMPLETION</text>
+<rect x="1010" y="266" width="103" height="25" rx="6" fill="#fff" stroke="#efb2b8"/><text x="1061" y="283" text-anchor="middle" class="s">CHAT</text>
+<rect x="1123" y="266" width="118" height="25" rx="6" fill="#fff" stroke="#efb2b8"/><text x="1182" y="283" text-anchor="middle" class="s">AGENT_CHAT</text>
+<rect x="1251" y="266" width="103" height="25" rx="6" fill="#fff" stroke="#efb2b8"/><text x="1302" y="283" text-anchor="middle" class="s">AGENT</text>
+<rect x="1364" y="266" width="153" height="25" rx="6" fill="#fff" stroke="#efb2b8"/><text x="1440" y="283" text-anchor="middle" class="s">WORKFLOW / CHATFLOW</text>
+
+<!-- RIGHT execution -->
+<rect x="850" y="334" width="320" height="215" rx="12" fill="#f3edff" stroke="#b79ee7"/>
+<text x="1010" y="362" text-anchor="middle" class="lt" fill="#5e35b1">Message / Agent Apps</text>
+<rect x="874" y="389" width="272" height="45" rx="8" fill="#fff" stroke="#ccbdec"/>
+<text x="1010" y="407" text-anchor="middle" class="n">Completion / Chat / AGENT_CHAT</text>
+<text x="1010" y="424" text-anchor="middle" class="s">+ Agent App</text>
+<rect x="874" y="451" width="272" height="72" rx="8" fill="#fff" stroke="#ccbdec"/>
+<text x="1010" y="472" text-anchor="middle" class="n">各 AppGenerator</text>
+<text x="1010" y="490" text-anchor="middle" class="s">显式 Session</text>
+<text x="1010" y="508" text-anchor="middle" class="s">Message / Conversation / Trace</text>
+
+<rect x="1190" y="334" width="360" height="215" rx="12" fill="#eaf4ff" stroke="#7faef0"/>
+<text x="1370" y="362" text-anchor="middle" class="lt" fill="#1d5ea8">Workflow / Chatflow</text>
+<rect x="1215" y="389" width="310" height="45" rx="8" fill="#fff" stroke="#b4d2f8"/>
+<text x="1370" y="407" text-anchor="middle" class="n">Streaming: Official Async Task</text>
+<text x="1370" y="424" text-anchor="middle" class="s">Blocking: Direct Generator</text>
+<rect x="1215" y="451" width="310" height="72" rx="8" fill="#fff" stroke="#b4d2f8"/>
+<text x="1370" y="472" text-anchor="middle" class="n">AppExecutionParams</text>
+<text x="1370" y="490" text-anchor="middle" class="s">workflow_based_app_execution_task</text>
+<text x="1370" y="508" text-anchor="middle" class="s">_AppRunner → Generator</text>
+
+<!-- RIGHT state -->
+<rect x="850" y="580" width="700" height="124" rx="12" fill="#eaf8ef" stroke="#81c795"/>
+<text x="1200" y="608" text-anchor="middle" class="lt" fill="#237a44">官方 Runtime / 状态</text>
+<rect x="870" y="630" width="120" height="46" rx="8" fill="#fff" stroke="#a9dab7"/><text x="930" y="657" text-anchor="middle" class="n">WorkflowRun</text>
+<rect x="1002" y="630" width="120" height="46" rx="8" fill="#fff" stroke="#a9dab7"/><text x="1062" y="657" text-anchor="middle" class="n">Message</text>
+<rect x="1134" y="630" width="135" height="46" rx="8" fill="#fff" stroke="#a9dab7"/><text x="1201" y="649" text-anchor="middle" class="n">WorkflowPause</text><text x="1201" y="666" text-anchor="middle" class="s">Human Input</text>
+<rect x="1281" y="630" width="135" height="46" rx="8" fill="#fff" stroke="#a9dab7"/><text x="1348" y="649" text-anchor="middle" class="n">Resume Task</text><text x="1348" y="666" text-anchor="middle" class="s">ResumptionContext</text>
+<rect x="1428" y="630" width="102" height="46" rx="8" fill="#fff" stroke="#a9dab7"/><text x="1479" y="649" text-anchor="middle" class="n">SSE</text><text x="1479" y="666" text-anchor="middle" class="s">Events</text>
+
+<rect x="850" y="735" width="700" height="95" rx="12" fill="#eef5fd" stroke="#8ab2de"/>
+<text x="1200" y="763" text-anchor="middle" class="lt">PostgreSQL / Redis / Storage / Trace</text>
+<rect x="890" y="781" width="180" height="31" rx="7" fill="#fff" stroke="#b6cce5"/><text x="980" y="801" text-anchor="middle" class="s">Workflow / Message 数据</text>
+<rect x="1100" y="781" width="180" height="31" rx="7" fill="#fff" stroke="#b6cce5"/><text x="1190" y="801" text-anchor="middle" class="s">Pause / Resume 状态</text>
+<rect x="1310" y="781" width="180" height="31" rx="7" fill="#fff" stroke="#b6cce5"/><text x="1400" y="801" text-anchor="middle" class="s">File / Agent / Unified Trace</text>
+
+<!-- right arrows -->
+<path d="M930 197V215H1200V225" class="line"/><path d="M1110 197V215H1200V225" class="line"/><path d="M1290 197V215H1200V225" class="line"/><path d="M1470 197V215H1200V225" class="line"/>
+<path d="M1090 303V322H1010V334" class="line"/><path d="M1420 303V322H1370V334" class="line"/>
+<path d="M1010 549V568H1110V580" class="line"/><path d="M1370 549V568H1290V580" class="line"/><path d="M1200 704V735" class="line"/>
+
+<!-- compact diff strip -->
+<rect x="22" y="878" width="1556" height="28" rx="8" fill="#f4f6f9" stroke="#e2e6ec"/>
+<text x="44" y="897" class="s">核心差异：1.17.1 并不是“新增一套公司调度架构”，而是在官方主链上增加显式 Session、新 Agent App、Human Input 的 WorkflowPause / Resume 等能力；Workflow / Chatflow Streaming 仍使用官方异步执行任务。</text>
+</svg>
