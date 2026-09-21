@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+<defs>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;fill:#11213f}
+    .title{font-size:31px;font-weight:800}.sub{font-size:15px;fill:#5d6b82}
+    .panelTitle{font-size:23px;font-weight:800}.panelSub{font-size:14px;fill:#60708a}
+    .layerNo{font-size:13px;font-weight:800;fill:white}.layerName{font-size:18px;font-weight:800}
+    .node{font-size:13px;font-weight:700}.hint{font-size:11px;fill:#62718a}
+    .arrow{stroke:#314b73;stroke-width:2.2;fill:none;marker-end:url(#arr)}
+  </style>
+  <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L9 5 0 10Z" fill="#314b73"/></marker>
+  <filter id="shadow" x="-20%" y="-20%" width="150%" height="160%"><feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#24324a" flood-opacity=".12"/></filter>
+  <linearGradient id="bluePanel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#eef7ff"/><stop offset="1" stop-color="#dfeeff"/></linearGradient>
+  <linearGradient id="redPanel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3f4"/><stop offset="1" stop-color="#ffe4e7"/></linearGradient>
+  <linearGradient id="violetPanel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f6f2ff"/><stop offset="1" stop-color="#eadfff"/></linearGradient>
+  <linearGradient id="greenPanel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f0fbf3"/><stop offset="1" stop-color="#dcf4e3"/></linearGradient>
+  <linearGradient id="goldPanel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fffaf0"/><stop offset="1" stop-color="#fff0c7"/></linearGradient>
+  <linearGradient id="grayPanel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f6f9fd"/><stop offset="1" stop-color="#eaf1f8"/></linearGradient>
+</defs>
+
+<rect width="1600" height="980" fill="#fff"/>
+<text x="24" y="40" class="title">当前架构 vs Dify 1.17.1 官方架构</text>
+<text x="24" y="66" class="sub">沿用当前方案图风格：分层主链 + 组件图标；右侧仅展示 Dify 官方能力，不包含公司调度与准入</text>
+
+<!-- outer panels -->
+<rect x="22" y="86" width="754" height="845" rx="18" fill="#fbfdff" stroke="#d9e6f4"/>
+<rect x="824" y="86" width="754" height="845" rx="18" fill="#fbfdff" stroke="#d9e6f4"/>
+<text x="399" y="122" text-anchor="middle" class="panelTitle">当前架构（公司现状）</text>
+<text x="399" y="146" text-anchor="middle" class="panelSub">公司准入、调度、双队列 Worker 与执行接管均已在线</text>
+<text x="1201" y="122" text-anchor="middle" class="panelTitle">Dify 1.17.1 官方架构</text>
+<text x="1201" y="146" text-anchor="middle" class="panelSub">只看 1.17.1 官方执行链路</text>
+
+<!-- reusable component icon style is drawn inline -->
+
+<!-- LEFT 01 -->
+<g filter="url(#shadow)">
+  <rect x="46" y="170" width="706" height="96" rx="13" fill="url(#bluePanel)" stroke="#7db2f2"/>
+  <rect x="46" y="170" width="706" height="9" rx="9" fill="#6aa7ef"/>
+</g>
+<circle cx="78" cy="207" r="18" fill="#2f80ed"/><text x="78" y="212" text-anchor="middle" class="layerNo">01</text>
+<text x="110" y="201" class="layerName">入口层</text><text x="110" y="222" class="hint">多种方式接入</text>
+
+<!-- cards -->
+<g transform="translate(220 190)">
+  <rect width="116" height="56" rx="9" fill="#fff" stroke="#a9cdf7"/>
+  <rect x="16" y="13" width="24" height="18" rx="2" fill="none" stroke="#2f80ed" stroke-width="2"/><path d="M20 17h16M28 31v7M22 38h12" fill="none" stroke="#2f80ed" stroke-width="2"/>
+  <text x="78" y="24" text-anchor="middle" class="node">WebApp</text><text x="78" y="42" text-anchor="middle" class="hint">前端</text>
+</g>
+<g transform="translate(350 190)">
+  <rect width="116" height="56" rx="9" fill="#fff" stroke="#a9cdf7"/>
+  <path d="M22 13l-8 8 8 8M34 13l8 8-8 8M30 10l-6 23" fill="none" stroke="#2f80ed" stroke-width="2.2" stroke-linecap="round"/>
+  <text x="78" y="24" text-anchor="middle" class="node">Service API</text><text x="78" y="42" text-anchor="middle" class="hint">外部调用</text>
+</g>
+<g transform="translate(480 190)">
+  <rect width="116" height="56" rx="9" fill="#fff" stroke="#a9cdf7"/>
+  <rect x="16" y="14" width="25" height="18" rx="2" fill="none" stroke="#2f80ed" stroke-width="2"/><path d="M21 19l5 4-5 4M29 28h7" fill="none" stroke="#2f80ed" stroke-width="2"/>
+  <text x="78" y="24" text-anchor="middle" class="node">Console</text><text x="78" y="42" text-anchor="middle" class="hint">调试</text>
+</g>
+<g transform="translate(610 190)">
+  <rect width="116" height="56" rx="9" fill="#fff" stroke="#a9cdf7"/>
+  <rect x="16" y="14" width="25" height="22" rx="3" fill="none" stroke="#2f80ed" stroke-width="2"/><path d="M21 10v8M36 10v8M19 22h19" stroke="#2f80ed" stroke-width="2"/>
+  <text x="78" y="24" text-anchor="middle" class="node">Schedule</text><text x="78" y="42" text-anchor="middle" class="hint">定时触发</text>
+</g>
+
+<!-- LEFT 02 -->
+<g filter="url(#shadow)"><rect x="46" y="292" width="706" height="105" rx="13" fill="url(#redPanel)" stroke="#ef909b"/><rect x="46" y="292" width="706" height="9" rx="9" fill="#ec7e8c"/></g>
+<circle cx="78" cy="330" r="18" fill="#8b4de8"/><text x="78" y="335" text-anchor="middle" class="layerNo">02</text>
+<text x="110" y="324" class="layerName">公司准入层</text><text x="110" y="345" class="hint">安全控制与质量保障</text>
+<!-- icon cards -->
+<g transform="translate(220 312)"><rect width="96" height="64" rx="9" fill="#fff" stroke="#efb4bb"/><path d="M32 13l10 4v9c0 7-5 12-10 15-5-3-10-8-10-15v-9z" fill="#8b4de8" opacity=".9"/><text x="64" y="25" text-anchor="middle" class="node">Policy</text><text x="64" y="43" text-anchor="middle" class="hint">应用策略</text></g>
+<g transform="translate(326 312)"><rect width="96" height="64" rx="9" fill="#fff" stroke="#efb4bb"/><circle cx="30" cy="21" r="6" fill="#8b4de8"/><path d="M20 39c1-8 19-8 20 0" fill="#8b4de8"/><text x="64" y="25" text-anchor="middle" class="node">Admission</text><text x="64" y="43" text-anchor="middle" class="hint">准入控制</text></g>
+<g transform="translate(432 312)"><rect width="96" height="64" rx="9" fill="#fff" stroke="#efb4bb"/><path d="M22 16h16M22 24h16M22 32h16" stroke="#8b4de8" stroke-width="2"/><circle cx="18" cy="16" r="2.5" fill="#8b4de8"/><circle cx="18" cy="24" r="2.5" fill="#8b4de8"/><circle cx="18" cy="32" r="2.5" fill="#8b4de8"/><text x="64" y="25" text-anchor="middle" class="node">Priority</text><text x="64" y="43" text-anchor="middle" class="hint">优先级</text></g>
+<g transform="translate(538 312)"><rect width="96" height="64" rx="9" fill="#fff" stroke="#efb4bb"/><path d="M18 31a12 12 0 1124 0" fill="none" stroke="#8b4de8" stroke-width="2"/><path d="M30 31l7-8" stroke="#8b4de8" stroke-width="2"/><text x="64" y="25" text-anchor="middle" class="node">Queue Limit</text><text x="64" y="43" text-anchor="middle" class="hint">队列限制</text></g>
+<g transform="translate(644 312)"><rect width="82" height="64" rx="9" fill="#fff" stroke="#efb4bb"/><rect x="14" y="13" width="20" height="27" rx="2" fill="none" stroke="#8b4de8" stroke-width="2"/><path d="M18 19h12M18 24h12M18 29h9" stroke="#8b4de8" stroke-width="1.7"/><text x="58" y="25" text-anchor="middle" class="node">Snapshot</text><text x="58" y="43" text-anchor="middle" class="hint">输入快照</text></g>
+
+<!-- LEFT 03 -->
+<g filter="url(#shadow)"><rect x="46" y="423" width="706" height="104" rx="13" fill="url(#violetPanel)" stroke="#b59ce6"/><rect x="46" y="423" width="706" height="9" rx="9" fill="#9c7ae0"/></g>
+<circle cx="78" cy="461" r="18" fill="#2f80ed"/><text x="78" y="466" text-anchor="middle" class="layerNo">03</text>
+<text x="110" y="455" class="layerName">公司调度中心</text><text x="110" y="476" class="hint">任务调度与资源管理</text>
+<g transform="translate(220 444)"><rect width="96" height="62" rx="9" fill="#fff" stroke="#cbb9ef"/><path d="M17 17h23M17 25h23M17 33h23" stroke="#2f80ed" stroke-width="2"/><text x="64" y="24" text-anchor="middle" class="node">Job</text><text x="64" y="42" text-anchor="middle" class="hint">任务管理</text></g>
+<g transform="translate(326 444)"><rect width="96" height="62" rx="9" fill="#fff" stroke="#cbb9ef"/><circle cx="29" cy="24" r="11" fill="none" stroke="#2f80ed" stroke-width="2"/><path d="M29 16v8l6 4" stroke="#2f80ed" stroke-width="2"/><text x="66" y="24" text-anchor="middle" class="node">Scheduler</text><text x="66" y="42" text-anchor="middle" class="hint">扫描/派发</text></g>
+<g transform="translate(432 444)"><rect width="96" height="62" rx="9" fill="#fff" stroke="#cbb9ef"/><rect x="19" y="17" width="22" height="24" rx="3" fill="none" stroke="#2f80ed" stroke-width="2"/><path d="M24 17v-4h12v4" stroke="#2f80ed" stroke-width="2"/><text x="66" y="24" text-anchor="middle" class="node">Lease</text><text x="66" y="42" text-anchor="middle" class="hint">任务认领</text></g>
+<g transform="translate(538 444)"><rect width="96" height="62" rx="9" fill="#fff" stroke="#cbb9ef"/><path d="M18 18h24v20H18zM18 25l12 7 12-7" fill="none" stroke="#2f80ed" stroke-width="2"/><text x="66" y="24" text-anchor="middle" class="node">Outbox</text><text x="66" y="42" text-anchor="middle" class="hint">事件通知</text></g>
+<g transform="translate(644 444)"><rect width="82" height="62" rx="9" fill="#fff" stroke="#cbb9ef"/><rect x="16" y="28" width="5" height="11" fill="#2f80ed"/><rect x="24" y="22" width="5" height="17" fill="#2f80ed"/><rect x="32" y="15" width="5" height="24" fill="#2f80ed"/><text x="58" y="24" text-anchor="middle" class="node">Capacity</text><text x="58" y="42" text-anchor="middle" class="hint">容量/健康</text></g>
+
+<!-- LEFT 04 -->
+<g filter="url(#shadow)"><rect x="46" y="553" width="706" height="106" rx="13" fill="url(#greenPanel)" stroke="#84c997"/><rect x="46" y="553" width="706" height="9" rx="9" fill="#5eb77a"/></g>
+<circle cx="78" cy="591" r="18" fill="#28965a"/><text x="78" y="596" text-anchor="middle" class="layerNo">04</text>
+<text x="110" y="585" class="layerName">执行队列与 Worker</text><text x="110" y="606" class="hint">双队列隔离，资源分级</text>
+<g transform="translate(240 575)"><rect width="210" height="60" rx="10" fill="#fff" stroke="#a7dbb5"/><ellipse cx="30" cy="19" rx="13" ry="5" fill="#28965a"/><rect x="17" y="19" width="26" height="19" fill="#28965a"/><ellipse cx="30" cy="38" rx="13" ry="5" fill="#1f7f49"/><text x="126" y="26" text-anchor="middle" class="node">Standard Queue / Worker</text><text x="126" y="44" text-anchor="middle" class="hint">普通任务</text></g>
+<g transform="translate(476 575)"><rect width="210" height="60" rx="10" fill="#fff9e9" stroke="#edc769"/><path d="M29 12l5 10 11 2-8 8 2 11-10-5-10 5 2-11-8-8 11-2z" fill="#e3a228"/><text x="126" y="26" text-anchor="middle" class="node">Critical Queue / Worker</text><text x="126" y="44" text-anchor="middle" class="hint">重要任务</text></g>
+
+<!-- LEFT 05 -->
+<g filter="url(#shadow)"><rect x="46" y="685" width="706" height="114" rx="13" fill="url(#violetPanel)" stroke="#b59ce6"/><rect x="46" y="685" width="706" height="9" rx="9" fill="#9c7ae0"/></g>
+<circle cx="78" cy="723" r="18" fill="#8b4de8"/><text x="78" y="728" text-anchor="middle" class="layerNo">05</text>
+<text x="110" y="717" class="layerName">执行接管层</text><text x="110" y="738" class="hint">公司扩展能力已接入</text>
+<g transform="translate(205 706)">
+  <g><rect x="0" y="0" width="84" height="68" rx="9" fill="#fff" stroke="#cbb9ef"/><path d="M26 16v8M18 24h16M18 24v8M34 24v8" stroke="#8b4de8" stroke-width="2"/><text x="42" y="49" text-anchor="middle" class="hint">Workflow</text><text x="42" y="63" text-anchor="middle" class="hint">Chatflow</text></g>
+  <g transform="translate(92)"><rect width="84" height="68" rx="9" fill="#fff" stroke="#cbb9ef"/><circle cx="25" cy="22" r="8" fill="#8b4de8"/><path d="M18 34h14" stroke="#8b4de8" stroke-width="2"/><text x="42" y="49" text-anchor="middle" class="hint">Chat /</text><text x="42" y="63" text-anchor="middle" class="hint">Completion</text></g>
+  <g transform="translate(184)"><rect width="84" height="68" rx="9" fill="#fff" stroke="#cbb9ef"/><circle cx="25" cy="22" r="7" fill="none" stroke="#8b4de8" stroke-width="2"/><path d="M25 11v-4M16 14l-3-3M34 14l3-3M16 30l-3 3M34 30l3 3" stroke="#8b4de8" stroke-width="2"/><text x="42" y="49" text-anchor="middle" class="hint">AGENT_CHAT</text><text x="42" y="63" text-anchor="middle" class="hint">Agent</text></g>
+  <g transform="translate(276)"><rect width="84" height="68" rx="9" fill="#fff" stroke="#cbb9ef"/><rect x="16" y="15" width="20" height="17" rx="2" fill="none" stroke="#8b4de8" stroke-width="2"/><text x="42" y="49" text-anchor="middle" class="hint">Console</text><text x="42" y="63" text-anchor="middle" class="hint">Debug</text></g>
+  <g transform="translate(368)"><rect width="84" height="68" rx="9" fill="#fff" stroke="#cbb9ef"/><circle cx="25" cy="20" r="6" fill="#8b4de8"/><path d="M16 34c1-8 17-8 18 0" fill="#8b4de8"/><text x="42" y="49" text-anchor="middle" class="hint">Human</text><text x="42" y="63" text-anchor="middle" class="hint">Input</text></g>
+  <g transform="translate(460)"><rect width="84" height="68" rx="9" fill="#fff" stroke="#cbb9ef"/><circle cx="25" cy="22" r="8" fill="none" stroke="#8b4de8" stroke-width="2"/><path d="M25 16v7l5 3" stroke="#8b4de8" stroke-width="2"/><text x="42" y="49" text-anchor="middle" class="hint">Schedule</text><text x="42" y="63" text-anchor="middle" class="hint">Debug</text></g>
+</g>
+
+<!-- LEFT 06 -->
+<g filter="url(#shadow)"><rect x="46" y="825" width="706" height="79" rx="13" fill="url(#grayPanel)" stroke="#9bb9df"/><rect x="46" y="825" width="706" height="9" rx="9" fill="#7ea7d7"/></g>
+<circle cx="78" cy="863" r="18" fill="#2f80ed"/><text x="78" y="868" text-anchor="middle" class="layerNo">06</text>
+<text x="110" y="857" class="layerName">数据与基础设施</text><text x="110" y="878" class="hint">数据存储与基础服务</text>
+<g transform="translate(290 843)"><ellipse cx="20" cy="8" rx="14" ry="5" fill="#2f80ed"/><rect x="6" y="8" width="28" height="22" fill="#2f80ed"/><ellipse cx="20" cy="30" rx="14" ry="5" fill="#1f66bd"/><text x="61" y="16" class="node">PostgreSQL</text></g>
+<g transform="translate(410 843)"><path d="M8 8l17-5 17 5-17 6zM8 16l17 6 17-6M8 24l17 6 17-6" fill="#d93c37"/><text x="61" y="16" class="node">Redis</text></g>
+<g transform="translate(510 843)"><path d="M10 7h30l-3 26H13z" fill="#24905b"/><text x="58" y="16" class="node">S3 / KMS</text></g>
+<g transform="translate(610 843)"><rect x="10" y="5" width="23" height="29" rx="2" fill="#2f80ed"/><path d="M15 12h13M15 18h13M15 24h9" stroke="#fff" stroke-width="1.5"/><text x="58" y="16" class="node">历史数据</text></g>
+
+<!-- RIGHT: official -->
+<g filter="url(#shadow)"><rect x="848" y="170" width="706" height="96" rx="13" fill="url(#bluePanel)" stroke="#7db2f2"/><rect x="848" y="170" width="706" height="9" rx="9" fill="#6aa7ef"/></g>
+<circle cx="880" cy="207" r="18" fill="#2f80ed"/><text x="880" y="212" text-anchor="middle" class="layerNo">01</text>
+<text x="912" y="201" class="layerName">入口层</text><text x="912" y="222" class="hint">官方标准入口</text>
+<g transform="translate(1022 190)"><rect width="116" height="56" rx="9" fill="#fff" stroke="#a9cdf7"/><rect x="16" y="13" width="24" height="18" rx="2" fill="none" stroke="#2f80ed" stroke-width="2"/><text x="78" y="24" text-anchor="middle" class="node">WebApp</text></g>
+<g transform="translate(1152 190)"><rect width="116" height="56" rx="9" fill="#fff" stroke="#a9cdf7"/><path d="M22 13l-8 8 8 8M34 13l8 8-8 8M30 10l-6 23" fill="none" stroke="#2f80ed" stroke-width="2.2"/><text x="78" y="24" text-anchor="middle" class="node">Service API</text></g>
+<g transform="translate(1282 190)"><rect width="116" height="56" rx="9" fill="#fff" stroke="#a9cdf7"/><rect x="16" y="14" width="25" height="18" rx="2" fill="none" stroke="#2f80ed" stroke-width="2"/><text x="78" y="24" text-anchor="middle" class="node">Console</text></g>
+<g transform="translate(1412 190)"><rect width="116" height="56" rx="9" fill="#fff" stroke="#a9cdf7"/><rect x="16" y="14" width="25" height="22" rx="3" fill="none" stroke="#2f80ed" stroke-width="2"/><text x="78" y="24" text-anchor="middle" class="node">Trigger</text></g>
+
+<g filter="url(#shadow)"><rect x="848" y="292" width="706" height="92" rx="13" fill="url(#violetPanel)" stroke="#b59ce6"/><rect x="848" y="292" width="706" height="9" rx="9" fill="#9c7ae0"/></g>
+<circle cx="880" cy="330" r="18" fill="#8b4de8"/><text x="880" y="335" text-anchor="middle" class="layerNo">02</text>
+<text x="912" y="324" class="layerName">官方服务入口</text><text x="912" y="345" class="hint">统一应用服务入口</text>
+<g transform="translate(1050 313)"><rect width="220" height="50" rx="10" fill="#fff" stroke="#cbb9ef"/><path d="M18 14l12-7 12 7v14l-12 7-12-7z" fill="#2f80ed"/><text x="130" y="22" text-anchor="middle" class="node">AppGenerateService</text><text x="130" y="39" text-anchor="middle" class="hint">应用生成服务</text></g>
+<g transform="translate(1290 313)"><rect width="180" height="50" rx="10" fill="#fff" stroke="#cbb9ef"/><circle cx="27" cy="18" r="7" fill="#2f80ed"/><path d="M17 37c2-10 20-10 22 0" fill="#2f80ed"/><text x="112" y="22" text-anchor="middle" class="node">Session</text><text x="112" y="39" text-anchor="middle" class="hint">会话管理</text></g>
+
+<g filter="url(#shadow)"><rect x="848" y="410" width="706" height="102" rx="13" fill="url(#bluePanel)" stroke="#7db2f2"/><rect x="848" y="410" width="706" height="9" rx="9" fill="#6aa7ef"/></g>
+<circle cx="880" cy="448" r="18" fill="#2f80ed"/><text x="880" y="453" text-anchor="middle" class="layerNo">03</text>
+<text x="912" y="442" class="layerName">应用分流层</text><text x="912" y="463" class="hint">按应用类型分发</text>
+<g transform="translate(1040 431)">
+  <g><rect width="78" height="60" rx="9" fill="#fff" stroke="#a9cdf7"/><circle cx="25" cy="20" r="8" fill="#2f80ed"/><text x="39" y="46" text-anchor="middle" class="hint">Completion</text></g>
+  <g transform="translate(88)"><rect width="78" height="60" rx="9" fill="#fff" stroke="#a9cdf7"/><circle cx="25" cy="20" r="8" fill="#2f80ed"/><text x="39" y="46" text-anchor="middle" class="hint">Chat</text></g>
+  <g transform="translate(176)"><rect width="78" height="60" rx="9" fill="#fff" stroke="#a9cdf7"/><circle cx="25" cy="20" r="7" fill="none" stroke="#2f80ed" stroke-width="2"/><text x="39" y="46" text-anchor="middle" class="hint">AGENT_CHAT</text></g>
+  <g transform="translate(264)"><rect width="78" height="60" rx="9" fill="#fff" stroke="#a9cdf7"/><path d="M18 18h14M25 11v14" stroke="#2f80ed" stroke-width="2"/><text x="39" y="46" text-anchor="middle" class="hint">Agent</text></g>
+  <g transform="translate(352)"><rect width="78" height="60" rx="9" fill="#fff" stroke="#a9cdf7"/><path d="M18 16h14M18 24h14M18 32h14" stroke="#2f80ed" stroke-width="2"/><text x="39" y="46" text-anchor="middle" class="hint">Workflow</text></g>
+  <g transform="translate(440)"><rect width="78" height="60" rx="9" fill="#fff" stroke="#a9cdf7"/><path d="M16 20h9M30 14h10M30 26h10M25 20l5-6M25 20l5 6" stroke="#2f80ed" stroke-width="2"/><text x="39" y="46" text-anchor="middle" class="hint">Chatflow</text></g>
+</g>
+
+<!-- right split execution -->
+<g filter="url(#shadow)"><rect x="848" y="538" width="338" height="168" rx="13" fill="url(#greenPanel)" stroke="#84c997"/><rect x="848" y="538" width="338" height="9" rx="9" fill="#5eb77a"/></g>
+<circle cx="880" cy="576" r="18" fill="#28965a"/><text x="880" y="581" text-anchor="middle" class="layerNo">04</text>
+<text x="912" y="570" class="layerName">Message / Agent 类</text><text x="912" y="591" class="hint">对话与 Agent 执行链</text>
+<g transform="translate(884 612)">
+  <g><rect width="82" height="72" rx="9" fill="#fff" stroke="#a7dbb5"/><path d="M17 17h18v18H17z" fill="none" stroke="#28965a" stroke-width="2"/><text x="41" y="51" text-anchor="middle" class="hint">Completion</text><text x="41" y="65" text-anchor="middle" class="hint">Generator</text></g>
+  <g transform="translate(90)"><rect width="82" height="72" rx="9" fill="#fff" stroke="#a7dbb5"/><circle cx="26" cy="23" r="8" fill="#28965a"/><text x="41" y="51" text-anchor="middle" class="hint">Chat</text><text x="41" y="65" text-anchor="middle" class="hint">Generator</text></g>
+  <g transform="translate(180)"><rect width="82" height="72" rx="9" fill="#fff" stroke="#a7dbb5"/><circle cx="25" cy="23" r="7" fill="none" stroke="#28965a" stroke-width="2"/><text x="41" y="51" text-anchor="middle" class="hint">Agent /</text><text x="41" y="65" text-anchor="middle" class="hint">AgentChat</text></g>
+</g>
+
+<g filter="url(#shadow)"><rect x="1210" y="538" width="344" height="168" rx="13" fill="url(#goldPanel)" stroke="#e6bf65"/><rect x="1210" y="538" width="344" height="9" rx="9" fill="#e3a228"/></g>
+<circle cx="1242" cy="576" r="18" fill="#d78317"/><text x="1242" y="581" text-anchor="middle" class="layerNo">04</text>
+<text x="1274" y="570" class="layerName">Workflow / Chatflow 类</text><text x="1274" y="591" class="hint">工作流与对话流执行链</text>
+<g transform="translate(1236 612)">
+  <g><rect width="72" height="72" rx="9" fill="#fff" stroke="#f0d79b"/><path d="M17 16l9-5 9 5v10l-9 5-9-5z" fill="#d78317"/><text x="36" y="51" text-anchor="middle" class="hint">AppExec</text><text x="36" y="65" text-anchor="middle" class="hint">Params</text></g>
+  <g transform="translate(80)"><rect width="96" height="72" rx="9" fill="#fff" stroke="#f0d79b"/><rect x="18" y="15" width="21" height="27" rx="2" fill="#d78317"/><text x="48" y="51" text-anchor="middle" class="hint">workflow_based</text><text x="48" y="65" text-anchor="middle" class="hint">execution_task</text></g>
+  <g transform="translate(184)"><rect width="72" height="72" rx="9" fill="#fff" stroke="#f0d79b"/><circle cx="26" cy="23" r="9" fill="#d78317"/><path d="M23 18l8 5-8 5z" fill="#fff"/><text x="36" y="51" text-anchor="middle" class="hint">_AppRunner</text><text x="36" y="65" text-anchor="middle" class="hint">Runtime</text></g>
+</g>
+
+<g filter="url(#shadow)"><rect x="848" y="732" width="706" height="102" rx="13" fill="url(#violetPanel)" stroke="#b59ce6"/><rect x="848" y="732" width="706" height="9" rx="9" fill="#9c7ae0"/></g>
+<circle cx="880" cy="770" r="18" fill="#8b4de8"/><text x="880" y="775" text-anchor="middle" class="layerNo">05</text>
+<text x="912" y="764" class="layerName">官方运行状态层</text><text x="912" y="785" class="hint">执行状态管理</text>
+<g transform="translate(1050 752)">
+  <g><rect width="88" height="60" rx="9" fill="#fff" stroke="#cbb9ef"/><circle cx="25" cy="20" r="8" fill="#8b4de8"/><text x="44" y="46" text-anchor="middle" class="hint">WorkflowRun</text></g>
+  <g transform="translate(96)"><rect width="88" height="60" rx="9" fill="#fff" stroke="#cbb9ef"/><circle cx="25" cy="20" r="8" fill="#8b4de8"/><text x="44" y="46" text-anchor="middle" class="hint">Message</text></g>
+  <g transform="translate(192)"><rect width="88" height="60" rx="9" fill="#fff" stroke="#cbb9ef"/><rect x="18" y="13" width="18" height="25" fill="none" stroke="#8b4de8" stroke-width="2"/><text x="44" y="46" text-anchor="middle" class="hint">WorkflowPause</text></g>
+  <g transform="translate(288)"><rect width="88" height="60" rx="9" fill="#fff" stroke="#cbb9ef"/><path d="M22 18a10 10 0 111 17M23 35l-5-1 2-5" fill="none" stroke="#8b4de8" stroke-width="2"/><text x="44" y="46" text-anchor="middle" class="hint">Resumption</text></g>
+  <g transform="translate(384)"><rect width="88" height="60" rx="9" fill="#fff" stroke="#cbb9ef"/><path d="M18 20h5v16h-5zM27 20h5v16h-5z" fill="#8b4de8"/><text x="44" y="46" text-anchor="middle" class="hint">SSE / Events</text></g>
+</g>
+
+<g filter="url(#shadow)"><rect x="848" y="860" width="706" height="44" rx="13" fill="url(#grayPanel)" stroke="#9bb9df"/></g>
+<text x="1201" y="888" text-anchor="middle" class="layerName">PostgreSQL　/　Redis　/　Storage　/　Trace</text>
+
+<!-- arrows -->
+<path d="M399 266V292" class="arrow"/><path d="M399 397V423" class="arrow"/><path d="M399 527V553" class="arrow"/><path d="M399 659V685" class="arrow"/><path d="M399 799V825" class="arrow"/>
+<path d="M1201 266V292" class="arrow"/><path d="M1201 384V410" class="arrow"/><path d="M1201 512V538" class="arrow"/><path d="M1017 706V732" class="arrow"/><path d="M1382 706V732" class="arrow"/><path d="M1201 834V860" class="arrow"/>
+
+<rect x="22" y="944" width="1556" height="18" rx="8" fill="#f4f6f9" stroke="#e1e6ed"/>
+<text x="38" y="957" class="hint">差异重点：左侧多出公司准入、公司调度、双队列 Worker 与执行接管层；右侧仅保留 Dify 1.17.1 官方执行能力。</text>
+</svg>
