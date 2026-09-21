@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<defs>
+<style>
+text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;fill:#172033}
+.t{font-size:32px;font-weight:700}.s{font-size:16px;fill:#667085}.h{font-size:22px;font-weight:700}.n{font-size:15px;font-weight:700}.m{font-size:13px;fill:#667085}
+.line{stroke:#667085;stroke-width:2.5;fill:none;marker-end:url(#a)}
+</style>
+<filter id="sh"><feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#24324a" flood-opacity=".15"/></filter>
+<marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L9 5 0 10Z" fill="#667085"/></marker>
+<linearGradient id="b" x1="0" x2="1"><stop stop-color="#ddecff"/><stop offset="1" stop-color="#b8d5ff"/></linearGradient>
+<linearGradient id="p" x1="0" x2="1"><stop stop-color="#eee6ff"/><stop offset="1" stop-color="#d5c5ff"/></linearGradient>
+<linearGradient id="g" x1="0" x2="1"><stop stop-color="#dcf7e9"/><stop offset="1" stop-color="#b9e8cf"/></linearGradient>
+<linearGradient id="y" x1="0" x2="1"><stop stop-color="#fff0d7"/><stop offset="1" stop-color="#ffd38c"/></linearGradient>
+<linearGradient id="r" x1="0" x2="1"><stop stop-color="#ffe8e3"/><stop offset="1" stop-color="#ffc1b2"/></linearGradient>
+</defs>
+<rect width="1600" height="900" fill="#f8fafc"/>
+<text x="70" y="60" class="t">托管执行迁移架构</text>
+<text x="70" y="92" class="s">旧架构深耦合 Runtime；目标架构只重写执行连接层</text>
+<path d="M800 130V835" stroke="#d5dae3" stroke-width="2" stroke-dasharray="8 9"/>
+<text x="395" y="140" text-anchor="middle" class="h">旧架构 · 1.14.x</text>
+<text x="1205" y="140" text-anchor="middle" class="h">目标架构 · 1.17.1</text>
+
+<!-- left layers -->
+<g filter="url(#sh)">
+<polygon points="110,210 365,165 690,230 435,278" fill="url(#b)" stroke="#8fb5eb" stroke-width="2"/>
+<polygon points="110,210 435,278 435,312 110,244" fill="#b7d0f3"/>
+<polygon points="435,278 690,230 690,264 435,312" fill="#9fbce8"/>
+</g>
+<g transform="translate(205 226)">
+<rect x="-24" y="-15" width="48" height="30" rx="7" fill="#fff" stroke="#5f91d9" stroke-width="2"/>
+<path d="M-9 0H9M0-9V9" stroke="#5f91d9" stroke-width="2.6" stroke-linecap="round"/>
+</g>
+<text x="420" y="220" text-anchor="middle" class="n">API / WebApp / Console</text>
+
+<g filter="url(#sh)">
+<polygon points="130,365 380,320 665,380 415,428" fill="url(#p)" stroke="#a58bd9" stroke-width="2"/>
+<polygon points="130,365 415,428 415,470 130,407" fill="#c5b2e8"/>
+<polygon points="415,428 665,380 665,422 415,470" fill="#ad95dc"/>
+</g>
+<g transform="translate(205 389)"><circle r="18" fill="#fff" stroke="#8d72c4" stroke-width="2.3"/><path d="M0-10V2L9 7" fill="none" stroke="#8d72c4" stroke-width="2.7" stroke-linecap="round"/></g>
+<g transform="translate(258 389)"><ellipse cy="-6" rx="17" ry="6" fill="#fff" stroke="#8d72c4" stroke-width="2"/><rect x="-17" y="-6" width="34" height="17" fill="#f4efff" stroke="#8d72c4" stroke-width="2"/><ellipse cy="11" rx="17" ry="6" fill="#eadfff" stroke="#8d72c4" stroke-width="2"/></g>
+<text x="420" y="380" text-anchor="middle" class="n">Policy · Admission · Job · Scheduler</text>
+
+<g filter="url(#sh)">
+<polygon points="165,545 245,520 315,541 235,568" fill="url(#g)" stroke="#70b88e" stroke-width="2"/>
+<polygon points="165,545 235,568 235,648 165,625" fill="#addfc3"/>
+<polygon points="235,568 315,541 315,621 235,648" fill="#91cda8"/>
+</g>
+<text x="240" y="675" text-anchor="middle" class="n">Standard Worker</text>
+<g filter="url(#sh)">
+<polygon points="475,545 555,520 625,541 545,568" fill="url(#y)" stroke="#d7a23b" stroke-width="2"/>
+<polygon points="475,545 545,568 545,648 475,625" fill="#f4cc72"/>
+<polygon points="545,568 625,541 625,621 545,648" fill="#e5b34f"/>
+</g>
+<text x="550" y="675" text-anchor="middle" class="n">Critical Worker</text>
+
+<g filter="url(#sh)">
+<polygon points="125,730 370,687 670,750 425,795" fill="url(#r)" stroke="#dc7563" stroke-width="2"/>
+<polygon points="125,730 425,795 425,833 125,768" fill="#efad9f"/>
+<polygon points="425,795 670,750 670,788 425,833" fill="#df9383"/>
+</g>
+<g transform="translate(210 750)"><path d="M-18-2h36a7 7 0 017 7v24a7 7 0 01-7 7h-36a7 7 0 01-7-7V5a7 7 0 017-7z" fill="#fff" stroke="#c66754" stroke-width="2"/><path d="M-9 11H9M-9 20H7M-9 29H4" stroke="#c66754" stroke-width="2" stroke-linecap="round"/></g>
+<text x="420" y="745" text-anchor="middle" class="n">旧 Runtime / Event / Pause / Result</text>
+<text x="420" y="770" text-anchor="middle" class="m">Worker 深入 Dify 内部执行链路</text>
+
+<path d="M405 278V335" class="line"/><path d="M280 470C255 500 246 518 240 540" class="line"/><path d="M520 470C535 497 543 515 548 540" class="line"/><path d="M240 650C275 693 330 711 385 727" class="line"/><path d="M550 650C520 691 485 710 445 726" class="line"/>
+
+<!-- right layers -->
+<g filter="url(#sh)">
+<polygon points="910,210 1165,165 1490,230 1235,278" fill="url(#b)" stroke="#8fb5eb" stroke-width="2"/>
+<polygon points="910,210 1235,278 1235,312 910,244" fill="#b7d0f3"/>
+<polygon points="1235,278 1490,230 1490,264 1235,312" fill="#9fbce8"/>
+</g>
+<g transform="translate(1005 226)"><rect x="-24" y="-15" width="48" height="30" rx="7" fill="#fff" stroke="#5f91d9" stroke-width="2"/><path d="M-9 0H9M0-9V9" stroke="#5f91d9" stroke-width="2.6" stroke-linecap="round"/></g>
+<text x="1220" y="220" text-anchor="middle" class="n">1.17.1 API / WebApp / Console</text>
+
+<g filter="url(#sh)">
+<polygon points="930,365 1180,320 1465,380 1215,428" fill="url(#p)" stroke="#a58bd9" stroke-width="2"/>
+<polygon points="930,365 1215,428 1215,470 930,407" fill="#c5b2e8"/>
+<polygon points="1215,428 1465,380 1465,422 1215,470" fill="#ad95dc"/>
+</g>
+<g transform="translate(1005 389)"><circle r="18" fill="#fff" stroke="#8d72c4" stroke-width="2.3"/><path d="M0-10V2L9 7" fill="none" stroke="#8d72c4" stroke-width="2.7" stroke-linecap="round"/></g>
+<g transform="translate(1058 389)"><ellipse cy="-6" rx="17" ry="6" fill="#fff" stroke="#8d72c4" stroke-width="2"/><rect x="-17" y="-6" width="34" height="17" fill="#f4efff" stroke="#8d72c4" stroke-width="2"/><ellipse cy="11" rx="17" ry="6" fill="#eadfff" stroke="#8d72c4" stroke-width="2"/></g>
+<text x="1220" y="380" text-anchor="middle" class="n">公司调度层保留</text>
+<text x="1220" y="404" text-anchor="middle" class="m">Policy · Admission · Job · Scheduler · Queue</text>
+
+<g filter="url(#sh)"><polygon points="965,545 1045,520 1115,541 1035,568" fill="url(#g)" stroke="#70b88e" stroke-width="2"/><polygon points="965,545 1035,568 1035,648 965,625" fill="#addfc3"/><polygon points="1035,568 1115,541 1115,621 1035,648" fill="#91cda8"/></g>
+<text x="1040" y="675" text-anchor="middle" class="n">Standard</text>
+<g filter="url(#sh)"><polygon points="1270,545 1350,520 1420,541 1340,568" fill="url(#y)" stroke="#d7a23b" stroke-width="2"/><polygon points="1270,545 1340,568 1340,648 1270,625" fill="#f4cc72"/><polygon points="1340,568 1420,541 1420,621 1340,648" fill="#e5b34f"/></g>
+<text x="1345" y="675" text-anchor="middle" class="n">Critical</text>
+
+<g filter="url(#sh)">
+<polygon points="1085,700 1205,674 1325,700 1205,728" fill="url(#y)" stroke="#d7a23b" stroke-width="2"/>
+<polygon points="1085,700 1205,728 1205,765 1085,737" fill="#f4c46f"/>
+<polygon points="1205,728 1325,700 1325,737 1205,765" fill="#e5ad4e"/>
+</g>
+<g transform="translate(1142 714)"><path d="M-15-8l10 8-10 8M15-8L5 0l10 8" fill="none" stroke="#9a6a12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="1215" y="715" text-anchor="middle" class="n">执行适配层</text>
+<text x="1215" y="739" text-anchor="middle" class="m">Managed Worker → Official Task</text>
+
+<g filter="url(#sh)">
+<polygon points="920,800 1165,758 1485,822 1240,869" fill="url(#g)" stroke="#70b88e" stroke-width="2"/>
+<polygon points="920,800 1240,869 1240,900 920,833" fill="#addfc3"/>
+<polygon points="1240,869 1485,822 1485,853 1240,900" fill="#91cda8"/>
+</g>
+<text x="1220" y="810" text-anchor="middle" class="n">Dify 1.17.1 Runtime</text>
+<text x="1220" y="835" text-anchor="middle" class="m">WorkflowRun · Message · Human Input · SSE</text>
+<path d="M1208 278V335" class="line"/><path d="M1100 470C1080 497 1055 515 1040 540" class="line"/><path d="M1325 470C1335 495 1340 515 1345 540" class="line"/><path d="M1040 650C1085 682 1120 696 1160 707" class="line"/><path d="M1345 650C1310 681 1280 695 1250 706" class="line"/><path d="M1215 765V790" class="line"/>
+<text x="1390" y="730" class="n" fill="#b54708">重点重写：连接层</text>
+</svg>
