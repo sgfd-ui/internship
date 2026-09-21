@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920">
+<defs>
+<style>
+text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;fill:#172033}
+.title{font-size:31px;font-weight:700}.pt{font-size:21px;font-weight:700}.ps{font-size:14px;fill:#667085}
+.lt{font-size:18px;font-weight:700}.n{font-size:14px;font-weight:700}.s{font-size:12px;fill:#667085}.tiny{font-size:11px;fill:#667085}
+.line{stroke:#536176;stroke-width:2;fill:none;marker-end:url(#a)}.hot{stroke:#d45745;stroke-width:2.5;fill:none;marker-end:url(#r)}
+</style>
+<marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#536176"/></marker>
+<marker id="r" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#d45745"/></marker>
+<filter id="sh"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#24324a" flood-opacity=".09"/></filter>
+</defs>
+<rect width="1600" height="920" fill="#fff"/>
+<text x="24" y="42" class="title">公司能力迁移到 Dify 1.17.1：需要迁什么、重在哪里</text>
+
+<!-- left: old custom -->
+<rect x="28" y="72" width="515" height="786" rx="18" fill="#fbfbfd" stroke="#dfe3ea"/>
+<text x="285" y="103" text-anchor="middle" class="pt">原 1.14.2 公司扩展</text>
+<text x="285" y="127" text-anchor="middle" class="ps">需要保留的业务能力</text>
+
+<rect x="55" y="158" width="460" height="92" rx="12" fill="#fff0f1" stroke="#ef8c96"/>
+<text x="285" y="184" text-anchor="middle" class="lt" fill="#a61b29">准入与策略</text>
+<rect x="75" y="199" width="95" height="33" rx="7" fill="#fff" stroke="#efb2b8"/><text x="122" y="220" text-anchor="middle" class="s">Policy</text>
+<rect x="182" y="199" width="95" height="33" rx="7" fill="#fff" stroke="#efb2b8"/><text x="229" y="220" text-anchor="middle" class="s">Admission</text>
+<rect x="289" y="199" width="95" height="33" rx="7" fill="#fff" stroke="#efb2b8"/><text x="336" y="220" text-anchor="middle" class="s">Priority</text>
+<rect x="396" y="199" width="95" height="33" rx="7" fill="#fff" stroke="#efb2b8"/><text x="443" y="220" text-anchor="middle" class="s">Queue Limit</text>
+
+<rect x="55" y="272" width="460" height="112" rx="12" fill="#f3edff" stroke="#b79ee7"/>
+<text x="285" y="298" text-anchor="middle" class="lt" fill="#5e35b1">托管调度</text>
+<rect x="75" y="316" width="95" height="48" rx="7" fill="#fff" stroke="#ccbdec"/><text x="122" y="345" text-anchor="middle" class="s">Job</text>
+<rect x="182" y="316" width="95" height="48" rx="7" fill="#fff" stroke="#ccbdec"/><text x="229" y="345" text-anchor="middle" class="s">Scheduler</text>
+<rect x="289" y="316" width="95" height="48" rx="7" fill="#fff" stroke="#ccbdec"/><text x="336" y="337" text-anchor="middle" class="s">Lease</text><text x="336" y="353" text-anchor="middle" class="tiny">Outbox</text>
+<rect x="396" y="316" width="95" height="48" rx="7" fill="#fff" stroke="#ccbdec"/><text x="443" y="337" text-anchor="middle" class="s">Capacity</text><text x="443" y="353" text-anchor="middle" class="tiny">Health</text>
+
+<rect x="55" y="406" width="460" height="112" rx="12" fill="#edf8ef" stroke="#82c991"/>
+<text x="285" y="432" text-anchor="middle" class="lt" fill="#237a44">Standard / Critical Worker</text>
+<rect x="105" y="452" width="130" height="44" rx="8" fill="#fff" stroke="#a9dab7"/><text x="170" y="479" text-anchor="middle" class="s">Standard Queue</text>
+<rect x="335" y="452" width="130" height="44" rx="8" fill="#fff" stroke="#e4bf64"/><text x="400" y="479" text-anchor="middle" class="s">Critical Queue</text>
+
+<rect x="55" y="540" width="460" height="132" rx="12" fill="#eaf4ff" stroke="#7faef0"/>
+<text x="285" y="566" text-anchor="middle" class="lt" fill="#1d5ea8">执行与调试接管</text>
+<rect x="75" y="586" width="130" height="31" rx="7" fill="#fff" stroke="#b4d2f8"/><text x="140" y="606" text-anchor="middle" class="s">Workflow / Chatflow</text>
+<rect x="220" y="586" width="130" height="31" rx="7" fill="#fff" stroke="#b4d2f8"/><text x="285" y="606" text-anchor="middle" class="s">Chat / Completion</text>
+<rect x="365" y="586" width="130" height="31" rx="7" fill="#fff" stroke="#b4d2f8"/><text x="430" y="606" text-anchor="middle" class="s">AGENT_CHAT</text>
+<rect x="75" y="628" width="130" height="31" rx="7" fill="#fff" stroke="#b4d2f8"/><text x="140" y="648" text-anchor="middle" class="s">Console Debug</text>
+<rect x="220" y="628" width="130" height="31" rx="7" fill="#fff" stroke="#b4d2f8"/><text x="285" y="648" text-anchor="middle" class="s">Human Input</text>
+<rect x="365" y="628" width="130" height="31" rx="7" fill="#fff" stroke="#b4d2f8"/><text x="430" y="648" text-anchor="middle" class="s">Schedule</text>
+
+<rect x="55" y="694" width="460" height="132" rx="12" fill="#fff7df" stroke="#e7bd59"/>
+<text x="285" y="720" text-anchor="middle" class="lt" fill="#9a6815">企业基础能力</text>
+<rect x="75" y="742" width="95" height="31" rx="7" fill="#fff" stroke="#ecd38f"/><text x="122" y="762" text-anchor="middle" class="s">SkyOA</text>
+<rect x="182" y="742" width="95" height="31" rx="7" fill="#fff" stroke="#ecd38f"/><text x="229" y="762" text-anchor="middle" class="s">Workspace</text>
+<rect x="289" y="742" width="95" height="31" rx="7" fill="#fff" stroke="#ecd38f"/><text x="336" y="762" text-anchor="middle" class="s">KMS / S3</text>
+<rect x="396" y="742" width="95" height="31" rx="7" fill="#fff" stroke="#ecd38f"/><text x="443" y="762" text-anchor="middle" class="s">Audit / OTel</text>
+<rect x="125" y="786" width="130" height="27" rx="7" fill="#fff" stroke="#ecd38f"/><text x="190" y="804" text-anchor="middle" class="tiny">Task Management</text>
+<rect x="315" y="786" width="130" height="27" rx="7" fill="#fff" stroke="#ecd38f"/><text x="380" y="804" text-anchor="middle" class="tiny">Redis Event Bus</text>
+
+<!-- center: migration hotspots -->
+<rect x="574" y="72" width="452" height="786" rx="18" fill="#fffaf8" stroke="#f1d0c7"/>
+<text x="800" y="103" text-anchor="middle" class="pt">迁移适配点</text>
+<text x="800" y="127" text-anchor="middle" class="ps">真正耗时的是“旧公司能力 ↔ 新官方协议”的重接</text>
+
+<rect x="610" y="174" width="380" height="102" rx="12" fill="#ffe8e2" stroke="#de7b67"/>
+<text x="800" y="201" text-anchor="middle" class="lt" fill="#b42318">① Worker → Runtime</text>
+<text x="800" y="228" text-anchor="middle" class="n">执行入口、AppMode、Session、输入参数</text>
+<text x="800" y="251" text-anchor="middle" class="s">公司 Worker 不再按旧方式直接调用 Generator</text>
+
+<rect x="610" y="298" width="380" height="102" rx="12" fill="#fff2d9" stroke="#dda23b"/>
+<text x="800" y="325" text-anchor="middle" class="lt" fill="#9a6815">② Job ↔ 官方执行状态</text>
+<text x="800" y="352" text-anchor="middle" class="n">job_id / workflow_run_id / task_id</text>
+<text x="800" y="375" text-anchor="middle" class="s">Streaming / Blocking / Terminal State / Result</text>
+
+<rect x="610" y="422" width="380" height="102" rx="12" fill="#f3edff" stroke="#b79ee7"/>
+<text x="800" y="449" text-anchor="middle" class="lt" fill="#5e35b1">③ Stop / Cancel / Retry</text>
+<text x="800" y="476" text-anchor="middle" class="n">queued 与 running 控制入口不同</text>
+<text x="800" y="499" text-anchor="middle" class="s">generation / fence / 迟到结果收敛</text>
+
+<rect x="610" y="546" width="380" height="126" rx="12" fill="#eaf4ff" stroke="#7faef0"/>
+<text x="800" y="573" text-anchor="middle" class="lt" fill="#1d5ea8">④ 特殊执行链路</text>
+<rect x="635" y="594" width="100" height="45" rx="8" fill="#fff" stroke="#b4d2f8"/><text x="685" y="621" text-anchor="middle" class="s">Console</text>
+<rect x="750" y="594" width="100" height="45" rx="8" fill="#fff" stroke="#b4d2f8"/><text x="800" y="621" text-anchor="middle" class="s">Human Input</text>
+<rect x="865" y="594" width="100" height="45" rx="8" fill="#fff" stroke="#b4d2f8"/><text x="915" y="621" text-anchor="middle" class="s">Schedule</text>
+<text x="800" y="657" text-anchor="middle" class="s">草稿 / 单节点 / Iteration / Loop / Pause / Resume / Trigger</text>
+
+<rect x="610" y="694" width="380" height="112" rx="12" fill="#eef5fd" stroke="#8ab2de"/>
+<text x="800" y="721" text-anchor="middle" class="lt">⑤ 数据与基础设施</text>
+<text x="800" y="748" text-anchor="middle" class="n">Schema Migration · KMS / S3 · Redis Event Bus</text>
+<text x="800" y="771" text-anchor="middle" class="s">历史文件 Key、租户私钥、企业 migration 链兼容</text>
+
+<!-- right: 1.17.1 official targets -->
+<rect x="1057" y="72" width="515" height="786" rx="18" fill="#f8fbff" stroke="#d9e4f1"/>
+<text x="1315" y="103" text-anchor="middle" class="pt">Dify 1.17.1 官方能力</text>
+<text x="1315" y="127" text-anchor="middle" class="ps">迁移后的公司能力最终接到这些官方组件</text>
+
+<rect x="1085" y="158" width="460" height="116" rx="12" fill="#fff0f1" stroke="#ef8c96"/>
+<text x="1315" y="185" text-anchor="middle" class="lt" fill="#a61b29">AppGenerateService / AppGenerator</text>
+<rect x="1105" y="206" width="125" height="31" rx="7" fill="#fff" stroke="#efb2b8"/><text x="1167" y="226" text-anchor="middle" class="s">Workflow</text>
+<rect x="1242" y="206" width="125" height="31" rx="7" fill="#fff" stroke="#efb2b8"/><text x="1304" y="226" text-anchor="middle" class="s">Chatflow</text>
+<rect x="1379" y="206" width="145" height="31" rx="7" fill="#fff" stroke="#efb2b8"/><text x="1451" y="226" text-anchor="middle" class="s">Chat / Completion</text>
+<text x="1315" y="257" text-anchor="middle" class="s">Agent / AGENT_CHAT · Explicit Session</text>
+
+<rect x="1085" y="296" width="460" height="118" rx="12" fill="#eaf4ff" stroke="#7faef0"/>
+<text x="1315" y="323" text-anchor="middle" class="lt" fill="#1d5ea8">Workflow Async Execution</text>
+<rect x="1107" y="345" width="128" height="44" rx="7" fill="#fff" stroke="#b4d2f8"/><text x="1171" y="363" text-anchor="middle" class="s">AppExecution</text><text x="1171" y="379" text-anchor="middle" class="tiny">Params</text>
+<rect x="1245" y="345" width="150" height="44" rx="7" fill="#fff" stroke="#b4d2f8"/><text x="1320" y="363" text-anchor="middle" class="s">Official Celery</text><text x="1320" y="379" text-anchor="middle" class="tiny">Task</text>
+<rect x="1405" y="345" width="118" height="44" rx="7" fill="#fff" stroke="#b4d2f8"/><text x="1464" y="371" text-anchor="middle" class="s">_AppRunner</text>
+
+<rect x="1085" y="436" width="460" height="118" rx="12" fill="#eaf8ef" stroke="#81c795"/>
+<text x="1315" y="463" text-anchor="middle" class="lt" fill="#237a44">State / Events</text>
+<rect x="1105" y="486" width="95" height="44" rx="7" fill="#fff" stroke="#a9dab7"/><text x="1152" y="512" text-anchor="middle" class="s">WorkflowRun</text>
+<rect x="1210" y="486" width="95" height="44" rx="7" fill="#fff" stroke="#a9dab7"/><text x="1257" y="512" text-anchor="middle" class="s">Message</text>
+<rect x="1315" y="486" width="95" height="44" rx="7" fill="#fff" stroke="#a9dab7"/><text x="1362" y="512" text-anchor="middle" class="s">SSE</text>
+<rect x="1420" y="486" width="105" height="44" rx="7" fill="#fff" stroke="#a9dab7"/><text x="1472" y="512" text-anchor="middle" class="s">Session</text>
+
+<rect x="1085" y="576" width="460" height="116" rx="12" fill="#f3edff" stroke="#b79ee7"/>
+<text x="1315" y="603" text-anchor="middle" class="lt" fill="#5e35b1">Human Input / Resume</text>
+<rect x="1110" y="626" width="125" height="42" rx="7" fill="#fff" stroke="#ccbdec"/><text x="1172" y="651" text-anchor="middle" class="s">WorkflowPause</text>
+<rect x="1247" y="626" width="140" height="42" rx="7" fill="#fff" stroke="#ccbdec"/><text x="1317" y="643" text-anchor="middle" class="s">Resumption</text><text x="1317" y="659" text-anchor="middle" class="tiny">Context</text>
+<rect x="1399" y="626" width="120" height="42" rx="7" fill="#fff" stroke="#ccbdec"/><text x="1459" y="643" text-anchor="middle" class="s">Resume</text><text x="1459" y="659" text-anchor="middle" class="tiny">Task</text>
+
+<rect x="1085" y="714" width="460" height="112" rx="12" fill="#fff7df" stroke="#e7bd59"/>
+<text x="1315" y="741" text-anchor="middle" class="lt" fill="#9a6815">Storage / DB / Trace</text>
+<rect x="1110" y="765" width="120" height="34" rx="7" fill="#fff" stroke="#ecd38f"/><text x="1170" y="787" text-anchor="middle" class="s">PostgreSQL</text>
+<rect x="1247" y="765" width="120" height="34" rx="7" fill="#fff" stroke="#ecd38f"/><text x="1307" y="787" text-anchor="middle" class="s">Redis</text>
+<rect x="1384" y="765" width="135" height="34" rx="7" fill="#fff" stroke="#ecd38f"/><text x="1451" y="787" text-anchor="middle" class="s">File / Unified Trace</text>
+
+<!-- arrows across -->
+<path d="M515 204C555 204 570 204 610 204" class="line"/><path d="M990 224C1030 224 1045 216 1085 216" class="hot"/>
+<path d="M515 330C555 330 570 348 610 348" class="line"/><path d="M990 348C1030 348 1045 354 1085 354" class="hot"/>
+<path d="M515 462C555 462 570 472 610 472" class="line"/><path d="M990 472C1030 472 1045 494 1085 494" class="hot"/>
+<path d="M515 606C555 606 570 608 610 608" class="line"/><path d="M990 608C1030 608 1045 632 1085 632" class="hot"/>
+<path d="M515 760C555 760 570 750 610 750" class="line"/><path d="M990 750C1030 750 1045 770 1085 770" class="hot"/>
+
+<rect x="28" y="875" width="1544" height="28" rx="8" fill="#f4f6f9" stroke="#e2e6ec"/>
+<text x="50" y="894" class="s">阅读方式：左边是“我们原来有什么”，中间是“迁移时真正要改什么”，右边是“最终接到 1.17.1 哪些官方能力”。第二张图才是本次迁移工作量的核心说明。</text>
+</svg>
