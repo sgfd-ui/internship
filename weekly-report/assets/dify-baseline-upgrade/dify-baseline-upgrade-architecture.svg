@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <style>
+      .title{font:700 34px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#17223b}
+      .sub{font:400 18px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#667085}
+      .h{font:700 22px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+      .t{font:500 17px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#344054}
+      .s{font:400 15px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#667085}
+      .box{fill:#fff;stroke-width:2}
+      .arrow{stroke:#98a2b3;stroke-width:2.2;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#98a2b3"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="#fbfcfe"/>
+  <text x="70" y="68" class="title">Dify 1.17.1 基线升级目标架构</text>
+  <text x="70" y="102" class="sub">以官方 1.17.1 为基础，企业能力作为增强层重新接入，不复制旧版内部实现</text>
+
+  <rect x="70" y="145" rx="24" ry="24" width="1460" height="122" fill="#eef4ff" stroke="#b2ccff" stroke-width="2"/>
+  <text x="100" y="188" class="h" fill="#175cd3">Dify 1.17.1 官方基线</text>
+  <rect x="330" y="173" rx="12" ry="12" width="245" height="64" class="box" stroke="#84adff"/>
+  <text x="452" y="200" text-anchor="middle" class="t">Console / WebApp</text>
+  <text x="452" y="222" text-anchor="middle" class="s">页面、调试与应用入口</text>
+  <rect x="615" y="173" rx="12" ry="12" width="270" height="64" class="box" stroke="#84adff"/>
+  <text x="750" y="200" text-anchor="middle" class="t">Application Runtime</text>
+  <text x="750" y="222" text-anchor="middle" class="s">Workflow / Chat / Agent</text>
+  <rect x="925" y="173" rx="12" ry="12" width="245" height="64" class="box" stroke="#84adff"/>
+  <text x="1048" y="200" text-anchor="middle" class="t">平台基础能力</text>
+  <text x="1048" y="222" text-anchor="middle" class="s">权限、存储、观测、任务</text>
+  <rect x="1210" y="173" rx="12" ry="12" width="245" height="64" class="box" stroke="#84adff"/>
+  <text x="1332" y="200" text-anchor="middle" class="t">官方升级能力</text>
+  <text x="1332" y="222" text-anchor="middle" class="s">新版接口与运行职责</text>
+
+  <path d="M800 267 L800 310" class="arrow"/>
+
+  <rect x="70" y="315" rx="28" ry="28" width="1460" height="390" fill="#fff" stroke="#d0d5dd" stroke-width="2"/>
+  <text x="100" y="360" class="h" fill="#344054">企业级能力增强层</text>
+
+  <rect x="105" y="395" rx="18" ry="18" width="310" height="250" fill="#f3f7ff" stroke="#9ebcff" stroke-width="2"/>
+  <text x="135" y="438" class="h" fill="#175cd3">身份与租户治理</text>
+  <text x="135" y="480" class="t">SkyOA 统一登录</text>
+  <text x="135" y="516" class="t">超级管理员初始化</text>
+  <text x="135" y="552" class="t">邀请注册与默认工作空间</text>
+  <text x="135" y="588" class="t">工作空间与权限治理</text>
+
+  <rect x="450" y="395" rx="18" ry="18" width="360" height="250" fill="#f7f3ff" stroke="#c7a7ff" stroke-width="2"/>
+  <text x="480" y="438" class="h" fill="#6941c6">托管执行引擎</text>
+  <text x="480" y="480" class="t">准入 / Policy / Queue</text>
+  <text x="480" y="516" class="t">Scheduler / Worker / Capacity</text>
+  <text x="480" y="552" class="t">Streaming / Blocking / Result</text>
+  <text x="480" y="588" class="t">Job 管理、暂停恢复与调试</text>
+
+  <rect x="845" y="395" rx="18" ry="18" width="310" height="250" fill="#effaf5" stroke="#9dd9b7" stroke-width="2"/>
+  <text x="875" y="438" class="h" fill="#067647">存储与数据安全</text>
+  <text x="875" y="480" class="t">KMS 凭据管理</text>
+  <text x="875" y="516" class="t">S3 对象存储</text>
+  <text x="875" y="552" class="t">文件路径与租户私钥</text>
+  <text x="875" y="588" class="t">敏感数据与缓存隔离</text>
+
+  <rect x="1190" y="395" rx="18" ry="18" width="305" height="250" fill="#fff7ed" stroke="#f7c78d" stroke-width="2"/>
+  <text x="1220" y="438" class="h" fill="#b54708">管理与可观测</text>
+  <text x="1220" y="480" class="t">系统管理端</text>
+  <text x="1220" y="516" class="t">Health / OTel</text>
+  <text x="1220" y="552" class="t">审计与执行状态</text>
+  <text x="1220" y="588" class="t">部署与环境配置</text>
+
+  <path d="M800 705 L800 750" class="arrow"/>
+
+  <rect x="140" y="760" rx="20" ry="20" width="1320" height="95" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="180" y="804" class="h" fill="#344054">共享基础设施</text>
+  <text x="410" y="807" class="t">PostgreSQL</text>
+  <text x="610" y="807" class="t">Redis / Event Bus</text>
+  <text x="850" y="807" class="t">S3</text>
+  <text x="1010" y="807" class="t">KMS</text>
+  <text x="1160" y="807" class="t">模型与外部服务</text>
+  <text x="180" y="836" class="s">升级只调整 Dify 侧职责与接入方式，基础设施数据和历史引用按兼容策略保留</text>
+</svg>
