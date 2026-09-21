@@ -630,49 +630,40 @@ Health / Audit / OTel 无阻断问题
 
 状态说明：**✅ 已完成　🟡 进行中　⬜ 待开展**
 
-<table>
-  <thead>
-    <tr><th>时间</th><th>功能</th><th>任务项</th><th>完成</th></tr>
-  </thead>
-  <tbody>
-    <tr><td rowspan="7">09.21 - 09.25</td><td rowspan="2">基线与构建</td><td>确定 Dify 1.17.1 基线并建立升级分支</td><td>✅</td></tr>
-    <tr><td>迁入 API/Web 平台构建、产物清理和依赖路径处理</td><td>✅</td></tr>
-    <tr><td rowspan="5">账号与工作空间</td><td>SkyOA OAuth / state / 身份映射迁移</td><td>⬜</td></tr>
-    <tr><td>超级管理员初始化接入新版 SetupService</td><td>⬜</td></tr>
-    <tr><td>邀请注册接入新版 AccountActivationService</td><td>⬜</td></tr>
-    <tr><td>默认工作空间、current workspace 和 owner 保护迁移</td><td>⬜</td></tr>
-    <tr><td>工作空间创建、归档、权限和缓存迁移</td><td>⬜</td></tr>
-
-    <tr><td rowspan="7">09.28 - 10.02</td><td rowspan="7">托管执行底座</td><td>迁入执行模型及企业历史 migration</td><td>⬜</td></tr>
-    <tr><td>完成官方链与企业 migration 链合流</td><td>⬜</td></tr>
-    <tr><td>迁移 Policy 与 workspace 调度权限</td><td>⬜</td></tr>
-    <tr><td>迁移 Admission、Queue、Input Snapshot</td><td>⬜</td></tr>
-    <tr><td>迁移 Scheduler、Lease、Outbox 和终态收敛</td><td>⬜</td></tr>
-    <tr><td>迁移 Worker、心跳 v2、执行租约和容量管理</td><td>⬜</td></tr>
-    <tr><td>迁移 Job 管理、Streaming、Blocking 和结果查询</td><td>⬜</td></tr>
-
-    <tr><td rowspan="8">10.05 - 10.09</td><td rowspan="5">正式应用执行</td><td>Workflow 正式执行接入新版 Workflow Runtime</td><td>⬜</td></tr>
-    <tr><td>Chatflow 正式执行和会话身份迁移</td><td>⬜</td></tr>
-    <tr><td>Chat 正式执行、结果和停止迁移</td><td>⬜</td></tr>
-    <tr><td>Completion Streaming / Blocking / Stop 迁移</td><td>⬜</td></tr>
-    <tr><td>AGENT_CHAT 受管执行迁移，新 AGENT 范围确认</td><td>⬜</td></tr>
-    <tr><td rowspan="3">Console 调试</td><td>Workflow / Chatflow 草稿冻结、排队、查询和停止</td><td>⬜</td></tr>
-    <tr><td>单节点、迭代、循环调试接入新版原生执行入口</td><td>⬜</td></tr>
-    <tr><td>前端运行状态、SSE 重连和新旧轮次隔离</td><td>⬜</td></tr>
-
-    <tr><td rowspan="7">10.12 - 10.16</td><td rowspan="2">暂停与调度</td><td>Human Input generation、暂停、恢复和重试迁移</td><td>⬜</td></tr>
-    <tr><td>正式定时触发与草稿 schedule 调试迁移</td><td>⬜</td></tr>
-    <tr><td rowspan="4">存储与安全</td><td>KMS Provider 和凭据刷新接入新版 S3</td><td>⬜</td></tr>
-    <tr><td>新旧文件 Key 与租户私钥引用兼容</td><td>⬜</td></tr>
-    <tr><td>知识库文件 S3 删除链路修复</td><td>⬜</td></tr>
-    <tr><td>Redis Event Bus 地址和跨进程事件交付配置</td><td>⬜</td></tr>
-    <tr><td>管理与监控</td><td>Health、OTel、Audit、Scheduler/Worker 运行入口迁移</td><td>⬜</td></tr>
-
-    <tr><td rowspan="6">10.19 - 10.23</td><td rowspan="6">验收与上线</td><td>完成 PostgreSQL、关键 S3 Key、配置和 migration 状态备份</td><td>⬜</td></tr>
-    <tr><td>执行数据库 migration 并检查历史数据</td><td>⬜</td></tr>
-    <tr><td>完成 API / Web / Scheduler / Worker 启动验证</td><td>⬜</td></tr>
-    <tr><td>完成账号、正式执行、Console 调试和 Human Input 回归</td><td>⬜</td></tr>
-    <tr><td>完成 KMS/S3、任务管理、Health 和 Audit 回归</td><td>⬜</td></tr>
-    <tr><td>完成正式切换和回滚验证</td><td>⬜</td></tr>
-  </tbody>
-</table>
+| 时间 | 功能 | 任务项 | 完成 |
+| --- | --- | --- | --- |
+| 09.21 - 09.25 | 基线与构建 | 确定 Dify 1.17.1 基线并建立升级分支 | ✅ |
+| 09.21 - 09.25 | 基线与构建 | 迁入 API/Web 平台构建、产物清理和依赖路径处理 | ✅ |
+| 09.21 - 09.25 | 账号与工作空间 | SkyOA OAuth / state / 身份映射迁移 | ⬜ |
+| 09.21 - 09.25 | 账号与工作空间 | 超级管理员初始化接入新版 SetupService | ⬜ |
+| 09.21 - 09.25 | 账号与工作空间 | 邀请注册接入新版 AccountActivationService | ⬜ |
+| 09.21 - 09.25 | 账号与工作空间 | 默认工作空间、current workspace 和 owner 保护迁移 | ⬜ |
+| 09.21 - 09.25 | 账号与工作空间 | 工作空间创建、归档、权限和缓存迁移 | ⬜ |
+| 09.28 - 10.02 | 托管执行底座 | 迁入执行模型及企业历史 migration | ⬜ |
+| 09.28 - 10.02 | 托管执行底座 | 完成官方链与企业 migration 链合流 | ⬜ |
+| 09.28 - 10.02 | 托管执行底座 | 迁移 Policy 与 workspace 调度权限 | ⬜ |
+| 09.28 - 10.02 | 托管执行底座 | 迁移 Admission、Queue、Input Snapshot | ⬜ |
+| 09.28 - 10.02 | 托管执行底座 | 迁移 Scheduler、Lease、Outbox 和终态收敛 | ⬜ |
+| 09.28 - 10.02 | 托管执行底座 | 迁移 Worker、心跳 v2、执行租约和容量管理 | ⬜ |
+| 09.28 - 10.02 | 托管执行底座 | 迁移 Job 管理、Streaming、Blocking 和结果查询 | ⬜ |
+| 10.05 - 10.09 | 正式应用执行 | Workflow 正式执行接入新版 Workflow Runtime | ⬜ |
+| 10.05 - 10.09 | 正式应用执行 | Chatflow 正式执行和会话身份迁移 | ⬜ |
+| 10.05 - 10.09 | 正式应用执行 | Chat 正式执行、结果和停止迁移 | ⬜ |
+| 10.05 - 10.09 | 正式应用执行 | Completion Streaming / Blocking / Stop 迁移 | ⬜ |
+| 10.05 - 10.09 | 正式应用执行 | AGENT_CHAT 受管执行迁移，新 AGENT 范围确认 | ⬜ |
+| 10.05 - 10.09 | Console 调试 | Workflow / Chatflow 草稿冻结、排队、查询和停止 | ⬜ |
+| 10.05 - 10.09 | Console 调试 | 单节点、迭代、循环调试接入新版原生执行入口 | ⬜ |
+| 10.05 - 10.09 | Console 调试 | 前端运行状态、SSE 重连和新旧轮次隔离 | ⬜ |
+| 10.12 - 10.16 | 暂停与调度 | Human Input generation、暂停、恢复和重试迁移 | ⬜ |
+| 10.12 - 10.16 | 暂停与调度 | 正式定时触发与草稿 schedule 调试迁移 | ⬜ |
+| 10.12 - 10.16 | 存储与安全 | KMS Provider 和凭据刷新接入新版 S3 | ⬜ |
+| 10.12 - 10.16 | 存储与安全 | 新旧文件 Key 与租户私钥引用兼容 | ⬜ |
+| 10.12 - 10.16 | 存储与安全 | 知识库文件 S3 删除链路修复 | ⬜ |
+| 10.12 - 10.16 | 存储与安全 | Redis Event Bus 地址和跨进程事件交付配置 | ⬜ |
+| 10.12 - 10.16 | 管理与监控 | Health、OTel、Audit、Scheduler/Worker 运行入口迁移 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 完成 PostgreSQL、关键 S3 Key、配置和 migration 状态备份 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 执行数据库 migration 并检查历史数据 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 完成 API / Web / Scheduler / Worker 启动验证 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 完成账号、正式执行、Console 调试和 Human Input 回归 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 完成 KMS/S3、任务管理、Health 和 Audit 回归 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 完成正式切换和回滚验证 | ⬜ |
