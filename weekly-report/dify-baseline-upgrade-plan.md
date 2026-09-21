@@ -465,9 +465,18 @@ S3 本次不做全量复制，因为升级不搬迁已有对象；发布前只�
 
 Redis 不作为数据库回滚数据源，不通过恢复 Redis 队列完成回滚，避免重复消费旧任务。
 
-### 6.3 Migration 执行
+### 6.3 数据库 Schema 迁移
 
-Migration 从长期服务中拆出来，作为一次性发布步骤执行。
+在完成 PostgreSQL 全库备份后，执行 Dify 1.17.1 及公司自定义的数据库 Schema Migration，使现有数据库结构与升级后的代码保持一致。
+
+这里迁移的是**数据库表结构和必要的兼容数据**，不是升级 PostgreSQL 版本，也不是重建数据库。现有账号、工作空间、Workflow、执行记录、文件引用等业务数据继续保留。
+
+本次需要同时处理两条 migration 链：
+
+- Dify 1.14.2 → 1.17.1 的官方 migration；
+- 公司在旧基线上新增的 Job、Policy、Generation、Lease、Outbox 等执行相关 migration。
+
+最终需要保证官方 migration 和公司自定义 migration 合并到同一个 Alembic head，再执行一次升级。
 
 以 Dify 1.17.1 的 migration 命令为准：
 
@@ -482,7 +491,7 @@ uv run flask upgrade-db
 uv run flask db upgrade
 ```
 
-发布前统一确认目标分支实际 CLI，只保留一个 Migration Job；不能两个命令都执行。
+发布前统一确认目标分支实际 CLI，只保留一个 Schema Migration Job，不能两个命令都执行。
 
 Migration 完成后至少验证：
 
