@@ -16,13 +16,13 @@
 
   <rect width="1600" height="900" fill="#fbfcfe"/>
   <text x="70" y="68" class="title">Dify 1.17.1 基线升级目标架构</text>
-  <text x="70" y="102" class="sub">以官方 1.17.1 为基础，企业能力作为增强层重新接入，不复制旧版内部实现</text>
+  <text x="70" y="102" class="sub">Dify 1.17.1 提供原生运行与调试，企业层保留正式应用托管调度和公司治理能力</text>
 
   <rect x="70" y="145" rx="24" ry="24" width="1460" height="122" fill="#eef4ff" stroke="#b2ccff" stroke-width="2"/>
   <text x="100" y="188" class="h" fill="#175cd3">Dify 1.17.1 官方基线</text>
   <rect x="330" y="173" rx="12" ry="12" width="245" height="64" class="box" stroke="#84adff"/>
   <text x="452" y="200" text-anchor="middle" class="t">Console / WebApp</text>
-  <text x="452" y="222" text-anchor="middle" class="s">页面、调试与应用入口</text>
+  <text x="452" y="222" text-anchor="middle" class="s">页面、官方调试与应用入口</text>
   <rect x="615" y="173" rx="12" ry="12" width="270" height="64" class="box" stroke="#84adff"/>
   <text x="750" y="200" text-anchor="middle" class="t">Application Runtime</text>
   <text x="750" y="222" text-anchor="middle" class="s">Workflow / Chat / Agent</text>
@@ -50,7 +50,7 @@
   <text x="480" y="480" class="t">准入 / Policy / Queue</text>
   <text x="480" y="516" class="t">Scheduler / Worker / Capacity</text>
   <text x="480" y="552" class="t">Streaming / Blocking / Result</text>
-  <text x="480" y="588" class="t">Job 管理、暂停恢复与调试</text>
+  <text x="480" y="588" class="t">Job 管理 / 正式应用执行</text>
 
   <rect x="845" y="395" rx="18" ry="18" width="310" height="250" fill="#effaf5" stroke="#9dd9b7" stroke-width="2"/>
   <text x="875" y="438" class="h" fill="#067647">存储与数据安全</text>
@@ -75,5 +75,5 @@
   <text x="850" y="807" class="t">S3</text>
   <text x="1010" y="807" class="t">KMS</text>
   <text x="1160" y="807" class="t">模型与外部服务</text>
-  <text x="180" y="836" class="s">升级只调整 Dify 侧职责与接入方式，基础设施数据和历史引用按兼容策略保留</text>
+  <text x="180" y="836" class="s">PostgreSQL / Redis / S3 / KMS / 模型与外部服务</text>
 </svg>
