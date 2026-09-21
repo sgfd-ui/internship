@@ -2,12 +2,12 @@
 
 ## 一、升级目标
 
-当前平台基于 Dify 1.14.2，已扩展账号与工作空间治理、托管执行引擎、KMS/S3 和管理监控等企业能力。本次升级到 **Dify 1.17.1**，保留正式应用托管执行等核心企业能力，Console 调试和 Human Input 使用新版官方能力。
+当前平台基于 Dify 1.14.2，已扩展账号与工作空间治理、托管执行引擎、Console 调试、Human Input、KMS/S3 和管理监控等企业能力。本次升级到 **Dify 1.17.1**，迁移现有企业能力，并按新版执行链路重做与 Dify Runtime 的连接部分。
 
 | 目标 | 内容 |
 | --- | --- |
 | 基线升级 | 平台统一升级到 Dify 1.17.1 |
-| 能力保留 | SkyOA、工作空间治理、正式应用托管执行、KMS/S3、任务管理与监控继续可用 |
+| 能力保留 | SkyOA、工作空间、托管执行、Console 调试、Human Input、KMS/S3、管理与监控等现有能力继续可用 |
 | 数据兼容 | 保留账号、工作空间、执行记录、文件和租户私钥等历史数据 |
 | 平稳切换 | 升级前完成数据备份，测试通过后切换新版运行组件，并保留回滚能力 |
 
@@ -44,15 +44,19 @@
 | 管理与可观测 | 任务管理；调度策略管理；Worker / Scheduler 健康；OTel；执行审计 | 提供托管执行的任务管理、运行状态、监控和审计能力 |
 | 部署与运行 | API / Web 构建；General Worker；Scheduler；Standard / Critical Worker；环境配置与启动脚本 | 负责各运行角色在 DevOps 中的构建、启动、配置和独立部署 |
 
-### 2.3 本次不迁移 / 舍弃功能
+### 2.3 高工作量迁移项
 
-| 能力方向 | 不迁移 / 舍弃功能 | 功能说明 | 处理结论 | 处理原因 |
+| 能力方向 | 高工作量项 | 为什么工作量大 | 主要改造内容 | 工作量 |
 | --- | --- | --- | --- | --- |
-| Console 调试 | Workflow、Chatflow 草稿调试接入托管调度 | 草稿调试统一经过公司准入、排队、Scheduler、Worker、状态查询和停止链路 | 本期不迁移 | 1.17.1 已提供官方草稿调试；迁移后主要增加托管调度能力，但需要大量适配新版调试接口和前端状态 |
-| Console 调试 | 单节点、Iteration、Loop 调试接入托管调度 | 单节点、迭代和循环调试接入公司任务排队、结果查询和停止链路 | 本期不迁移 | 与新版节点执行、事件结构和前端调试状态耦合较深，继续使用官方调试即可满足当前需求 |
-| Console 调试 | Agent、Completion 调试接入托管调度 | Agent 和 Completion 的 Console 调试任务接入公司任务管理和 Worker | 本期不迁移 | 正式执行仍保留托管调度；调试接入属于额外增强，官方调试能力可直接使用 |
-| Human Input | 公司托管暂停、恢复与重试机制 | Human Input 暂停后通过公司 Job 进行恢复排队、取消和失败重试 | 本期暂不迁移 | 1.17.1 已提供官方 Human Input；公司旧实现与执行快照、Job 状态和 Worker 恢复协议耦合较深 |
-| 定时触发 | 草稿 Schedule 调试接入托管调度 | 草稿定时调试任务接入公司 Scheduler 和 Worker | 本期不迁移 | 属于调试增强，依赖 Console 托管调试链路；本期仅保留正式定时任务迁移 |
+| 托管执行引擎 | Managed Worker 与 1.17.1 Runtime 对接 | 旧 Worker 直接调用旧版 Generator；1.17.1 已改为新的执行参数、异步任务、Session 和事件链路，旧调用方式不能直接复用 | 重写 Worker 执行入口，让公司 Worker 调用 1.17.1 官方执行服务；保留 Job、Lease、容量和 Standard / Critical 调度，不复制旧 Runtime | 高 |
+| Workflow / Chatflow | 正式执行链路迁移 | 1.17.1 Streaming 已通过 AppExecutionParams、workflow_based_app_execution_task、_AppRunner 执行，并由官方维护 WorkflowRun、事件和暂停状态 | 重做公司 Job 与 workflow_run_id / task_id 的映射；接入官方执行任务、事件发布、失败终态和结果回写 | 高 |
+| Chat / Completion / Agent | 多应用类型托管执行 | 1.17.1 中这些应用与 Workflow / Chatflow 的执行方式并不完全一致，新版 Agent 还有独立 Runtime，不能统一套旧 Worker | 分应用重新适配 Generator / Service 参数、Session、Message / Conversation、Streaming / Blocking 和终态提取 | 高 |
+| 结果交付 | Streaming / Blocking / Result | 公司原来自己转发 Redis 事件和维护结果状态；1.17.1 的 SSE、workflow_run_id、task_id 和失败终态已经变化 | 重新定义 Job 与官方执行标识的稳定映射，处理排队、运行、成功、失败、停止、断线重连和最终结果查询 | 高 |
+| 任务控制 | Stop / Cancel / Retry | queued 和 running 任务的控制入口不同；新版取消信号、任务标识和暂停状态已经变化 | queued 由公司 Job 取消；running 对接官方停止；Retry 创建新 generation，并防止旧执行结果覆盖新任务 | 高 |
+| Console 调试 | 草稿、单节点、Iteration、Loop 托管调试 | 调试执行与正式执行入口不同，并且和草稿快照、节点事件、前端运行状态高度耦合 | 重新接入新版 draft / single node / iteration / loop 执行入口，恢复排队、停止、结果查询、SSE 重连和前端状态隔离 | 高 |
+| Human Input | 公司暂停、恢复与重试 | 1.17.1 已使用 WorkflowPause、ResumptionContext 和 resume_app_execution；旧公司暂停上下文和 generation 机制与新版不兼容 | 保留公司 Job generation / fence，同时接入官方 Pause / Resume，上游表单提交、恢复排队、取消、幂等和失败重试需要重新串联 | 高 |
+| API / WebApp 入口 | 托管路由接入 | 1.17.1 Controller、AppGenerateService、权限校验和 Session 都已变化，不能覆盖旧 Controller | 在新版正式入口只增加托管路由判断，未托管请求完整走官方逻辑；补齐 Streaming / Blocking / Stop 返回协议 | 中到高 |
+| 定时触发 | Schedule 接入托管调度 | 1.17.1 已有新的 Trigger / Schedule 执行链路，旧轮询逻辑不应直接搬回 | 保留正式定时任务的托管准入；草稿 Schedule 调试重新接新版触发和调试链路，避免重复轮询和重复执行 | 中到高 |
 
 
 ---
@@ -63,22 +67,22 @@
 
 ![Dify 1.17.1 基线升级目标架构](assets/dify-baseline-upgrade/dify-baseline-upgrade-architecture.svg)
 
-升级后分为两层：
+升级后仍以 Dify 1.17.1 为执行基础，公司能力放在官方 Runtime 外层：
 
-- **Dify 1.17.1 官方能力**：Console / WebApp、Console 调试、Human Input、Application Runtime、Workflow Runtime、文件与基础观测能力。
-- **企业增强能力**：SkyOA、工作空间治理、正式应用托管调度、KMS/S3、任务管理、Worker / Scheduler 健康和执行审计。
+- **Dify 1.17.1 官方能力**：Application Runtime、Workflow Runtime、Message / WorkflowRun、Human Input、SSE、Console / WebApp 和文件基础能力。
+- **企业增强能力**：SkyOA、工作空间治理、Policy、Admission、Job、Queue、Scheduler、Standard / Critical Worker、Console 托管调试、KMS/S3、任务管理、Health、Audit。
 
-正式 Workflow、Chatflow、Chat、Completion、AGENT_CHAT 和正式 Schedule 接入托管执行；Console 草稿调试、单节点、Iteration、Loop、Human Input 暂停恢复和草稿 Schedule 调试使用 1.17.1 官方链路。
+托管执行只决定任务何时执行、进入哪个资源池以及如何管理任务；具体 Workflow、Chatflow、Chat、Completion、Agent 的运行逻辑尽量复用 1.17.1 官方执行能力。
 
 ### 3.2 迁移原则
 
 | 原则 | 处理方式 |
 | --- | --- |
-| 官方能力优先 | Console 调试、Human Input、Workflow Runtime、文件等直接使用 1.17.1 官方能力 |
-| 保留企业规则 | SkyOA、默认工作空间、调度优先级、容量控制、KMS 等公司规则继续保留 |
-| 正式执行统一托管 | 正式应用和正式 Schedule 接入 Admission、Queue、Scheduler、Worker |
-| 按功能迁移 | 不整分支覆盖，只迁本次保留的企业能力 |
-| 历史数据兼容 | 保留账号、工作空间、文件 Key、租户私钥和执行历史 |
+| 官方 Runtime 优先 | 不恢复旧 Generator / Controller / Human Input 内部实现，按 1.17.1 当前执行链路重新接入 |
+| 保留企业调度规则 | Policy、Admission、优先级、Standard / Critical、容量控制和任务中心继续保留 |
+| 托管层与执行层分离 | 公司负责排队和治理，Dify 负责具体应用执行、WorkflowRun、Message、SSE 和 Human Input |
+| 按功能迁移 | 不整分支覆盖，逐项迁移账号、调度、执行、调试、存储和管理能力 |
+| 历史数据兼容 | 保留账号、工作空间、执行记录、文件 Key、租户私钥和已有任务状态 |
 
 ---
 
@@ -146,17 +150,39 @@
 
 ---
 
-### 4.3 正式应用执行与定时触发
+### 4.3 应用执行与 Console 调试
+
+#### 正式应用执行
 
 | 功能 | 具体迁移方式 |
 | --- | --- |
-| Workflow | Service API / WebApp 正式运行接入 Admission；Worker 使用 1.17.1 Workflow Runtime 执行 |
-| Chatflow | 正式运行接入托管调度，保留 conversation / message / task 身份和新版消息处理 |
-| Chat | 正式运行接入托管调度，保留新版消息落库、流式输出和停止能力 |
-| Completion | 保留 Streaming / Blocking / Stop，并接入统一 Job 和结果交付 |
-| AGENT_CHAT | 保留原有托管执行；新版独立 Agent App 使用 1.17.1 官方执行链路 |
-| 正式 Schedule | 定时触发的正式 Workflow 接入统一准入和托管调度 |
+| Workflow | Service API / WebApp 入口先走受管 Admission；Worker 按 1.17.1 AppExecutionParams / Workflow Runtime 执行，不恢复旧 Workflow Adapter |
+| Chatflow | 保留 conversation / message / task 身份，按新版 AdvancedChatAppGenerator 和 Workflow 执行链路重新实现 Worker 调用与结果投影 |
+| Chat | 迁入 Chat 的快照、队列和 stop；Worker 使用新版 ChatAppGenerator，保留官方消息落库、moderation 和 trace |
+| Completion | 保留 Streaming / Blocking / result / stop；Worker 使用新版 CompletionAppGenerator，不套 Workflow 结果结构 |
+| AGENT_CHAT | 迁移旧 AGENT_CHAT 受管执行，按新版 AgentChatAppGenerator 适配 Session、消息和结果 |
+| 新版 Agent | 按 1.17.1 AgentAppGenerator 单独适配，不复用旧 AGENT_CHAT 执行实现 |
 
+#### Console 调试
+
+| 功能 | 具体迁移方式 |
+| --- | --- |
+| Workflow / Chatflow 草稿 | 迁入草稿 graph、features、inputs 冻结；排队后即使用户继续修改草稿，本轮仍执行已冻结版本 |
+| 单节点调试 | 改接 1.17.1 当前单节点执行入口，补异步 accepted、Job 查询和停止 |
+| Iteration 调试 | 受管准入后调用新版 iteration 调试入口，保留多轮事件、节点状态和停止 |
+| Loop 调试 | 调用新版 loop 调试入口，保留预分配运行身份、多轮事件、停止和 SSE 重连 |
+| Agent / Completion 调试 | 将新版 Console 调试入口接入公司 Job，保留官方 Generator 行为，只增加准入、排队和任务状态 |
+| 前端状态 | 运行状态按 app / workflow / node / job 隔离，防止上一次调试结果覆盖新一轮或其他节点 |
+
+#### Human Input 与定时触发
+
+| 功能 | 具体迁移方式 |
+| --- | --- |
+| Human Input | 表单、上传、WorkflowPause 和 ResumptionContext 使用 1.17.1 原生实现，公司 Job 保留 generation / fence |
+| 暂停恢复 | 表单提交后进入公司恢复排队，再调用 1.17.1 resume_app_execution；同一暂停只允许一次有效恢复 |
+| 旧暂停数据 | 升级前检查未完成暂停任务；存在时兼容旧 schema 与新版恢复上下文，不直接删除 |
+| 正式定时触发 | 保留正式 Schedule 统一准入和 trigger source；只允许一个有效轮询 / 触发执行方 |
+| 草稿 Schedule 调试 | 冻结本次 trigger 输入并创建调试 Job，不推进真实 schedule 的 next_run_at |
 
 ---
 
@@ -269,7 +295,7 @@ uv run celery -A app.celery worker \
   -Q dataset,dataset_summary,priority_dataset,priority_pipeline,pipeline,mail,ops_trace,app_deletion,plugin,workflow_storage,conversation,workflow,schedule_poller,schedule_executor,triggered_workflow_dispatcher,trigger_refresh_executor,retention,workflow_based_app_execution
 ```
 
-兼容阶段保留 `workflow_based_app_execution`；正式应用和正式定时触发全部切到托管执行后再移除。
+兼容阶段保留 `workflow_based_app_execution`；正式应用、Console 调试、Human Input 和定时触发全部完成托管迁移后再移除。
 
 #### dify-worker-beat
 
@@ -383,7 +409,7 @@ Migration 只能执行一次，不能让 API、Worker、Scheduler 的 init 脚�
   ↓
 General Worker 保留 workflow_based_app_execution
   ↓
-正式应用 / 正式定时触发完成托管迁移
+正式应用 / Console 调试 / Human Input / 定时触发完成托管迁移
   ↓
 确认旧队列无积压、无新任务进入
   ↓
@@ -543,16 +569,18 @@ WHERE tenant_id = '<默认工作空间ID>';
 | AGENT_CHAT | Tool/模型调用正常，受管队列状态正确 |
 | 正式 Schedule | 到点生成托管任务并只执行一次 |
 
-### 7.4 官方调试与 Human Input 回归
+### 7.4 Console 调试与 Human Input
 
 | 场景 | 核心验证 |
 | --- | --- |
-| Workflow / Chatflow 草稿 | 官方草稿调试可以正常运行并返回结果 |
-| 单节点 | 官方单节点调试正常 |
-| Iteration / Loop | 官方迭代、循环调试正常 |
-| Agent / Completion | Console 官方调试入口正常 |
-| Human Input | 暂停、表单提交、恢复和文件输入正常 |
-| 草稿 Schedule | 官方草稿定时调试正常，不进入公司托管队列 |
+| Workflow / Chatflow 草稿 | 入队后继续编辑草稿，本次仍执行入队时快照 |
+| 单节点 | accepted → Job 查询 → 节点结果；可停止 |
+| Iteration | 多轮事件、每轮节点状态和最终结果完整 |
+| Loop | 多轮事件、SSE 重连后状态不丢失 |
+| Agent / Completion | Console 调试进入托管队列，结果与官方调试行为一致 |
+| 前端状态 | 连续两次运行、多个节点并发时状态不串 |
+| Human Input | 暂停 → 表单提交 → 恢复排队 → 官方 resume → 完成 |
+| 定时触发 | 正式 Schedule 只执行一次；草稿 Schedule 调试不推进真实 next_run_at |
 
 
 ### 7.5 托管执行专项
@@ -592,8 +620,8 @@ WHERE tenant_id = '<默认工作空间ID>';
 SkyOA / 默认工作空间 / owner 正常
 General Worker / Beat / Scheduler / 双 Worker 职责不串
 Workflow / Chatflow / Chat / Completion / AGENT_CHAT 正式执行通过
-官方草稿 / 单节点 / Iteration / Loop / Human Input 回归通过
-正式 Schedule 托管执行通过
+草稿 / 单节点 / Iteration / Loop / Agent / Completion 调试通过
+Human Input 暂停恢复与 Schedule 托管执行通过
 KMS / S3 / Sandbox / Plugin Daemon 通过
 Health / Audit / OTel 无阻断问题
 回滚入口和数据库备份可用
@@ -617,14 +645,18 @@ Health / Audit / OTel 无阻断问题
 | 09.28 - 10.02 | 托管执行底座 | 迁移 Standard / Critical Worker、容量管理和 Job 结果交付 | ⬜ |
 | 10.05 - 10.09 | 正式应用执行 | Workflow、Chatflow 正式执行接入托管调度 | ⬜ |
 | 10.05 - 10.09 | 正式应用执行 | Chat、Completion 正式执行接入托管调度 | ⬜ |
-| 10.05 - 10.09 | 正式应用执行 | AGENT_CHAT 托管执行迁移 | ⬜ |
-| 10.05 - 10.09 | 正式应用执行 | 正式 Schedule 接入托管调度 | ⬜ |
+| 10.05 - 10.09 | 正式应用执行 | AGENT_CHAT 与新版 Agent 执行适配 | ⬜ |
+| 10.05 - 10.09 | Console 调试 | Workflow / Chatflow 草稿冻结、排队、查询和停止 | ⬜ |
+| 10.05 - 10.09 | Console 调试 | 单节点、Iteration、Loop 调试接入新版执行入口 | ⬜ |
+| 10.05 - 10.09 | Console 调试 | Agent / Completion 调试和前端状态适配 | ⬜ |
+| 10.12 - 10.16 | Human Input 与触发 | Human Input 暂停、恢复、幂等和重试迁移 | ⬜ |
+| 10.12 - 10.16 | Human Input 与触发 | 正式 Schedule 与草稿 Schedule 调试迁移 | ⬜ |
 | 10.12 - 10.16 | 存储与安全 | KMS Provider 和凭据刷新接入新版 S3 | ⬜ |
 | 10.12 - 10.16 | 存储与安全 | 新旧文件 Key 与租户私钥兼容 | ⬜ |
 | 10.12 - 10.16 | 存储与安全 | Redis Event Bus 跨进程事件配置 | ⬜ |
 | 10.12 - 10.16 | 管理与监控 | 任务管理、Health、OTel、Audit 迁移 | ⬜ |
 | 10.19 - 10.23 | 验收与上线 | 完成 PostgreSQL 备份并执行 Schema Migration | ⬜ |
 | 10.19 - 10.23 | 验收与上线 | 完成 API / Web / Scheduler / Worker 启动验证 | ⬜ |
-| 10.19 - 10.23 | 验收与上线 | 完成账号、正式应用托管执行和正式 Schedule 回归 | ⬜ |
-| 10.19 - 10.23 | 验收与上线 | 完成官方 Console 调试、Human Input、KMS/S3 和管理监控回归 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 完成账号、正式应用、Console 调试、Human Input 和 Schedule 回归 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 完成 KMS/S3、任务管理、Health、Audit 回归 | ⬜ |
 | 10.19 - 10.23 | 验收与上线 | 完成正式切换和回滚验证 | ⬜ |
