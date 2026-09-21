@@ -177,7 +177,7 @@
 
 ## 五、DevOps 部署方案
 
-本次升级继续使用现有 DevOps 的“源码构建 → output 制品 → 平台基础镜像 → Kubernetes 发布”方式，不改成仓库 Dockerfile 自建镜像。API、General Worker、Beat、Scheduler、Standard/Critical Worker 复用同一套 API 后端代码，只通过平台应用和启动命令区分运行角色。
+API、General Worker、Beat、Scheduler、Standard/Critical Worker 复用同一套 API 后端制品，通过不同应用和启动命令区分运行角色。
 
 ### 5.1 部署应用
 
