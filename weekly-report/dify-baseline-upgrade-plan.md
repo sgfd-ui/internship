@@ -48,6 +48,18 @@
 
 以下时间按 **1 人开发**估算，包含代码适配、单元测试、联调和核心异常场景验证。各项存在共用代码，时间不能直接逐行相加。
 
+#### 架构变化
+
+![托管执行迁移前后架构](assets/dify-baseline-upgrade/dify-managed-execution-before-after.svg)
+
+这张图用于说明迁移的核心变化：**公司调度层继续保留，真正需要重做的是 Managed Worker 与 Dify 1.17.1 Runtime 之间的连接。**
+
+#### 高工作量分布
+
+![高工作量迁移分布](assets/dify-baseline-upgrade/dify-heavy-migration-hotspots.svg)
+
+高工作量主要集中在三处：**Worker 与 Runtime 对接、执行状态和结果协议、Console / Human Input / Schedule 等特殊执行链路。**
+
 | 能力方向 | 高工作量项 | 为什么工作量大 | 主要改造内容 | 工作量 | 预计时间（含适配 + 测试） |
 | --- | --- | --- | --- | --- | --- |
 | 托管执行引擎 | Managed Worker 与 1.17.1 Runtime 对接 | 旧 Worker 直接调用旧版 Generator；1.17.1 已改为新的执行参数、异步任务、Session 和事件链路，旧调用方式不能直接复用 | 重写 Worker 执行入口，让公司 Worker 调用 1.17.1 官方执行服务；保留 Job、Lease、容量和 Standard / Critical 调度，不复制旧 Runtime | 高 | **3～5 天** |
