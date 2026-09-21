@@ -50,13 +50,13 @@
 
 #### 架构变化
 
-![托管执行迁移前后架构](assets/dify-baseline-upgrade/dify-managed-execution-before-after-v2.svg)
+![托管执行迁移前后架构](assets/dify-baseline-upgrade/dify-managed-execution-before-after-v4.svg)
 
 这张图用于说明迁移的核心变化：**公司调度层继续保留，真正需要重做的是 Managed Worker 与 Dify 1.17.1 Runtime 之间的连接。**
 
 #### 高工作量分布
 
-![高工作量迁移分布](assets/dify-baseline-upgrade/dify-heavy-migration-hotspots-v2.svg)
+![高工作量迁移分布](assets/dify-baseline-upgrade/dify-heavy-migration-hotspots-v4.svg)
 
 高工作量主要集中在三处：**Worker 与 Runtime 对接、执行状态和结果协议、Console / Human Input / Schedule 等特殊执行链路。**
 
