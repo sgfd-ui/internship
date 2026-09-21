@@ -46,17 +46,21 @@
 
 ### 2.3 高工作量迁移项
 
-| 能力方向 | 高工作量项 | 为什么工作量大 | 主要改造内容 | 工作量 |
-| --- | --- | --- | --- | --- |
-| 托管执行引擎 | Managed Worker 与 1.17.1 Runtime 对接 | 旧 Worker 直接调用旧版 Generator；1.17.1 已改为新的执行参数、异步任务、Session 和事件链路，旧调用方式不能直接复用 | 重写 Worker 执行入口，让公司 Worker 调用 1.17.1 官方执行服务；保留 Job、Lease、容量和 Standard / Critical 调度，不复制旧 Runtime | 高 |
-| Workflow / Chatflow | 正式执行链路迁移 | 1.17.1 Streaming 已通过 AppExecutionParams、workflow_based_app_execution_task、_AppRunner 执行，并由官方维护 WorkflowRun、事件和暂停状态 | 重做公司 Job 与 workflow_run_id / task_id 的映射；接入官方执行任务、事件发布、失败终态和结果回写 | 高 |
-| Chat / Completion / Agent | 多应用类型托管执行 | 1.17.1 中这些应用与 Workflow / Chatflow 的执行方式并不完全一致，新版 Agent 还有独立 Runtime，不能统一套旧 Worker | 分应用重新适配 Generator / Service 参数、Session、Message / Conversation、Streaming / Blocking 和终态提取 | 高 |
-| 结果交付 | Streaming / Blocking / Result | 公司原来自己转发 Redis 事件和维护结果状态；1.17.1 的 SSE、workflow_run_id、task_id 和失败终态已经变化 | 重新定义 Job 与官方执行标识的稳定映射，处理排队、运行、成功、失败、停止、断线重连和最终结果查询 | 高 |
-| 任务控制 | Stop / Cancel / Retry | queued 和 running 任务的控制入口不同；新版取消信号、任务标识和暂停状态已经变化 | queued 由公司 Job 取消；running 对接官方停止；Retry 创建新 generation，并防止旧执行结果覆盖新任务 | 高 |
-| Console 调试 | 草稿、单节点、Iteration、Loop 托管调试 | 调试执行与正式执行入口不同，并且和草稿快照、节点事件、前端运行状态高度耦合 | 重新接入新版 draft / single node / iteration / loop 执行入口，恢复排队、停止、结果查询、SSE 重连和前端状态隔离 | 高 |
-| Human Input | 公司暂停、恢复与重试 | 1.17.1 已使用 WorkflowPause、ResumptionContext 和 resume_app_execution；旧公司暂停上下文和 generation 机制与新版不兼容 | 保留公司 Job generation / fence，同时接入官方 Pause / Resume，上游表单提交、恢复排队、取消、幂等和失败重试需要重新串联 | 高 |
-| API / WebApp 入口 | 托管路由接入 | 1.17.1 Controller、AppGenerateService、权限校验和 Session 都已变化，不能覆盖旧 Controller | 在新版正式入口只增加托管路由判断，未托管请求完整走官方逻辑；补齐 Streaming / Blocking / Stop 返回协议 | 中到高 |
-| 定时触发 | Schedule 接入托管调度 | 1.17.1 已有新的 Trigger / Schedule 执行链路，旧轮询逻辑不应直接搬回 | 保留正式定时任务的托管准入；草稿 Schedule 调试重新接新版触发和调试链路，避免重复轮询和重复执行 | 中到高 |
+以下时间按 **1 人开发**估算，包含代码适配、单元测试、联调和核心异常场景验证。各项存在共用代码，时间不能直接逐行相加。
+
+| 能力方向 | 高工作量项 | 为什么工作量大 | 主要改造内容 | 工作量 | 预计时间（含适配 + 测试） |
+| --- | --- | --- | --- | --- | --- |
+| 托管执行引擎 | Managed Worker 与 1.17.1 Runtime 对接 | 旧 Worker 直接调用旧版 Generator；1.17.1 已改为新的执行参数、异步任务、Session 和事件链路，旧调用方式不能直接复用 | 重写 Worker 执行入口，让公司 Worker 调用 1.17.1 官方执行服务；保留 Job、Lease、容量和 Standard / Critical 调度，不复制旧 Runtime | 高 | **3～5 天** |
+| Workflow / Chatflow | 正式执行链路迁移 | 1.17.1 Streaming 已通过 AppExecutionParams、workflow_based_app_execution_task、_AppRunner 执行，并由官方维护 WorkflowRun、事件和暂停状态 | 重做公司 Job 与 workflow_run_id / task_id 的映射；接入官方执行任务、事件发布、失败终态和结果回写 | 高 | **3～4 天** |
+| Chat / Completion / Agent | 多应用类型托管执行 | 1.17.1 中这些应用与 Workflow / Chatflow 的执行方式并不完全一致，新版 Agent 还有独立 Runtime，不能统一套旧 Worker | 分应用重新适配 Generator / Service 参数、Session、Message / Conversation、Streaming / Blocking 和终态提取 | 高 | **4～6 天** |
+| 结果交付 | Streaming / Blocking / Result | 公司原来自己转发 Redis 事件和维护结果状态；1.17.1 的 SSE、workflow_run_id、task_id 和失败终态已经变化 | 重新定义 Job 与官方执行标识的稳定映射，处理排队、运行、成功、失败、停止、断线重连和最终结果查询 | 高 | **2～3 天** |
+| 任务控制 | Stop / Cancel / Retry | queued 和 running 任务的控制入口不同；新版取消信号、任务标识和暂停状态已经变化 | queued 由公司 Job 取消；running 对接官方停止；Retry 创建新 generation，并防止旧执行结果覆盖新任务 | 高 | **2～3 天** |
+| Console 调试 | 草稿、单节点、Iteration、Loop 托管调试 | 调试执行与正式执行入口不同，并且和草稿快照、节点事件、前端运行状态高度耦合 | 重新接入新版 draft / single node / iteration / loop 执行入口，恢复排队、停止、结果查询、SSE 重连和前端状态隔离 | 高 | **4～6 天** |
+| Human Input | 公司暂停、恢复与重试 | 1.17.1 已使用 WorkflowPause、ResumptionContext 和 resume_app_execution；旧公司暂停上下文和 generation 机制与新版不兼容 | 保留公司 Job generation / fence，同时接入官方 Pause / Resume，上游表单提交、恢复排队、取消、幂等和失败重试需要重新串联 | 高 | **3～5 天** |
+| API / WebApp 入口 | 托管路由接入 | 1.17.1 Controller、AppGenerateService、权限校验和 Session 都已变化，不能覆盖旧 Controller | 在新版正式入口只增加托管路由判断，未托管请求完整走官方逻辑；补齐 Streaming / Blocking / Stop 返回协议 | 中到高 | **2～3 天** |
+| 定时触发 | Schedule 接入托管调度 | 1.17.1 已有新的 Trigger / Schedule 执行链路，旧轮询逻辑不应直接搬回 | 保留正式定时任务的托管准入；草稿 Schedule 调试重新接新版触发和调试链路，避免重复轮询和重复执行 | 中到高 | **2～4 天** |
+
+按共用执行链路合并计算，上述高工作量部分整体预计 **15～22 个工作日**；如果联调中发现官方执行任务需要额外抽公共 Runner，或 Human Input / Agent 存在较大兼容问题，建议预留到 **20～25 个工作日**。
 
 
 ---
