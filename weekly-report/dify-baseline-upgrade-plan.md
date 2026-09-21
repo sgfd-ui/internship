@@ -2,12 +2,12 @@
 
 ## 一、升级目标
 
-当前平台已经在 Dify 上完成账号与工作空间治理、托管执行引擎、Console 调试、KMS/S3 存储安全和健康监控等企业能力。本次升级以 **Dify 1.17.1** 为新基线，将这些能力重新接入新版代码结构。
+当前平台基于 Dify 1.14.2，已扩展账号与工作空间治理、托管执行引擎、KMS/S3 和管理监控等企业能力。本次升级到 **Dify 1.17.1**，保留正式应用托管执行等核心企业能力，Console 调试和 Human Input 使用新版官方能力。
 
 | 目标 | 内容 |
 | --- | --- |
 | 基线升级 | 平台统一升级到 Dify 1.17.1 |
-| 能力保留 | SkyOA、工作空间、托管执行、调试、KMS/S3、监控等现有能力继续可用 |
+| 能力保留 | SkyOA、工作空间治理、正式应用托管执行、KMS/S3、任务管理与监控继续可用 |
 | 数据兼容 | 保留账号、工作空间、执行记录、文件和租户私钥等历史数据 |
 | 平稳切换 | 升级前完成数据备份，测试通过后切换新版运行组件，并保留回滚能力 |
 
@@ -41,7 +41,7 @@
 | 应用执行 | Workflow；Chatflow；Chat；Completion；AGENT_CHAT；正式 Schedule | 将正式应用运行和定时触发统一接入公司托管执行链路 |
 | Console 调试与 Human Input | Workflow / Chatflow 草稿调试；单节点；Iteration；Loop；Human Input 托管暂停恢复；草稿 Schedule 调试 | 将 Console 调试、人工暂停恢复和草稿定时调试也纳入公司排队、任务状态、停止和恢复管理 |
 | 存储与数据安全 | KMS 凭据获取与刷新；S3 存储接入；历史文件路径；租户私钥；Redis 事件通信 | 负责公司对象存储认证、历史文件与密钥兼容，以及 API / Scheduler / Worker 之间的跨进程事件通信 |
-| 管理与可观测 | 任务管理；调度策略管理；Worker / Scheduler 健康；OTel；执行审计；执行数据自动清理 | 提供托管执行的管理、健康状态、监控、审计和历史数据治理能力 |
+| 管理与可观测 | 任务管理；调度策略管理；Worker / Scheduler 健康；OTel；执行审计 | 提供托管执行的任务管理、运行状态、监控和审计能力 |
 | 部署与运行 | API / Web 构建；General Worker；Scheduler；Standard / Critical Worker；环境配置与启动脚本 | 负责各运行角色在 DevOps 中的构建、启动、配置和独立部署 |
 
 ### 2.3 本次不迁移 / 舍弃功能
@@ -63,21 +63,22 @@
 
 ![Dify 1.17.1 基线升级目标架构](assets/dify-baseline-upgrade/dify-baseline-upgrade-architecture.svg)
 
-升级后仍然以 Dify 1.17.1 为主体：
+升级后分为两层：
 
-- **Dify 原生能力**负责应用 Runtime、Console/WebApp、账号基础服务、Workflow Runtime 和文件基础能力。
-- **企业增强能力**继续负责 SkyOA、工作空间治理、托管调度、KMS/S3、安全和平台管理。
-- 旧版与新版职责冲突时，保留企业业务规则，底层实现按 1.17.1 当前接口重接，不恢复一套旧兼容 Runtime。
+- **Dify 1.17.1 官方能力**：Console / WebApp、Console 调试、Human Input、Application Runtime、Workflow Runtime、文件与基础观测能力。
+- **企业增强能力**：SkyOA、工作空间治理、正式应用托管调度、KMS/S3、任务管理、Worker / Scheduler 健康和执行审计。
+
+正式 Workflow、Chatflow、Chat、Completion、AGENT_CHAT 和正式 Schedule 接入托管执行；Console 草稿调试、单节点、Iteration、Loop、Human Input 暂停恢复和草稿 Schedule 调试使用 1.17.1 官方链路。
 
 ### 3.2 迁移原则
 
 | 原则 | 处理方式 |
 | --- | --- |
-| 新版已有能力优先 | 新版已经重构的账号、Workflow、Session、文件能力直接复用 |
-| 保留企业业务规则 | 调度优先级、默认工作空间、SkyOA、KMS 等公司规则继续保留 |
-| 不整分支覆盖 | 按功能迁移，不直接将旧 feature 分支整体 merge 到 1.17.1 |
-| 历史数据不重建 | 不重新生成账号、工作空间、私钥或批量改写 S3 对象 |
-| 先公共底座后应用入口 | 账号、数据模型、调度底座先完成，再接 Workflow/Chat/调试 |
+| 官方能力优先 | Console 调试、Human Input、Workflow Runtime、文件等直接使用 1.17.1 官方能力 |
+| 保留企业规则 | SkyOA、默认工作空间、调度优先级、容量控制、KMS 等公司规则继续保留 |
+| 正式执行统一托管 | 正式应用和正式 Schedule 接入 Admission、Queue、Scheduler、Worker |
+| 按功能迁移 | 不整分支覆盖，只迁本次保留的企业能力 |
+| 历史数据兼容 | 保留账号、工作空间、文件 Key、租户私钥和执行历史 |
 
 ---
 
@@ -145,37 +146,17 @@
 
 ---
 
-### 4.3 应用执行与 Console 调试
-
-#### 正式应用执行
+### 4.3 正式应用执行与定时触发
 
 | 功能 | 具体迁移方式 |
 | --- | --- |
-| Workflow | Service API / WebApp 入口先走受管 Admission；Worker 按 1.17.1 WorkflowAppGenerator / Workflow Runtime 执行，不恢复旧 Workflow Adapter |
-| Chatflow | 保留 conversation / message / task 身份，按新版 AdvancedChatAppGenerator 重新实现 Worker 调用和结果投影 |
-| Chat | 迁入 CHAT 的快照、队列和 stop；Worker 使用新版 ChatAppGenerator，保留官方消息落库、moderation、trace |
-| Completion | 保留 Streaming / Blocking / result / stop；Worker 使用新版 CompletionAppGenerator，不套 Workflow 结果结构 |
-| Agent | 先迁旧 AGENT_CHAT 受管执行；1.17.1 新 AppMode.AGENT 保留官方路径，待确认是否统一纳入托管执行 |
+| Workflow | Service API / WebApp 正式运行接入 Admission；Worker 使用 1.17.1 Workflow Runtime 执行 |
+| Chatflow | 正式运行接入托管调度，保留 conversation / message / task 身份和新版消息处理 |
+| Chat | 正式运行接入托管调度，保留新版消息落库、流式输出和停止能力 |
+| Completion | 保留 Streaming / Blocking / Stop，并接入统一 Job 和结果交付 |
+| AGENT_CHAT | 保留原有托管执行；新版独立 Agent App 使用 1.17.1 官方执行链路 |
+| 正式 Schedule | 定时触发的正式 Workflow 接入统一准入和托管调度 |
 
-#### Console 调试
-
-| 功能 | 具体迁移方式 |
-| --- | --- |
-| Workflow / Chatflow 草稿 | 迁入草稿 graph、features、inputs 冻结；排队后即使用户继续修改草稿，本轮仍执行已冻结版本 |
-| 单节点调试 | 将旧单节点 Adapter 改接 1.17.1 run_draft_workflow_node / WorkflowEntry.single_step_run，补异步 accepted、查询和停止 |
-| 迭代调试 | 受管准入后调用新版 single_iteration_generate，保留多轮事件、节点状态和停止 |
-| 循环调试 | 调用新版 single_loop_generate，保留预分配运行身份、多轮事件、停止和 SSE 重连 |
-| 前端状态 | 运行状态按 app / workflow / node / job 隔离，防止上一次调试结果覆盖新一轮或其他节点 |
-
-#### Human Input 与定时触发
-
-| 功能 | 具体迁移方式 |
-| --- | --- |
-| Human Input | 保留 Job generation / fence；表单、上传和 WorkflowPause 使用 1.17.1 原生实现 |
-| 暂停恢复 | 表单提交后只创建新的受管 generation，由 Worker 恢复同一 task / conversation / message，不并行触发两套 resume |
-| 旧暂停数据 | 升级前确认是否存在未完成暂停任务；存在时按旧 schema 与新版恢复上下文做兼容处理，不直接删除 |
-| 定时触发 | 保留正式 schedule 统一准入和 trigger source；LEGACY / ENFORCED 模式只允许一个轮询者 |
-| 草稿定时调试 | 冻结本次 trigger 输入，只创建调试 Job，不推进真实 schedule 的 next_run_at |
 
 ---
 
@@ -288,7 +269,7 @@ uv run celery -A app.celery worker \
   -Q dataset,dataset_summary,priority_dataset,priority_pipeline,pipeline,mail,ops_trace,app_deletion,plugin,workflow_storage,conversation,workflow,schedule_poller,schedule_executor,triggered_workflow_dispatcher,trigger_refresh_executor,retention,workflow_based_app_execution
 ```
 
-兼容阶段保留 `workflow_based_app_execution`；等所有应用正式入口、Console 调试、Human Input 和定时触发全部迁入托管链路后再移除。
+兼容阶段保留 `workflow_based_app_execution`；正式应用和正式定时触发全部切到托管执行后再移除。
 
 #### dify-worker-beat
 
@@ -402,7 +383,7 @@ Migration 只能执行一次，不能让 API、Worker、Scheduler 的 init 脚�
   ↓
 General Worker 保留 workflow_based_app_execution
   ↓
-正式执行 / Console 调试 / Human Input / 定时触发全部迁移
+正式应用 / 正式定时触发完成托管迁移
   ↓
 确认旧队列无积压、无新任务进入
   ↓
@@ -419,7 +400,7 @@ Standard / Critical Worker 正常消费
 
 ## 六、数据备份与数据库迁移
 
-本次不做数据库副本运行。升级前直接对测试环境进行**完整备份**，备份成功并可读取后再执行 migration。
+升级前对测试环境 PostgreSQL 做**完整备份**，验证备份可读取后再执行 Schema Migration。
 
 ### 6.1 PostgreSQL 全库备份
 
@@ -522,7 +503,7 @@ WHERE tenant_id = '<默认工作空间ID>';
 
 ## 七、测试与验收方案
 
-测试分为“部署检查 → 数据库检查 → 功能回归 → 托管执行专项 → 外部依赖”五层，全部在当前测试环境完成，不再增加数据库副本运行。
+测试分为“部署检查 → 数据库检查 → 功能回归 → 托管执行专项 → 外部依赖”五层。
 
 ### 7.1 部署检查
 
@@ -560,18 +541,19 @@ WHERE tenant_id = '<默认工作空间ID>';
 | Chat | 消息落库、流式输出、停止和结果查询 |
 | Completion | Streaming / Blocking 返回结构正确 |
 | AGENT_CHAT | Tool/模型调用正常，受管队列状态正确 |
+| 正式 Schedule | 到点生成托管任务并只执行一次 |
 
-### 7.4 Console 调试
+### 7.4 官方调试与 Human Input 回归
 
 | 场景 | 核心验证 |
 | --- | --- |
-| Workflow / Chatflow 草稿 | 入队后继续编辑草稿，本次仍执行入队时快照 |
-| 单节点 | accepted → job 查询 → 节点结果；可停止 |
-| Iteration | 多轮事件、每轮节点状态和最终结果完整 |
-| Loop | 多轮事件、SSE 重连后状态不丢失 |
-| 前端状态 | 连续两次运行、多个节点并发时状态不串 |
-| Human Input | 暂停 → 表单提交 → 新 generation 恢复 → 完成 |
-| 定时触发 | 到点只产生一份正式 Job；草稿定时调试不推进真实 schedule |
+| Workflow / Chatflow 草稿 | 官方草稿调试可以正常运行并返回结果 |
+| 单节点 | 官方单节点调试正常 |
+| Iteration / Loop | 官方迭代、循环调试正常 |
+| Agent / Completion | Console 官方调试入口正常 |
+| Human Input | 暂停、表单提交、恢复和文件输入正常 |
+| 草稿 Schedule | 官方草稿定时调试正常，不进入公司托管队列 |
+
 
 ### 7.5 托管执行专项
 
@@ -610,7 +592,8 @@ WHERE tenant_id = '<默认工作空间ID>';
 SkyOA / 默认工作空间 / owner 正常
 General Worker / Beat / Scheduler / 双 Worker 职责不串
 Workflow / Chatflow / Chat / Completion / AGENT_CHAT 正式执行通过
-草稿 / 单节点 / Iteration / Loop / Human Input / Schedule 通过
+官方草稿 / 单节点 / Iteration / Loop / Human Input 回归通过
+正式 Schedule 托管执行通过
 KMS / S3 / Sandbox / Plugin Daemon 通过
 Health / Audit / OTel 无阻断问题
 回滚入口和数据库备份可用
@@ -625,35 +608,23 @@ Health / Audit / OTel 无阻断问题
 | 09.21 - 09.25 | 基线与构建 | 确定 Dify 1.17.1 基线并建立升级分支 | ✅ |
 | 09.21 - 09.25 | 基线与构建 | 迁入 API/Web 平台构建、产物清理和依赖路径处理 | ✅ |
 | 09.21 - 09.25 | 账号与工作空间 | SkyOA OAuth / state / 身份映射迁移 | ⬜ |
-| 09.21 - 09.25 | 账号与工作空间 | 超级管理员初始化接入新版 SetupService | ⬜ |
-| 09.21 - 09.25 | 账号与工作空间 | 邀请注册接入新版 AccountActivationService | ⬜ |
-| 09.21 - 09.25 | 账号与工作空间 | 默认工作空间、current workspace 和 owner 保护迁移 | ⬜ |
-| 09.21 - 09.25 | 账号与工作空间 | 工作空间创建、归档、权限和缓存迁移 | ⬜ |
+| 09.21 - 09.25 | 账号与工作空间 | 超级管理员、邀请注册、默认工作空间迁移 | ⬜ |
+| 09.21 - 09.25 | 账号与工作空间 | 工作空间管理、权限和缓存迁移 | ⬜ |
 | 09.28 - 10.02 | 托管执行底座 | 迁入执行模型及企业历史 migration | ⬜ |
 | 09.28 - 10.02 | 托管执行底座 | 完成官方链与企业 migration 链合流 | ⬜ |
-| 09.28 - 10.02 | 托管执行底座 | 迁移 Policy 与 workspace 调度权限 | ⬜ |
-| 09.28 - 10.02 | 托管执行底座 | 迁移 Admission、Queue、Input Snapshot | ⬜ |
+| 09.28 - 10.02 | 托管执行底座 | 迁移 Policy、Admission、Queue 和 Input Snapshot | ⬜ |
 | 09.28 - 10.02 | 托管执行底座 | 迁移 Scheduler、Lease、Outbox 和终态收敛 | ⬜ |
-| 09.28 - 10.02 | 托管执行底座 | 迁移 Worker、心跳 v2、执行租约和容量管理 | ⬜ |
-| 09.28 - 10.02 | 托管执行底座 | 迁移 Job 管理、Streaming、Blocking 和结果查询 | ⬜ |
-| 10.05 - 10.09 | 正式应用执行 | Workflow 正式执行接入新版 Workflow Runtime | ⬜ |
-| 10.05 - 10.09 | 正式应用执行 | Chatflow 正式执行和会话身份迁移 | ⬜ |
-| 10.05 - 10.09 | 正式应用执行 | Chat 正式执行、结果和停止迁移 | ⬜ |
-| 10.05 - 10.09 | 正式应用执行 | Completion Streaming / Blocking / Stop 迁移 | ⬜ |
-| 10.05 - 10.09 | 正式应用执行 | AGENT_CHAT 受管执行迁移，新 AGENT 范围确认 | ⬜ |
-| 10.05 - 10.09 | Console 调试 | Workflow / Chatflow 草稿冻结、排队、查询和停止 | ⬜ |
-| 10.05 - 10.09 | Console 调试 | 单节点、迭代、循环调试接入新版原生执行入口 | ⬜ |
-| 10.05 - 10.09 | Console 调试 | 前端运行状态、SSE 重连和新旧轮次隔离 | ⬜ |
-| 10.12 - 10.16 | 暂停与调度 | Human Input generation、暂停、恢复和重试迁移 | ⬜ |
-| 10.12 - 10.16 | 暂停与调度 | 正式定时触发与草稿 schedule 调试迁移 | ⬜ |
+| 09.28 - 10.02 | 托管执行底座 | 迁移 Standard / Critical Worker、容量管理和 Job 结果交付 | ⬜ |
+| 10.05 - 10.09 | 正式应用执行 | Workflow、Chatflow 正式执行接入托管调度 | ⬜ |
+| 10.05 - 10.09 | 正式应用执行 | Chat、Completion 正式执行接入托管调度 | ⬜ |
+| 10.05 - 10.09 | 正式应用执行 | AGENT_CHAT 托管执行迁移 | ⬜ |
+| 10.05 - 10.09 | 正式应用执行 | 正式 Schedule 接入托管调度 | ⬜ |
 | 10.12 - 10.16 | 存储与安全 | KMS Provider 和凭据刷新接入新版 S3 | ⬜ |
-| 10.12 - 10.16 | 存储与安全 | 新旧文件 Key 与租户私钥引用兼容 | ⬜ |
-| 10.12 - 10.16 | 存储与安全 | 知识库文件 S3 删除链路修复 | ⬜ |
-| 10.12 - 10.16 | 存储与安全 | Redis Event Bus 地址和跨进程事件交付配置 | ⬜ |
-| 10.12 - 10.16 | 管理与监控 | Health、OTel、Audit、Scheduler/Worker 运行入口迁移 | ⬜ |
-| 10.19 - 10.23 | 验收与上线 | 完成 PostgreSQL、关键 S3 Key、配置和 migration 状态备份 | ⬜ |
-| 10.19 - 10.23 | 验收与上线 | 执行数据库 migration 并检查历史数据 | ⬜ |
+| 10.12 - 10.16 | 存储与安全 | 新旧文件 Key 与租户私钥兼容 | ⬜ |
+| 10.12 - 10.16 | 存储与安全 | Redis Event Bus 跨进程事件配置 | ⬜ |
+| 10.12 - 10.16 | 管理与监控 | 任务管理、Health、OTel、Audit 迁移 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 完成 PostgreSQL 备份并执行 Schema Migration | ⬜ |
 | 10.19 - 10.23 | 验收与上线 | 完成 API / Web / Scheduler / Worker 启动验证 | ⬜ |
-| 10.19 - 10.23 | 验收与上线 | 完成账号、正式执行、Console 调试和 Human Input 回归 | ⬜ |
-| 10.19 - 10.23 | 验收与上线 | 完成 KMS/S3、任务管理、Health 和 Audit 回归 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 完成账号、正式应用托管执行和正式 Schedule 回归 | ⬜ |
+| 10.19 - 10.23 | 验收与上线 | 完成官方 Console 调试、Human Input、KMS/S3 和管理监控回归 | ⬜ |
 | 10.19 - 10.23 | 验收与上线 | 完成正式切换和回滚验证 | ⬜ |
