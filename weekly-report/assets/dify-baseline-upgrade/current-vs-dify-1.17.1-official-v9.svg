@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="960" viewBox="0 0 1600 960">
+<defs>
+<style>
+text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;fill:#172033}
+.t{font-size:30px;font-weight:700}.st{font-size:15px;fill:#667085}.pt{font-size:23px;font-weight:700}.ps{font-size:14px;fill:#667085}
+.l{font-size:18px;font-weight:700}.n{font-size:13px;font-weight:700}.s{font-size:12px;fill:#667085}
+.a{stroke:#56677d;stroke-width:2;fill:none;marker-end:url(#m)}.h{stroke:#d25745;stroke-width:2.4;fill:none;marker-end:url(#mh)}
+</style>
+<marker id="m" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#56677d"/></marker>
+<marker id="mh" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#d25745"/></marker>
+<filter id="sh"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#24324a" flood-opacity=".10"/></filter>
+</defs>
+<rect width="1600" height="960" fill="#fff"/>
+<text x="28" y="42" class="t">当前架构 vs Dify 1.17.1 官方架构</text>
+<text x="28" y="68" class="st">左侧是当前公司现状；右侧只展示 Dify 1.17.1 官方执行链路，不包含公司定制能力</text>
+<rect x="22" y="88" width="744" height="820" rx="18" fill="#f9fbff" stroke="#dbe4f2"/>
+<rect x="834" y="88" width="744" height="820" rx="18" fill="#f9fbff" stroke="#dbe4f2"/>
+<text x="394" y="124" text-anchor="middle" class="pt">当前架构（公司现状）</text>
+<text x="394" y="148" text-anchor="middle" class="ps">公司扩展已经接入并在线使用</text>
+<text x="1206" y="124" text-anchor="middle" class="pt">Dify 1.17.1 官方架构</text>
+<text x="1206" y="148" text-anchor="middle" class="ps">只展示官方执行链路</text>
+
+<!-- current -->
+<rect x="54" y="178" width="680" height="74" rx="12" fill="#eaf3ff" stroke="#80aff0" filter="url(#sh)"/>
+<text x="394" y="205" text-anchor="middle" class="l">入口层</text>
+<text x="394" y="231" text-anchor="middle" class="s">WebApp　｜　Service API　｜　Console　｜　Schedule</text>
+
+<rect x="54" y="278" width="680" height="92" rx="12" fill="#fff0f2" stroke="#ef97a0" filter="url(#sh)"/>
+<text x="394" y="305" text-anchor="middle" class="l">公司准入层</text>
+<text x="394" y="333" text-anchor="middle" class="s">Policy　｜　Admission　｜　Priority　｜　Queue Limit　｜　Input Snapshot</text>
+
+<rect x="54" y="396" width="680" height="94" rx="12" fill="#f3edff" stroke="#bca4ea" filter="url(#sh)"/>
+<text x="394" y="423" text-anchor="middle" class="l">公司调度中心</text>
+<text x="394" y="451" text-anchor="middle" class="s">Job　｜　Scheduler　｜　Lease　｜　Outbox　｜　Capacity / Health</text>
+
+<rect x="54" y="516" width="680" height="104" rx="12" fill="#edf8ef" stroke="#8bcc98" filter="url(#sh)"/>
+<text x="394" y="543" text-anchor="middle" class="l">执行队列与 Worker</text>
+<rect x="126" y="565" width="210" height="34" rx="8" fill="#fff" stroke="#b7e1bd"/><text x="231" y="586" text-anchor="middle" class="s">Standard Queue / Worker</text>
+<rect x="452" y="565" width="210" height="34" rx="8" fill="#fff" stroke="#f1d07d"/><text x="557" y="586" text-anchor="middle" class="s">Critical Queue / Worker</text>
+
+<rect x="54" y="646" width="680" height="128" rx="12" fill="#eaf4ff" stroke="#80aff0" filter="url(#sh)"/>
+<text x="394" y="673" text-anchor="middle" class="l">执行接管层</text>
+<text x="394" y="703" text-anchor="middle" class="s">Workflow / Chatflow　｜　Chat / Completion　｜　AGENT_CHAT</text>
+<text x="394" y="731" text-anchor="middle" class="s">Console Debug　｜　Human Input　｜　Schedule Debug</text>
+
+<rect x="54" y="800" width="680" height="76" rx="12" fill="#eef5fd" stroke="#9bb9df" filter="url(#sh)"/>
+<text x="394" y="827" text-anchor="middle" class="l">数据与基础设施</text>
+<text x="394" y="853" text-anchor="middle" class="s">PostgreSQL ｜ Redis ｜ S3 / KMS ｜ app_execution_* ｜ 历史业务数据</text>
+
+<path d="M394 252V278" class="a"/><path d="M394 370V396" class="a"/><path d="M394 490V516" class="a"/><path d="M394 620V646" class="a"/><path d="M394 774V800" class="a"/>
+
+<!-- official -->
+<rect x="866" y="178" width="680" height="74" rx="12" fill="#eaf3ff" stroke="#80aff0" filter="url(#sh)"/>
+<text x="1206" y="205" text-anchor="middle" class="l">入口层</text>
+<text x="1206" y="231" text-anchor="middle" class="s">WebApp　｜　Service API　｜　Console　｜　Trigger / Schedule</text>
+
+<rect x="866" y="278" width="680" height="80" rx="12" fill="#fff0f2" stroke="#ef97a0" filter="url(#sh)"/>
+<text x="1206" y="305" text-anchor="middle" class="l">官方服务入口</text>
+<text x="1206" y="333" text-anchor="middle" class="s">AppGenerateService　｜　Session</text>
+
+<rect x="866" y="384" width="680" height="92" rx="12" fill="#f3edff" stroke="#bca4ea" filter="url(#sh)"/>
+<text x="1206" y="411" text-anchor="middle" class="l">应用分流层</text>
+<text x="1206" y="439" text-anchor="middle" class="s">Completion ｜ Chat ｜ AGENT_CHAT ｜ Agent ｜ Workflow ｜ Chatflow</text>
+
+<rect x="866" y="502" width="324" height="164" rx="12" fill="#edf8ef" stroke="#8bcc98" filter="url(#sh)"/>
+<text x="1028" y="530" text-anchor="middle" class="l">Message / Agent 类</text>
+<text x="1028" y="564" text-anchor="middle" class="s">Completion AppGenerator</text>
+<text x="1028" y="590" text-anchor="middle" class="s">Chat AppGenerator</text>
+<text x="1028" y="616" text-anchor="middle" class="s">AgentChat / Agent AppGenerator</text>
+
+<rect x="1214" y="502" width="332" height="164" rx="12" fill="#fff7df" stroke="#e3bf66" filter="url(#sh)"/>
+<text x="1380" y="530" text-anchor="middle" class="l">Workflow / Chatflow 类</text>
+<text x="1380" y="558" text-anchor="middle" class="s">AppExecutionParams</text>
+<text x="1380" y="584" text-anchor="middle" class="s">workflow_based_app_execution_task</text>
+<text x="1380" y="610" text-anchor="middle" class="s">_AppRunner</text>
+<text x="1380" y="636" text-anchor="middle" class="s">Workflow / Chatflow Generator</text>
+
+<rect x="866" y="692" width="680" height="108" rx="12" fill="#eaf4ff" stroke="#80aff0" filter="url(#sh)"/>
+<text x="1206" y="719" text-anchor="middle" class="l">官方运行状态层</text>
+<text x="1206" y="747" text-anchor="middle" class="s">WorkflowRun ｜ Message ｜ WorkflowPause ｜ ResumptionContext ｜ Resume Task</text>
+<text x="1206" y="773" text-anchor="middle" class="s">SSE / Events ｜ Session</text>
+
+<rect x="866" y="826" width="680" height="50" rx="12" fill="#eef5fd" stroke="#9bb9df" filter="url(#sh)"/>
+<text x="1206" y="856" text-anchor="middle" class="l">PostgreSQL / Redis / Storage / Trace</text>
+
+<path d="M1206 252V278" class="a"/><path d="M1206 358V384" class="a"/><path d="M1206 476V502" class="a"/><path d="M1028 666V692" class="a"/><path d="M1380 666V692" class="a"/><path d="M1206 800V826" class="a"/>
+
+<rect x="22" y="920" width="1556" height="20" rx="8" fill="#f4f6f9" stroke="#e2e6ec"/>
+<text x="34" y="934" class="s">第一张图只做“当前公司现状 vs 1.17.1 官方架构”对比；真正的迁移内容放在第二张图。</text>
+</svg>
