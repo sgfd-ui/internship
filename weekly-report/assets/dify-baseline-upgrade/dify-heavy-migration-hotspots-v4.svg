@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<defs>
+<style>
+text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;fill:#172033}
+.t{font-size:32px;font-weight:700}.s{font-size:16px;fill:#667085}.h{font-size:20px;font-weight:700}.n{font-size:15px;font-weight:700}.m{font-size:13px;fill:#667085}
+.line{stroke:#667085;stroke-width:2.5;fill:none;marker-end:url(#a)}
+</style>
+<filter id="sh"><feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#24324a" flood-opacity=".15"/></filter>
+<marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L9 5 0 10Z" fill="#667085"/></marker>
+<linearGradient id="p" x1="0" x2="1"><stop stop-color="#eee6ff"/><stop offset="1" stop-color="#d7c7ff"/></linearGradient>
+<linearGradient id="b" x1="0" x2="1"><stop stop-color="#dfedff"/><stop offset="1" stop-color="#bad6ff"/></linearGradient>
+<linearGradient id="o" x1="0" x2="1"><stop stop-color="#fff0d6"/><stop offset="1" stop-color="#ffd18b"/></linearGradient>
+<linearGradient id="r" x1="0" x2="1"><stop stop-color="#ffe8e2"/><stop offset="1" stop-color="#ffb9a8"/></linearGradient>
+<linearGradient id="g" x1="0" x2="1"><stop stop-color="#dcf7e9"/><stop offset="1" stop-color="#b8e8cf"/></linearGradient>
+</defs>
+<rect width="1600" height="900" fill="#f8fafc"/>
+<text x="70" y="60" class="t">高工作量迁移分布</text>
+<text x="70" y="92" class="s">重活主要集中在执行适配、状态映射和特殊执行链路</text>
+
+<!-- scheduler -->
+<g filter="url(#sh)">
+<polygon points="90,240 430,170 770,242 430,315" fill="url(#p)" stroke="#a58bd9" stroke-width="2"/>
+<polygon points="90,240 430,315 430,365 90,290" fill="#c5b2e8"/>
+<polygon points="430,315 770,242 770,292 430,365" fill="#ad95dc"/>
+</g>
+<text x="430" y="220" text-anchor="middle" class="h">公司调度中心</text>
+<text x="430" y="247" text-anchor="middle" class="m">Policy · Admission · Job · Scheduler · Standard / Critical</text>
+<g transform="translate(190 257)"><circle r="21" fill="#fff" stroke="#8d72c4" stroke-width="2.5"/><path d="M0-11V2L10 8" fill="none" stroke="#8d72c4" stroke-width="3" stroke-linecap="round"/></g>
+<g transform="translate(250 257)"><ellipse cy="-6" rx="19" ry="6" fill="#fff" stroke="#8d72c4" stroke-width="2"/><rect x="-19" y="-6" width="38" height="18" fill="#f4efff" stroke="#8d72c4" stroke-width="2"/><ellipse cy="12" rx="19" ry="6" fill="#eadfff" stroke="#8d72c4" stroke-width="2"/></g>
+
+<!-- app islands -->
+<g filter="url(#sh)"><polygon points="100,465 205,443 300,464 195,487" fill="url(#b)" stroke="#76a9e8"/><polygon points="100,465 195,487 195,527 100,506" fill="#acd0f6"/><polygon points="195,487 300,464 300,505 195,527" fill="#92bdec"/></g>
+<text x="200" y="480" text-anchor="middle" class="n">Workflow</text>
+<g filter="url(#sh)"><polygon points="325,520 430,498 525,519 420,542" fill="url(#b)" stroke="#76a9e8"/><polygon points="325,520 420,542 420,582 325,561" fill="#acd0f6"/><polygon points="420,542 525,519 525,560 420,582" fill="#92bdec"/></g>
+<text x="425" y="535" text-anchor="middle" class="n">Chatflow</text>
+<g filter="url(#sh)"><polygon points="1075,520 1180,498 1275,519 1170,542" fill="url(#o)" stroke="#dd9d36"/><polygon points="1075,520 1170,542 1170,582 1075,561" fill="#f5c56d"/><polygon points="1170,542 1275,519 1275,560 1170,582" fill="#e6ae50"/></g>
+<text x="1175" y="535" text-anchor="middle" class="n">Chat / Completion</text>
+<g filter="url(#sh)"><polygon points="1300,465 1405,443 1500,464 1395,487" fill="url(#o)" stroke="#dd9d36"/><polygon points="1300,465 1395,487 1395,527 1300,506" fill="#f5c56d"/><polygon points="1395,487 1500,464 1500,505 1395,527" fill="#e6ae50"/></g>
+<text x="1400" y="480" text-anchor="middle" class="n">Agent</text>
+
+<!-- center hotspot -->
+<g filter="url(#sh)">
+<polygon points="610,425 800,385 990,425 800,468" fill="url(#r)" stroke="#d65e4b" stroke-width="2.5"/>
+<polygon points="610,425 800,468 800,545 610,502" fill="#efaa9b"/>
+<polygon points="800,468 990,425 990,502 800,545" fill="#dc8b79"/>
+</g>
+<g transform="translate(720 441)"><path d="M-17-9l11 9-11 9M17-9L6 0l11 9" fill="none" stroke="#b42318" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="800" y="442" text-anchor="middle" class="h">执行适配层</text>
+<text x="800" y="470" text-anchor="middle" class="m">Managed Worker → 1.17.1 Runtime</text>
+<text x="800" y="498" text-anchor="middle" class="n" fill="#b42318">最高工作量</text>
+<path d="M300 498C420 482 515 468 610 455" class="line"/><path d="M525 548C565 527 595 505 630 484" class="line"/><path d="M1075 548C1035 528 1008 506 970 484" class="line"/><path d="M1300 498C1185 482 1090 468 990 455" class="line"/>
+
+<!-- status layer -->
+<g filter="url(#sh)">
+<polygon points="665,590 800,562 935,590 800,620" fill="url(#o)" stroke="#dd9d36" stroke-width="2"/>
+<polygon points="665,590 800,620 800,655 665,626" fill="#f5c56d"/>
+<polygon points="800,620 935,590 935,626 800,655" fill="#e6ae50"/>
+</g>
+<text x="800" y="606" text-anchor="middle" class="n">状态 / 结果映射</text>
+<text x="800" y="630" text-anchor="middle" class="m">job_id · workflow_run_id · task_id</text>
+
+<!-- official runtime -->
+<g filter="url(#sh)">
+<polygon points="735,670 1075,600 1465,684 1125,756" fill="url(#g)" stroke="#65b98a" stroke-width="2"/>
+<polygon points="735,670 1125,756 1125,815 735,729" fill="#a6ddbd"/>
+<polygon points="1125,756 1465,684 1465,743 1125,815" fill="#8ac9a5"/>
+</g>
+<text x="1100" y="665" text-anchor="middle" class="h">1.17.1 官方执行层</text>
+<text x="1100" y="694" text-anchor="middle" class="m">Official Task · _AppRunner · Generator · WorkflowRun · Message</text>
+<path d="M860 545C905 586 950 607 1008 630" class="line"/><path d="M895 655C935 666 968 674 1000 681" class="line"/>
+
+<!-- special flow -->
+<g filter="url(#sh)">
+<polygon points="120,700 385,645 650,703 385,758" fill="url(#b)" stroke="#76a9e8" stroke-width="2"/>
+<polygon points="120,700 385,758 385,808 120,750" fill="#acd0f6"/>
+<polygon points="385,758 650,703 650,753 385,808" fill="#92bdec"/>
+</g>
+<text x="385" y="694" text-anchor="middle" class="h">特殊执行链路</text>
+<g transform="translate(210 725)"><path d="M-19-2h38a7 7 0 017 7v24a7 7 0 01-7 7h-38a7 7 0 01-7-7V5a7 7 0 017-7z" fill="#fff" stroke="#5f95d8" stroke-width="2"/><path d="M-9 11H9M-9 20H7M-9 29H4" stroke="#5f95d8" stroke-width="2" stroke-linecap="round"/></g>
+<text x="210" y="795" text-anchor="middle" class="n">Console</text>
+<g transform="translate(385 725)"><circle r="29" fill="#fff" stroke="#5f95d8" stroke-width="2.4"/><path d="M0-12V12M-12 0H12" stroke="#5f95d8" stroke-width="3" stroke-linecap="round"/></g>
+<text x="385" y="795" text-anchor="middle" class="n">Human Input</text>
+<g transform="translate(560 725)"><circle r="29" fill="#fff" stroke="#5f95d8" stroke-width="2.4"/><path d="M0-15V2L12 10" fill="none" stroke="#5f95d8" stroke-width="3" stroke-linecap="round"/></g>
+<text x="560" y="795" text-anchor="middle" class="n">Schedule</text>
+<path d="M625 690C675 650 690 615 715 570" class="line"/>
+
+<g filter="url(#sh)"><polygon points="1040,840 1240,800 1470,848 1270,890" fill="#fff" stroke="#cfd7e5" stroke-width="1.5"/></g>
+<text x="1260" y="840" text-anchor="middle" class="n">整体估算</text>
+<text x="1260" y="868" text-anchor="middle" font-size="21" font-weight="700" fill="#b42318">15～22 个工作日</text>
+</svg>
