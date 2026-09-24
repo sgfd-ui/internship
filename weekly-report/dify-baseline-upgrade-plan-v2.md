@@ -77,17 +77,144 @@
 
 ### 3.1 功能迁移
 
-| 功能点 | 来源 | 1.17.1 变化 | 迁移与适配 |
+#### 3.1.1 SkyOA 登录
+
+**来源：** `origin/feature/20260701` 的 SkyOA 登录能力，以及 `origin/feature/20260825_S3` 中账号邮箱匹配和资料补充。
+
+| 项目 | 当前能力 | 1.17.1 变化 | 迁移方案 |
 | --- | --- | --- | --- |
-| SkyOA 登录 | `origin/feature/20260701`；后续账号匹配增强来自 `origin/feature/20260825_S3` | OAuth、账号查询、Identity 关联和 Session 接口变化 | 保留 SkyOA Provider、POST 回调、state/nonce、账号绑定和邮箱匹配规则；改用新版 Account / Identity / Repository / Session |
-| 管理员初始化 | `origin/feature/20260701`；失败清理修复来自 `origin/feature/20260825_S3` | Setup 初始化流程和事务边界变化 | 在新版 Setup 中增加 SkyOA 初始化分支；失败时只清理由本次创建的账号、空间和身份关联 |
-| 邀请注册 | `origin/feature/20260701` | 新版 Account Activation、成员接口和 Session 变化 | 保留邀请记录、状态、有效期、Token 及 SkyOA 邮箱校验；接受邀请时调用新版账号和成员能力 |
-| 默认工作空间 | `origin/feature/20260701` | Tenant、成员关系和 current workspace 处理变化 | 保留 `is_default`、唯一默认空间、无空间账号加入和 current 修复规则；按新版 Session 重写 |
-| 工作空间管理 | `origin/feature/20260701`；指定 owner 和筛选增强来自 `origin/feature/20260825_S3` | Workspace Controller、返回类型、权限和 Session 变化 | 保留创建、指定 owner、列表、筛选、切换、归档和权限保护；底层复用新版 Tenant / Session / RBAC |
-| SSE Header | `origin/feature/20260825_S3` 混合提交中的通用修复 | 新版请求层仍需要处理自定义 Header 与系统 Header 的合并 | 只迁认证、CSRF、分享标识等系统 Header 的保留规则，不迁混合提交中的公司调度代码 |
-| S3 / KMS | `origin/feature/20260825_S3` | 新版 Storage 已增加预签名和流式读取等实现 | 增加公司 KMS Provider、凭据刷新和受控重试；保留 1.17.1 官方 S3 Client 其余行为 |
-| 文件路径 | `origin/feature/20260825_S3` | FileService、上传入口和 Workflow 文件调用链变化 | 保留对象前缀、Tenant/App 目录规则；按新版入口透传真实 app_id，并兼容历史 UploadFile.key |
-| 租户私钥 | `origin/feature/20260825_S3` | Key Provider 和缓存实现变化 | 保留公司 RSA 私钥路径与 Tenant 缓存语义；新租户记录真实路径，历史私钥先核对真实对象再处理 |
+| 登录入口 | SkyOA 与官方 Provider 并存 | 官方 OAuth 入口和 Service 已调整 | 保留官方 GitHub / Google 等流程，只为 SkyOA 增加独立 Provider 分支 |
+| 回调协议 | SkyOA 使用 POST `code`、`state`、`currentUrl` | 官方 Provider 主要使用自身 OAuth 回调协议 | 保留 SkyOA 现有 POST 回调，不强行改造成其他 Provider 协议 |
+| state / nonce | 短期 Cookie 保存登录上下文 | 新版 OAuth 状态管理变化 | 保留 SkyOA 的 state / nonce 校验，生命周期与官方登录流程隔离 |
+| 账号查找 | 优先按 OA 绑定查找，未绑定时按邮箱匹配旧账号 | 新版使用 Repository、`normalized_email` 和显式 Session | 按新版 Repository / Session 重写调用，保留“绑定优先、邮箱兜底、重复邮箱拒绝”规则 |
+| 身份绑定 | 登录后将 openId 关联到原账号 | Identity 关联接口和事务方式变化 | 使用 1.17.1 Identity 能力完成绑定，不改变原 `account_id` |
+| 账号信息补充 | OA 返回姓名、邮箱、头像等资料 | 新版账号字段和更新入口变化 | 只补充公司需要的账号资料，不覆盖新版账号治理逻辑 |
+| 前端入口 | 登录页与账号设置页展示 SkyOA | 新版页面结构变化 | 在 1.17.1 页面中恢复 SkyOA 登录按钮和绑定状态 |
+
+#### 3.1.2 管理员初始化
+
+**来源：** `origin/feature/20260701` 的 SkyOA 首次初始化流程，以及 `origin/feature/20260825_S3` 的失败清理修复。
+
+| 项目 | 当前能力 | 1.17.1 变化 | 迁移方案 |
+| --- | --- | --- | --- |
+| 初始化入口 | 启用 SkyOA 时通过 OA 身份创建初始管理员 | 官方 Setup 初始化流程变化 | 在 1.17.1 Setup 流程增加 SkyOA 初始化分支，未启用 SkyOA 时保持官方流程 |
+| 初始化检查 | 仅允许未初始化环境执行 | 新版已有安装状态与初始化检查 | 直接复用 1.17.1 官方初始化状态判断 |
+| 管理员账号 | 初始化时创建公司管理员账号 | 新版 Account 创建与 Session 方式变化 | 使用新版账号创建接口和 Session，保留公司管理员身份 |
+| 初始 Workspace | 初始化管理员同时创建 Workspace | Workspace 创建流程和事务边界变化 | 调用统一 Workspace 创建能力，不在 Setup 中重复实现一套 |
+| 初始化登录 | 创建完成后直接进入系统 | 登录返回和 Session 结构变化 | 按 1.17.1 登录态重新适配初始化后的跳转 |
+| 失败清理 | 旧实现中存在清理范围过大的风险 | 新版事务边界变化 | 失败时只回滚和清理由本次初始化创建的账号、Workspace 和 Identity 关系 |
+
+#### 3.1.3 邀请注册
+
+**来源：** `origin/feature/20260701` 的数据库邀请与 SkyOA 接受邀请流程。
+
+| 项目 | 当前能力 | 1.17.1 变化 | 迁移方案 |
+| --- | --- | --- | --- |
+| 邀请记录 | 邀请持久化到数据库，维护 pending / accepted / cancelled / expired 等状态 | 官方邀请与激活流程变化 | 保留公司邀请模型、状态和有效期 |
+| Token | 保存邀请 Token 摘要并校验有效性 | 官方邀请 Token 逻辑不同 | 保留现有 Token 语义，兼容已有邀请链接 |
+| 邀请登录 | 邀请场景只允许 SkyOA | 官方激活页支持其他登录方式 | 公司邀请页面继续只展示 SkyOA，不影响普通登录入口 |
+| 邮箱校验 | OA 邮箱必须与邀请邮箱一致 | 新版 OAuth / 激活流程拆分 | 在 SkyOA 接受邀请流程继续校验邮箱一致性 |
+| 账号创建 | OA 用户不存在时创建账号，已存在时复用 | Account Activation 与 Session 变化 | 接入 1.17.1 账号创建 / 激活能力 |
+| 加入 Workspace | 接受邀请后按邀请角色加入指定 Workspace | 成员接口与事务方式变化 | 使用新版成员接口写入 TenantAccountJoin，并保持原邀请角色 |
+| 重复接受 | 已接受邀请不能重复加入 | 新版接口幂等方式变化 | 保留邀请状态检查与幂等处理 |
+
+#### 3.1.4 默认工作空间
+
+**来源：** `origin/feature/20260701` 的默认 Workspace、自动加入和 current workspace 治理。
+
+| 项目 | 当前能力 | 1.17.1 变化 | 迁移方案 |
+| --- | --- | --- | --- |
+| 默认标记 | Tenant 增加 `is_default` | 官方无公司默认空间语义 | 保留 `is_default` 字段与唯一默认 Workspace 约束 |
+| 新账号归属 | SkyOA 新账号默认加入公司 Workspace | 新版注册默认空间处理变化 | 禁止创建无意义个人空间，加入公司默认 Workspace |
+| 无空间账号 | 登录时发现没有 Workspace 会自动加入默认空间 | 登录和成员接口变化 | 在新版登录完成后调用统一默认 Workspace 服务 |
+| current workspace | 保证账号只有一个有效 current Workspace | 新版 Session 与 Workspace 上下文变化 | 保留“已有有效 current → 普通有效空间 → 默认空间”的选择顺序 |
+| 归档兼容 | current 不能落在 archived Workspace | 新版归档状态处理变化 | current 修复时过滤 archived Workspace |
+| 管理员关系 | 默认 Workspace owner 参与公司管理员判断 | 官方 owner 只表示 Workspace 角色 | 保留公司管理员判断，但与阶段三执行调度权限解耦 |
+| 数据库升级 | 历史 Tenant 需要补充默认标记 | 官方无对应字段 | 在公司 migration 中补字段、索引和默认空间初始化 |
+
+#### 3.1.5 工作空间管理
+
+**来源：** `origin/feature/20260701` 的 Workspace 创建、列表、切换和归档，以及 `origin/feature/20260825_S3` 的指定 owner 和筛选能力。
+
+| 项目 | 当前能力 | 1.17.1 变化 | 迁移方案 |
+| --- | --- | --- | --- |
+| 创建 Workspace | 系统管理员通过公司入口创建 Workspace | 官方没有同一套公司管理入口 | 保留管理入口，底层改用 1.17.1 Tenant / Session 能力 |
+| 指定 owner | 创建时可指定已有账号或邮箱作为 owner | 账号查询与 Session 变化 | 使用新版账号查询，保留大小写处理、重复账号校验和 owner 唯一性 |
+| 列表查询 | 支持分页、状态和 owner 信息 | 新版 Model / Response 类型变化 | 按新版 ORM / DTO 重新组装返回结构 |
+| 条件筛选 | 支持创建时间、owner 等筛选 | Controller 和 Query Service 变化 | 在新版查询层保留公司需要的筛选条件 |
+| Workspace 切换 | 切换前检查成员关系与归档状态 | 新版已有 `switch_tenant` 相关校验 | 复用官方基础校验，再维护 company current workspace 规则 |
+| Workspace 归档 | 归档后不删除历史数据，并重新选择 current | 官方无公司管理入口 | 保留归档状态与 current 收敛规则 |
+| 权限 | 系统管理员、Workspace owner、普通成员分层 | 1.17.1 RBAC 基础变化 | 复用新版 RBAC，仅补充公司 Workspace 管理边界 |
+| 页面 | 旧版有公司 Workspace 管理页面 | 1.17.1 页面结构变化 | 在新版 Console 信息架构中重新接入入口，不整页覆盖旧实现 |
+
+#### 3.1.6 通用 SSE 请求
+
+**来源：** `origin/feature/20260825_S3` 混合提交中独立于执行调度的 SSE Header 修复。
+
+| 项目 | 当前能力 / 问题 | 1.17.1 变化 | 迁移方案 |
+| --- | --- | --- | --- |
+| 自定义 Header | 请求可追加业务自定义 Header | 新版请求封装发生变化 | 保留非冲突自定义 Header |
+| 系统 Header | 认证、CSRF、分享身份等 Header 不能被覆盖 | 新版请求入口重新组织 | 合并时系统 Header 优先，禁止自定义 Header 覆盖安全字段 |
+| GET / POST | 两种 SSE 请求都需正确透传 Header | 新版调用入口不同 | 分别验证 GET / POST 请求 |
+| 调度相关逻辑 | 原提交同时包含旧公司调度相关测试或逻辑 | 阶段一不迁执行调度 | 只提取通用 Header 修复，不迁混合提交中的调度部分 |
+
+#### 3.1.7 Redis Event Bus 与 Socket.IO
+
+**来源：** `origin/feature/20260825_S3` 的 Event Bus Sentinel 能力，以及 1.17.1 新增 Socket.IO RedisManager 后产生的 Sentinel 适配。
+
+| 项目 | 当前能力 / 来源 | 1.17.1 变化 | 迁移方案 |
+| --- | --- | --- | --- |
+| Event Bus | Sentinel 环境已有远程 Redis 主连接 | Event Bus 可根据 URL 单独建连接，空地址可能回退本机 | Sentinel 模式直接复用已初始化的远程 Redis Client；非 Sentinel 保留独立 URL |
+| Socket.IO | 1.14.2 没有这条 Redis 跨进程连接 | 1.17.1 新增独立 `RedisManager` | 根据 Sentinel 节点、Service Name、DB 和认证构造 `redis+sentinel://` |
+| Client 关系 | Event Bus 可复用主 Redis Client | Socket.IO 自己管理 RedisManager | 两者使用同一 Sentinel 基础设施，但保持独立 Client |
+| Redis DB | 公司环境使用远程 Sentinel | Socket.IO 默认地址处理不适配公司 Sentinel | 显式带入目标 DB 和 Sentinel 配置 |
+| Channel | Redis Pub/Sub 不按逻辑 DB 隔离 | 新旧版本同时运行时可能互相收到消息 | 使用环境前缀隔离 Event Bus / Socket.IO Channel |
+| 非 Sentinel | 普通 Redis 地址可直接连接 | 1.17.1 原逻辑可用 | 保留官方非 Sentinel 地址处理 |
+
+#### 3.1.8 S3 / KMS
+
+**来源：** `origin/feature/20260825_S3` 中最终有效的 KMS Provider、S3 Client 与凭据刷新能力。
+
+| 项目 | 当前能力 | 1.17.1 变化 | 迁移方案 |
+| --- | --- | --- | --- |
+| KMS Provider | 通过公司 KMS 获取并解密 S3 临时凭据 | 官方没有公司 KMS 协议 | 在 1.17.1 Storage 配置中增加公司 KMS Provider |
+| KMS 协议 | 使用最终 `data/signature` 请求协议 | 旧分支历史上存在中间方案 | 只迁最终有效协议，不恢复中间实现 |
+| 凭据来源 | IAM、KMS、静态 AK/SK 多种方式 | 官方 S3 Client 已支持 IAM / 静态凭据 | 保留官方分流，在 KMS 配置完整时增加 KMS 分支 |
+| 定时刷新 | 凭据到期前后台刷新 | 官方无公司刷新线程 | 保留每日 / 周期刷新能力 |
+| 刷新失败 | 刷新失败时继续使用旧 Client 并稍后重试 | 官方无该公司逻辑 | 保留旧 Client，延迟重试，不立即中断运行 |
+| 多进程 | fork 后需要重建刷新线程和锁 | Worker 仍可能多进程 | 保留 fork 后初始化逻辑 |
+| S3 请求失败 | KMS 模式下凭据可能失效 | 官方只执行正常请求 | 认证类失败时刷新 Client 后受控重试一次 |
+| 预签名 / 流式读取 | 旧公司版本缺少新版能力 | 1.17.1 已提供 | 不覆盖官方实现，只让其使用当前有效 S3 Client |
+
+#### 3.1.9 文件路径
+
+**来源：** `origin/feature/20260825_S3` 中对象前缀、应用目录和文件上传链路改造。
+
+| 项目 | 当前能力 | 1.17.1 变化 | 迁移方案 |
+| --- | --- | --- | --- |
+| 对象前缀 | 对象存储统一增加 `Dify/` 前缀 | 官方直接使用业务 Key | 在对象存储公共层统一增加前缀，已有前缀时不重复添加 |
+| 本地存储 | Local / Volume Storage 不需要对象前缀 | Storage Provider 结构变化 | 前缀只作用于对象存储实现 |
+| Tenant 目录 | 文件按 Tenant 组织 | 新版 FileService 路径变化 | 保留 Tenant 目录层级 |
+| App 目录 | 部分文件需要按 App 进一步隔离 | 新版 FileService 默认没有公司 `app_id` 参数 | 增加必要的可选 `app_id`，并校验应用归属 |
+| Console 上传 | 已有鉴权后的 App 上下文 | Controller 参数变化 | 从已鉴权上下文传递真实 App ID |
+| Service API / WebApp | 文件上传入口不同 | 新版入口重新组织 | 分别补齐 App ID 透传 |
+| Workflow 文件 | 节点结果、草稿变量会写文件 | 新版 Workflow 文件链路变化 | 在需要落对象存储的路径继续传递真实 App ID |
+| 历史 Key | 数据库中已经保存历史 `UploadFile.key` | 新目录规则与历史不同 | 读取兼容历史 Key，不在阶段一全量搬迁对象 |
+
+#### 3.1.10 租户私钥
+
+**来源：** `origin/feature/20260825_S3` 中 Tenant RSA 私钥路径与缓存能力。
+
+| 项目 | 当前能力 | 1.17.1 变化 | 迁移方案 |
+| --- | --- | --- | --- |
+| 私钥路径 | 使用 `Dify/RSA_privateKey/{tenant_id}/private.pem` | 官方 Key Provider 结构变化 | 新 Workspace 继续记录公司私钥路径 |
+| 数据库引用 | Tenant 侧保存私钥对象路径 | 新版读取接口变化 | 读取优先使用数据库记录，不依赖重新推导路径 |
+| 私钥缓存 | 公司按 Tenant 使用独立 Redis Cache | 新版缓存 Key 实现变化 | 保留最终公司缓存语义，只作用于私钥缓存 |
+| 新 Workspace | 创建空间时生成并保存私钥 | Workspace 创建服务变化 | 在统一 Workspace 创建流程中调用新版 Key 能力并记录真实路径 |
+| 创建失败 | Workspace 创建失败可能留下孤儿私钥 | 新版事务和 Storage 操作分离 | 创建失败时只删除本次新建的私钥对象 |
+| 历史私钥 | 旧对象实际位置可能与新规则不同 | migration 修改路径不会自动搬对象 | 先核对数据库引用和真实对象位置，再决定是否回填或迁移 |
+| 兼容原则 | 已有 Tenant 私钥必须继续可用 | 1.17.1 不认识公司历史路径 | 不重新生成已有 Tenant 私钥，优先做路径兼容 |
+
 
 ### 3.2 双基线隔离运行与组件改造
 
