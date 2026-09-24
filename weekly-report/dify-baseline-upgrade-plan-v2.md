@@ -2,15 +2,16 @@
 
 ## 一、升级目标
 
-当前平台基于 Dify 1.14.2，在官方能力之外扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次将基础版本升级到 Dify 1.17.1，但不再要求一次性迁移全部公司扩展：先完成当前必须保留的核心能力与运行环境迁移，1.17.1 新能力在基线稳定后再评估启用；与旧 Runtime、Worker 和任务状态深度耦合的公司执行调度能力单独评审。
+当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分阶段完成现有能力适配、新版本能力升级以及执行调度能力评审，最终形成统一的 1.17.1 公司版本。
 
 | 目标 | 内容 |
 | --- | --- |
 | 基线升级 | 平台基础版本由 Dify 1.14.2 升级到 Dify 1.17.1 |
-| 现有能力迁移 | 保留并适配 SkyOA、工作空间、S3/KMS、文件与私钥、平台部署等当前仍需要的企业能力 |
+| 现有能力迁移 | 将 SkyOA、工作空间、S3/KMS、文件与私钥等现有公司能力适配到 1.17.1 |
+| 新能力升级 | 基于 1.17.1 新增能力确定后续启用范围及运行组件 |
+| 调度能力评审 | 对现有执行调度、任务中心和专用 Worker 评估迁移、重写或取消 |
 | 数据兼容 | 保证账号、工作空间、历史文件、租户私钥及已有业务数据可继续使用 |
-| 降低升级耦合 | 优先复用 1.17.1 官方实现，只迁业务目标和必要扩展，减少公司代码继续侵入 Dify Runtime |
-| 平稳升级 | 在独立升级环境完成数据迁移、功能回归和回滚验证后再进入正式切换 |
+| 平稳切换 | 三阶段完成后统一收束分支、流水线、部署和数据，再执行正式迁移 |
 
 ---
 
@@ -20,444 +21,374 @@
 
 ![当前架构 vs Dify 1.17.1 官方架构](assets/dify-baseline-upgrade/current-vs-dify-1.17.1-official-v11.svg)
 
-当前版本是在 Dify 1.14.2 官方运行组件之上叠加公司账号治理、存储安全和托管执行等扩展，其中执行调度部分已经进入应用入口、任务状态和 Worker 执行链路。Dify 1.17.1 自身又调整了应用执行、Human Input、Schedule、Agent 等能力，并新增独立 Agent 运行组件，因此本次不能把旧公司实现整体覆盖到新版，而需要按能力重新判断迁移方式。
-
 ### 2.2 本次迁移架构
 
-![Dify 1.17.1 三阶段迁移路径](assets/dify-baseline-upgrade/dify-1.17.1-migration-scope-v12.svg)
-
-本次升级按固定顺序分为三个阶段推进：
-
-**当前 Dify 1.14.2 → 阶段一：现有能力迁移 → 形成可运行的 Dify 1.17.1 稳定基线 → 阶段二：升级 1.17.1 新能力 → 阶段三：评审执行调度相关能力。**
-
-阶段一先解决当前业务能否完整运行在 1.17.1 上，是本轮升级的主体和上线前提；阶段二只在稳定基线形成后选择性启用 1.17.1 新功能；阶段三最后处理与旧 Runtime、Worker 和任务状态深度耦合的公司执行调度能力，并根据业务必要性决定迁移、重写或取消。图中的箭头表示实施顺序，不代表阶段三一定保留全部旧能力。
+![Dify 1.17.1 三阶段迁移路径](assets/dify-baseline-upgrade/dify-1.17.1-migration-scope-v13.svg)
 
 ### 2.3 阶段一：现有能力迁移
 
-阶段一只迁移当前 1.14.2 已经在使用、且升级后仍必须保留的公司能力，同时完成 1.17.1 在公司运行环境中的基础适配。阶段一完成后需要形成一套不依赖旧托管执行链路、可以独立运行和回归的 Dify 1.17.1 基线。
-
-| 能力方向 | 当前能力 | 本次迁移或适配内容 | 1.17.1 落点 |
+| 能力方向 | 当前能力 | 阶段一处理 | 1.17.1 落点 |
 | --- | --- | --- | --- |
-| 平台构建与部署 | API / Web 公司构建方式、环境配置、启动参数 | 保留公司平台接入，按 1.17.1 的 Node、pnpm、migration 和启动方式解决冲突 | API / Web 官方制品与运行角色 |
-| 数据库与 Redis | 当前测试库、缓存、Celery 共用旧数据空间 | 为升级验证准备独立数据库，并隔离 Redis Cache、Broker、Result 和频道命名空间 | PostgreSQL / Redis |
-| Redis Event Bus | Sentinel 环境下跨进程消息 | Sentinel 模式复用现有远程 Redis 客户端，非 Sentinel 保留显式地址 | Redis Event Bus |
-| Socket.IO | 1.17.1 新增工作流实时协作 RedisManager | 为 RedisManager 增加 Sentinel URL、认证、DB 和频道隔离 | Socket.IO |
-| SkyOA 登录 | Provider、Token/userinfo、回调、账号匹配和绑定 | 保留 SkyOA 协议，适配新版 Account、Identity、Repository 和 Session | Account / Identity |
-| 管理员初始化 | SkyOA 首次安装、初始管理员、失败清理 | 接入新版 Setup 流程，只清理本次初始化产生的数据 | Setup / Account / Workspace |
-| 邀请注册 | 数据库邀请记录、SkyOA 接受邀请 | 保留公司邀请生命周期，适配新版 Account Activation 和成员接口 | Account / Workspace |
-| 默认工作空间 | 唯一默认空间、新用户加入、current workspace | 保留业务规则，适配新版 Tenant、Session 和成员关系 | Workspace / Tenant |
-| 工作空间管理 | 创建、指定 owner、查询、切换、归档和权限 | 保留公司管理能力，复用新版成员、Session 和 RBAC 基础 | Workspace |
-| SSE 请求 | 自定义 Header 与认证 Header 合并 | 只迁通用请求头修复，不迁任何调度接口逻辑 | Web Request / SSE |
-| S3 / KMS | KMS 凭据、刷新、S3 Client | 将公司 KMS Provider 接入 1.17.1 Storage，保留新版预签名和流式读取 | Storage Provider |
-| 文件与租户私钥 | Dify 前缀、租户/应用目录、历史文件、RSA 私钥路径和缓存 | 统一新版读写路径并兼容历史引用，不做无必要的全量对象搬迁 | Storage / Tenant |
+| 平台构建与部署 | API / Web 公司构建方式、环境配置、启动参数 | 按 1.17.1 依赖和启动方式调整公司构建与发布入口 | API / Web 官方制品与运行角色 |
+| 数据库与 Redis | 当前测试库、缓存、Celery 使用旧版数据空间 | 建立独立 1.17.1 数据库、Redis DB、Prefix 和队列空间 | PostgreSQL / Redis |
+| Redis Event Bus | Sentinel 环境下跨进程消息 | Sentinel 模式复用远程 Redis 客户端，并隔离频道 | Redis Event Bus |
+| Socket.IO | 1.17.1 新增工作流实时协作 RedisManager | 增加 Sentinel URL、认证、DB 和频道隔离 | Socket.IO |
+| SkyOA 登录 | Provider、回调、账号匹配和绑定 | 适配新版 Account、Identity、Repository 和 Session | Account / Identity |
+| 管理员初始化 | SkyOA 首次安装、初始管理员、失败清理 | 接入新版 Setup 流程和新版事务模型 | Setup / Account / Workspace |
+| 邀请注册 | 数据库邀请记录、SkyOA 接受邀请 | 适配新版 Account Activation 和成员接口 | Account / Workspace |
+| 默认工作空间 | 唯一默认空间、新用户加入、current workspace | 适配新版 Tenant、Session 和成员关系 | Workspace / Tenant |
+| 工作空间管理 | 创建、指定 owner、查询、切换、归档和权限 | 复用新版成员、Session 和 RBAC 基础 | Workspace |
+| SSE 请求 | 自定义 Header 与认证 Header 合并 | 迁入独立于调度的通用 Header 修复 | Web Request / SSE |
+| S3 / KMS | KMS 凭据、刷新、S3 Client | 将公司 KMS Provider 接入 1.17.1 Storage | Storage Provider |
+| 文件与租户私钥 | 对象前缀、应用目录、历史文件、RSA 私钥 | 适配新版 Storage / FileService 并兼容历史引用 | Storage / Tenant |
 
 ### 2.4 阶段二：1.17.1 新能力升级
 
-阶段二在阶段一稳定基线通过完整回归后再进行。这里关注的是 1.17.1 相比 1.14.2 新增或显著增强的产品能力，不要求一次性全部开放；需要新增运行组件、改变业务使用方式或增加运维成本的能力单独评估后启用。
-
-| 能力方向 | 1.17.1 新增或增强能力 | 能力说明 | 阶段二处理 |
+| 能力方向 | 1.17.1 新增或增强能力 | 组件影响 | 阶段二处理 |
 | --- | --- | --- | --- |
-| Workflow 与应用编排 | 自然语言生成 Workflow / Chatflow、运行记录导出、节点定位、LLM Environment 等 | 提升工作流创建、调试和配置复用能力 | 基线稳定后按实际使用场景开放 |
-| Human Input | 富表单、Loop / Iteration 内 Human Input | 官方暂停和恢复能力增强 | 优先使用官方能力，不接入旧公司调度 |
-| Agent | 新 Agent App、Agent Skills、Agent DSL、Agent Home Snapshot | 引入新的 Agent 应用和运行模型 | 单独验证产品需求后启用 |
-| Agent Runtime | Agent Backend、Local Sandbox、Agent SSRF Proxy 等 | 为新版 Agent 提供独立运行、工作区和网络隔离 | 仅在启用对应 Agent 能力时评估部署 |
-| WebApp | 应用描述和输入提示等展示能力 | 改善 Chatbot、Agent、Chatflow 的应用页面体验 | 按业务需要开放 |
-| 可观测 | Unified Tracing、Knowledge Tracing | 统一查看应用、Workflow、Tool 和知识检索链路 | 基线稳定后验证公司环境兼容性 |
-| CLI | difyctl | 支持通过命令行查看和执行 Dify 应用 | 按运维需求评估 |
-| 知识库与检索 | Excel 图片解析、ODT、TiDB 混合检索等 | 扩展知识库导入和检索能力 | 按实际数据源和检索需求启用 |
-| 多模态与工具 | 文件直接传入多模态模型、日期参数类型 | 扩展模型输入和 Tool 参数表达 | 随具体应用场景启用 |
-| 安全与数据治理 | 外部 KMS Provider、会话清理等 | 增强密钥、数据生命周期和平台治理能力 | 与公司现有 KMS 和治理能力分别评估，避免重复实现 |
+| Workflow 与应用编排 | 自然语言生成 Workflow / Chatflow、运行记录导出、节点定位、LLM Environment 等 | 主要复用现有 API / Web / Worker | 按公司实际使用场景启用 |
+| Human Input | 富表单、Loop / Iteration 内 Human Input | 复用官方 Workflow Runtime | 使用官方能力，不接入旧公司调度 |
+| Agent | 新 Agent App、Agent Skills、Agent DSL、Agent Home Snapshot | 可能引入独立 Agent Runtime | 单独验证产品需求后启用 |
+| Agent Runtime | Agent Backend、Local Sandbox、Agent SSRF Proxy | 可能新增运行应用、流水线和网络支撑 | 仅在启用对应 Agent 能力时部署 |
+| WebApp | 应用描述和输入提示等展示能力 | Web / API | 按业务需要开放 |
+| 可观测 | Unified Tracing、Knowledge Tracing | API / Worker / Trace 后端 | 验证公司环境兼容后开放 |
+| CLI | difyctl | 无长期运行组件 | 按运维需求启用 |
+| 知识库与检索 | Excel 图片解析、ODT、TiDB 混合检索等 | Plugin / 向量库 / Worker | 按实际数据源和检索需求启用 |
+| 多模态与工具 | 文件直接传入多模态模型、日期参数类型 | API / Plugin | 随应用场景启用 |
+| 安全与数据治理 | 外部 KMS Provider、会话清理等 | Storage / 定时任务 | 与现有公司能力对齐后启用 |
 
 ### 2.5 阶段三：执行调度能力评审
 
-阶段三在 1.17.1 稳定基线和新版能力边界明确后再进行。以下能力与旧 Dify 1.14.2 Runtime、Controller、Generator、Celery 执行以及公司 Job 状态深度耦合，而 1.17.1 的应用执行、Workflow、Human Input、Agent 和异步任务链路已经变化，因此不能默认直接搬迁。
-
-评审顺序固定为：**先判断旧能力是否仍有业务必要性 → 再判断 1.17.1 官方能力是否已经覆盖 → 确认仍需保留后，再比较直接迁移与基于新版执行链路重写。** 最终结论可以是迁移、重写或取消。
-
-| 能力方向 | 待评审项 | 为什么需要重新评审 | 可能的处理方向 | 状态 |
-| --- | --- | --- | --- | --- |
-| 托管执行准入 | Policy、Admission、Priority、容量限制 | 深度介入正式应用入口和执行准入，新版官方执行参数与异步链路已变化 | 评估是否仍需统一准入；若保留，优先设计 Runtime 外围控制层 | 待评审 |
-| 调度中心 | Job、Scheduler、Lease、Outbox、Generation | 旧任务状态、派发、恢复和 Worker 生命周期互相绑定 | 评估整体重写、缩减为外围任务治理，或取消 | 待评审 |
-| 专用 Worker | Standard / Critical Worker | 旧 Worker 直接承接公司调度并调用旧执行链路 | 评估是否仍需要专用资源池，以及能否建立在官方 Worker 外围 | 待评审 |
-| 正式应用托管 | Workflow、Chatflow、Chat、Completion、Agent | 1.17.1 各应用执行入口、Session、消息和结果管理已变化 | 评估继续统一托管是否仍有收益，否则直接使用官方执行 | 待评审 |
-| Console 调试 | Draft、Single Node、Iteration、Loop | 与草稿快照、前端状态、节点事件、SSE 高度耦合 | 优先复用官方调试；确需治理时再增加外围能力 | 待评审 |
-| Human Input | Pause、Resume、Retry | 1.17.1 已有新的 WorkflowPause、ResumptionContext 和恢复链路 | 评估完全使用官方能力，或仅增加外围状态治理 | 待评审 |
-| Schedule | 正式和草稿定时触发 | 1.17.1 Trigger / Schedule 链路与旧轮询方案不同 | 评估直接使用官方调度还是增加公司准入 | 待评审 |
-| 任务管理 | Query、Cancel、Stop、Retry、Streaming / Blocking Result | 旧任务中心建立在公司 Job 状态模型上 | 根据调度能力最终取舍决定是否继续存在 | 待评审 |
-| 调度监控与审计 | Worker / Scheduler Health、OTel、执行审计 | 指标、审计主体与旧调度模型绑定 | 如果调度能力保留或重写，再同步设计；本轮使用官方基础监控 | 待评审 |
+| 能力方向 | 待评审项 | 主要变化点 | 评审方向 |
+| --- | --- | --- | --- |
+| 托管执行准入 | Policy、Admission、Priority、容量限制 | 新版应用入口和异步执行参数发生变化 | 评估直接迁移、基于 1.17.1 重写或取消 |
+| 调度中心 | Job、Scheduler、Lease、Outbox、Generation | 旧任务状态与 Worker 生命周期高度绑定 | 评估保留完整调度中心、缩减为外围治理或取消 |
+| 专用 Worker | Standard / Critical Worker | 旧 Worker 直接承接公司调度并调用旧 Runtime | 评估是否仍需要专用资源池及新的接入方式 |
+| 正式应用托管 | Workflow、Chatflow、Chat、Completion、Agent | 1.17.1 各应用执行入口、Session、消息和结果管理变化 | 评估继续托管或直接使用官方执行 |
+| Console 调试 | Draft、Single Node、Iteration、Loop | 调试入口、节点事件和前端状态变化 | 评估复用官方调试或重新接入治理层 |
+| Human Input | Pause、Resume、Retry | 1.17.1 已有新的暂停恢复上下文 | 评估使用官方能力或增加外围治理 |
+| Schedule | 正式和草稿定时触发 | 1.17.1 Trigger / Schedule 链路变化 | 评估使用官方调度或增加公司准入 |
+| 任务管理 | Query、Cancel、Stop、Retry、Streaming / Blocking Result | 旧任务中心依赖公司 Job 状态 | 根据调度能力最终取舍决定是否保留 |
+| 调度监控与审计 | Worker / Scheduler Health、OTel、执行审计 | 指标和审计主体依赖旧调度模型 | 随最终调度方案重新设计或取消 |
 
 ---
 
-## 三、具体迁移方案
+## 三、阶段一：现有能力迁移
 
-本章以本地 1.17.1-change-log.md 已核对的能力来源为依据，但不复制逐提交和逐文件记录。每个功能只说明来源、1.17.1 的主要变化和本轮最终适配方式。
+### 3.1 功能迁移
 
-### 3.1 平台构建与部署支持
-
-**来源：** origin/feature/20260624_test_1 中现有平台部署能力。
-
-| 项目 | 当前能力 / 来源 | 1.17.1 变化 | 本次方案 |
+| 功能点 | 来源 | 1.17.1 变化 | 迁移与适配 |
 | --- | --- | --- | --- |
-| API / Web 制品 | 公司通过 build.sh 生成平台制品 | 1.17.1 依赖、前端构建和 migration 已更新 | 保留公司打包入口，只解决新版依赖和目录冲突，不覆盖官方构建逻辑 |
-| Web 启动 | 公司启动脚本支持 SERVER_HOST | 新版使用 pnpm 参数并默认读取系统 HOSTNAME | 保留新版 pnpm 参数，同时继续使用公司 SERVER_HOST，避免容器名称成为监听地址 |
-| Node 版本 | 旧基线允许更宽版本范围 | 1.17.1 提高 Node 要求 | 采用 1.17.1 官方版本要求，不恢复旧版本放宽 |
-| 数据库 Migration | 旧分支存在对 UUIDv7 migration 的修改 | 1.17.1 已修复已有函数与后续函数创建逻辑 | 完全使用 1.17.1 官方 migration 行为 |
-| 平台验证 | 当前已完成本地源码启动 | 还需验证 build.sh 到制品、镜像和 Kubernetes 发布链 | 将制品构建和平台发布作为上线前独立验收项 |
+| SkyOA 登录 | `origin/feature/20260701`；后续账号匹配增强来自 `origin/feature/20260825_S3` | OAuth、账号查询、Identity 关联和 Session 接口变化 | 保留 SkyOA Provider、POST 回调、state/nonce、账号绑定和邮箱匹配规则；改用新版 Account / Identity / Repository / Session |
+| 管理员初始化 | `origin/feature/20260701`；失败清理修复来自 `origin/feature/20260825_S3` | Setup 初始化流程和事务边界变化 | 在新版 Setup 中增加 SkyOA 初始化分支；失败时只清理由本次创建的账号、空间和身份关联 |
+| 邀请注册 | `origin/feature/20260701` | 新版 Account Activation、成员接口和 Session 变化 | 保留邀请记录、状态、有效期、Token 及 SkyOA 邮箱校验；接受邀请时调用新版账号和成员能力 |
+| 默认工作空间 | `origin/feature/20260701` | Tenant、成员关系和 current workspace 处理变化 | 保留 `is_default`、唯一默认空间、无空间账号加入和 current 修复规则；按新版 Session 重写 |
+| 工作空间管理 | `origin/feature/20260701`；指定 owner 和筛选增强来自 `origin/feature/20260825_S3` | Workspace Controller、返回类型、权限和 Session 变化 | 保留创建、指定 owner、列表、筛选、切换、归档和权限保护；底层复用新版 Tenant / Session / RBAC |
+| SSE Header | `origin/feature/20260825_S3` 混合提交中的通用修复 | 新版请求层仍需要处理自定义 Header 与系统 Header 的合并 | 只迁认证、CSRF、分享标识等系统 Header 的保留规则，不迁混合提交中的公司调度代码 |
+| S3 / KMS | `origin/feature/20260825_S3` | 新版 Storage 已增加预签名和流式读取等实现 | 增加公司 KMS Provider、凭据刷新和受控重试；保留 1.17.1 官方 S3 Client 其余行为 |
+| 文件路径 | `origin/feature/20260825_S3` | FileService、上传入口和 Workflow 文件调用链变化 | 保留对象前缀、Tenant/App 目录规则；按新版入口透传真实 app_id，并兼容历史 UploadFile.key |
+| 租户私钥 | `origin/feature/20260825_S3` | Key Provider 和缓存实现变化 | 保留公司 RSA 私钥路径与 Tenant 缓存语义；新租户记录真实路径，历史私钥先核对真实对象再处理 |
 
-### 3.2 数据库与 Redis 运行环境隔离
+### 3.2 双基线隔离运行与组件改造
 
-**来源：** 当前测试环境配置与 1.17.1 升级验证方案。
+阶段一只建立可独立运行的 1.17.1 升级环境，不执行正式环境切换。当前 1.14.2 与 1.17.1 两套基线并行运行，源码分支、构建流水线、部署、配置和数据空间全部隔离。
 
-升级验证期间旧版 1.14.2 仍需运行，因此不能直接对当前测试数据库执行 1.17.1 migration，也不能让两版 Worker 共用相同 Celery 队列和缓存命名空间。
+#### 3.2.1 分支、流水线与 DevOps 部署
 
-| 项目 | 当前问题 | 升级验证方案 | 正式迁移原则 |
+| 对象 | 当前 1.14.2 基线 | 1.17.1 升级基线 | 阶段一处理 |
 | --- | --- | --- | --- |
-| PostgreSQL | 旧版和新版 Schema 不同 | 新版使用独立数据库 ai_studio_1171_dev | 正式切换前基于备份或副本完成目标库 migration，不直接污染仍在运行的旧环境 |
-| Redis Cache | 旧环境使用 DB 0 且无独立前缀 | 新版使用 DB 2，并增加 dify_1171_dev 前缀 | 环境之间至少使用独立 DB 或独立前缀，禁止缓存互读 |
-| Celery Broker / Result | 旧配置 DB 和 Sentinel URL 表达不统一 | 新版统一使用 DB 3，并使用相同环境前缀 | Broker、Result 与旧 Worker 隔离，避免跨版本消费 |
-| Pub/Sub | Redis Pub/Sub 不按逻辑 DB 隔离 | 使用 REDIS_KEY_PREFIX 隔离频道名 | 事件频道必须显式区分环境，不能只依赖 Redis DB |
+| 源码分支 | 当前稳定 1.14.2 公司分支 | `release/1.17.1` | 两条分支独立维护，不在阶段一提前收束 |
+| 构建流水线 | 当前 test 流水线 | 新建或复制 1.17.1 独立流水线 | 分别绑定对应分支和 Commit，制品不可混用 |
+| 应用 | 现有 dify-api / worker / beat / web / plugin-daemon / sandbox | 复用同一批应用 | 阶段一不申请新的基础应用 |
+| 部署 | 当前 test | `test-upgrade-1.17.1` | 每个现有应用增加独立升级部署，当前 test 保持不动 |
+| 配置 | 当前 test 配置 | 1.17.1 upgrade 配置 | DB、Redis、Secret、服务地址和前端构建参数独立 |
+| 路由 | 当前测试域名 | 独立升级域名或路由 | 两套环境独立访问，不通过同一入口切换 |
+| 制品 | 当前 1.14.2 制品 | 1.17.1 API / Web 制品 | 使用独立构建号和 Commit 标识 |
 
-当前本地已经验证 PostgreSQL、Cache、Broker、Result、API、General Worker、Beat、Web、Sandbox 和 Plugin Daemon 的基础启动；这些结果只证明基础运行环境可用，不代替后续业务功能验收。
+#### 3.2.2 运行组件
 
-### 3.3 Redis Event Bus 与 Socket.IO
+| 组件 | 阶段一方案 | 说明 |
+| --- | --- | --- |
+| API | 现有应用新增 1.17.1 upgrade 部署 | 负责 Console / Service API、登录和 Workspace |
+| General Worker | 现有应用新增 1.17.1 upgrade 部署 | 只运行 1.17.1 官方普通队列，不引入 Standard / Critical Worker |
+| Beat | 现有应用新增 1.17.1 upgrade 部署 | 运行 1.17.1 官方周期任务 |
+| Web | 现有应用新增 1.17.1 upgrade 部署 | 使用 1.17.1 Web 制品及独立前端配置 |
+| Plugin Daemon | 独立验证 1.17.1 兼容版本 | 不改变现有职责 |
+| Sandbox | 独立验证 1.17.1 兼容版本 | 不改变现有职责 |
+| Agent Backend / Local Sandbox / SSRF Proxy | 阶段一不默认部署 | 是否部署由阶段二的新 Agent 能力选择决定 |
+| 公司 Scheduler / Standard / Critical Worker | 阶段一不部署 | 是否保留由阶段三评审决定 |
 
-**来源：** origin/feature/20260825_S3 中 Event Bus Sentinel 复用能力，以及 1.17.1 新增 Socket.IO RedisManager 的适配。
+#### 3.2.3 PostgreSQL 与 Migration
 
-| 项目 | 当前 / 旧实现 | 1.17.1 变化 | 本次方案 |
-| --- | --- | --- | --- |
-| Event Bus | Sentinel 环境已有可用 Redis 主连接 | 默认仍可根据独立地址重新建连接，地址为空时可能落到本机 | Sentinel 模式复用已经初始化的远程 Redis 客户端；非 Sentinel 仍允许独立 EVENT_BUS_REDIS_URL |
-| Socket.IO | 1.14.2 无该跨进程 Redis 连接 | 1.17.1 使用独立 RedisManager | Sentinel 模式使用现有节点、Service Name、DB 和认证构造 redis+sentinel 连接 |
-| 客户端关系 | Event Bus 可复用主 Redis 客户端 | Socket.IO 自己管理 RedisManager | 两者使用同一套 Sentinel 基础设施，但 Socket.IO 不复用 Event Bus 客户端 |
-| 消息隔离 | 旧环境频道无前缀 | 新版频道支持 REDIS_KEY_PREFIX | 新旧环境使用不同频道前缀，避免 Pub/Sub 消息互串 |
-| 验证 | 已完成单测和本地 Redis 连接 | 实际登录后的实时协作尚未验证 | 上线前补充真实 Workflow 协作和 API / Worker 业务事件验证 |
-
-### 3.4 SkyOA 登录
-
-**来源：** origin/feature/20260701 的 SkyOA 登录能力，以及 origin/feature/20260825_S3 中账号邮箱匹配和资料补充。
-
-| 项目 | 当前能力 | 1.17.1 变化 | 本次方案 |
-| --- | --- | --- | --- |
-| 登录入口 | SkyOA 与官方 Provider 并存 | 官方 OAuth 已收敛到 AccountOAuthService | 保留官方 GitHub / Google 流程，只为 SkyOA 增加独立分支 |
-| 回调协议 | SkyOA 使用 POST code、state、currentUrl | 官方 Provider 主要走 GET 回调 | 保留 SkyOA 原协议，不强行改成官方 Provider 协议 |
-| state / nonce | 通过短期 Cookie 校验登录上下文 | 官方有自己的 state 机制 | SkyOA 保留原校验生命周期，和官方机制并行 |
-| 账号查找 | 先找 OA 绑定，再按邮箱匹配旧账号 | 新版改用 Repository、normalized_email 和显式 Session | 按新版 Repository / Session 重写调用，保留“绑定优先、邮箱兜底、重复邮箱拒绝”业务规则 |
-| OA 身份绑定 | 保存账号后关联 openId | 新版 identity 关联接口变化 | 使用新版绑定接口，保留原 account_id 和保存顺序 |
-| 前端 | 按已配置 Provider 展示按钮和绑定状态 | 新版页面结构变化 | 在当前登录页和 Account 页补回 SkyOA 展示，不恢复旧页面整体实现 |
-| 日志 | 已有部分敏感信息脱敏 | 新版无 SkyOA 分支 | 只记录异常类型和必要状态，不输出 Secret、授权码、完整 URL 或响应正文 |
-
-### 3.5 管理员初始化
-
-**来源：** origin/feature/20260701 的 SkyOA 首次安装流程，以及 origin/feature/20260825_S3 的失败清理修复。
-
-| 项目 | 当前能力 | 1.17.1 变化 | 本次方案 |
-| --- | --- | --- | --- |
-| 初始化身份 | 启用 SkyOA 时通过 OA 创建初始管理员 | 官方 Setup 使用安装表单 | 在新版 Setup 入口增加 SkyOA 分支；未启用时完整保留官方表单 |
-| 初始化检查 | 只允许未初始化环境执行一次 | 新版已有安装状态、空间和凭据检查 | 直接复用新版检查，不恢复旧重复初始化逻辑 |
-| 初始化后登录 | 创建管理员后直接进入系统 | 官方 OAuth 返回结构变化 | 保留公司初始化后的登录结果和跳转，普通 OAuth 不改 |
-| 失败清理 | 旧逻辑曾存在清理范围过大的问题 | 新版事务边界变化 | 先回滚，再仅按本次创建的账号、空间和身份关联做定向清理，禁止删除既有数据 |
-| 空间创建 | 初始化同时创建管理员空间 | 本轮已有统一 Workspace 创建方案 | 复用 3.8 的统一创建服务，避免初始化流程再复制一套 |
-
-### 3.6 邀请注册
-
-**来源：** origin/feature/20260701 的数据库邀请与 SkyOA 接受邀请流程。
-
-| 项目 | 当前能力 | 1.17.1 变化 | 本次方案 |
-| --- | --- | --- | --- |
-| 邀请记录 | 邀请持久化到数据库，包含状态、有效期和 Token 摘要 | 官方有自己的邀请和激活流程 | 保留公司邀请模型和生命周期，不提前建号或加成员 |
-| 邀请登录 | 邀请场景只允许 SkyOA | 官方激活页支持多种登录方式 | 邀请流程继续只展示 SkyOA，普通登录方式不受影响 |
-| 邮箱校验 | OA 邮箱必须与邀请邮箱一致 | 官方通用 OAuth 邀请处理不同 | 在 SkyOA 分支保留邮箱一致性校验 |
-| 接受邀请 | OA 验证后创建或复用账号、加入 Workspace | 新版成员操作要求 Session 和授权 | 调用新版账号、成员和 Account Activation 基础能力，保留原角色与 account_id |
-| 直接激活 | 公司流程不使用旧 POST 激活和密码接受邀请 | 1.17.1 仍保留官方入口 | 只停用邀请相关分支，不删除普通密码登录、重置密码和官方公共服务 |
-| 旧邀请 | 已有邀请链接和数据库记录仍需可用 | migration 链发生变化 | 保留历史记录和 Token 语义，不批量重发邀请 |
-
-### 3.7 默认工作空间
-
-**来源：** origin/feature/20260701 的默认空间、自动加入和 current workspace 治理。
-
-| 项目 | 当前能力 | 1.17.1 变化 | 本次方案 |
-| --- | --- | --- | --- |
-| 默认标记 | Tenant 增加 is_default | 官方无公司默认空间语义 | 保留字段和唯一默认空间约束 |
-| SkyOA 新账号 | 已验证 OA 用户可在普通注册关闭时创建账号 | 新版注册要求显式 Session，默认个人空间逻辑变化 | 只对可信 OA 分支开放公司参数，普通注册仍按官方开关；关闭个人空间创建后加入默认空间 |
-| 无空间账号 | 登录后自动加入默认空间 | 新版登录和成员方法变化 | 在新版登录流程中调用统一默认空间治理服务 |
-| current workspace | 保留有效 current，否则选择正常空间，再兜底默认空间 | 新版依赖 Session 和成员上下文 | 保留原选择顺序，使用新版 Session 更新唯一 current |
-| 管理员识别 | 默认空间唯一 owner 作为公司系统管理员 | 官方 owner 只表示 Workspace 角色 | 保留公司管理员判断，但不混入本轮排除的调度权限 |
-| 旧库升级 | 历史数据库需要增加默认标记并维护索引 | 官方无对应 migration | 保留必要公司 migration，并与官方 migration 链安全合流 |
-
-### 3.8 工作空间管理
-
-**来源：** origin/feature/20260701 的 Workspace 创建、列表、切换和归档，以及 origin/feature/20260825_S3 的指定 owner 和筛选增强。
-
-| 项目 | 当前能力 | 1.17.1 变化 | 本次方案 |
-| --- | --- | --- | --- |
-| 创建 Workspace | 系统管理员通过统一服务创建空间 | 官方没有同一套公司管理入口 | 保留公司入口和统一创建服务，底层复用新版 Tenant、Session 和密钥创建能力 |
-| 指定 owner | 可通过已有账号或邮箱指定 owner | 新版账号查询与 Session 变化 | 复用 3.4 邮箱服务，保留大小写、重复账号和锁规则 |
-| 查询 / 筛选 | 支持分页、时间区间和 owner 信息 | 新版响应类型变化 | 保留业务查询能力，按新版模型重新组装返回 |
-| 切换 | 检查成员关系和归档状态 | 新版 switch_tenant 已有成员与状态检查 | 复用官方基础校验，再调用 3.7 current workspace 处理 |
-| 归档 | 可归档 Workspace 并重新选择有效 current | 官方无同一公司管理入口 | 保留归档业务规则，不删除历史数据；归档后重新计算有效空间 |
-| 权限 | 系统管理员和 Workspace owner 分层 | 本轮不迁调度权限 | 只保留 Workspace 管理权限，不恢复旧调度字段和页面 |
-| 页面 | 原公司有 Workspace 管理页面 | 1.17.1 页面结构已变化 | 页面位置和入口需在新版信息架构中重新确认，不整页搬旧实现 |
-
-### 3.9 通用 SSE 请求
-
-**来源：** origin/feature/20260825_S3 中独立于公司调度的 SSE Header 修复。
-
-| 项目 | 当前问题 | 1.17.1 情况 | 本次方案 |
-| --- | --- | --- | --- |
-| Header 合并 | 自定义 Header 可能覆盖认证、CSRF 或分享身份 Header | 新版请求层仍存在合并覆盖风险 | 迁入通用 Header 合并规则，系统 Header 优先保留，不冲突的自定义 Header 正常追加 |
-| 调度依赖 | 原测试中混有公司调度接口场景 | 本轮不迁调度 | 测试改为普通 SSE 请求，只验证 GET / POST、同名 Header、认证和 CSRF |
-| 其他行为 | Cancel、Response 等已有官方逻辑 | 新版已实现 | 不修改 |
-
-### 3.10 S3 / KMS
-
-**来源：** origin/feature/20260825_S3 中最终有效的 KMS Provider、S3 Client 和凭据刷新能力。
-
-| 项目 | 当前能力 | 1.17.1 变化 | 本次方案 |
-| --- | --- | --- | --- |
-| KMS Provider | 使用公司 KMS_URL 和最终 data/signature 协议获取并解密 S3 凭据 | 官方没有公司协议实现 | 迁入最终协议，不恢复中间 cp/r、本地 Token 或临时 URL 拼接方案 |
-| 凭据选择 | IAM 优先；KMS 完整配置时使用 KMS；未配置时可使用静态凭据 | 官方支持 IAM / 静态凭据 | 在官方 S3 初始化上增加 KMS 分支，保留新版其他客户端配置 |
-| 定时刷新 | 按时区每日刷新并后台检查 | 官方无公司刷新线程 | 保留刷新、失败后继续使用旧 Client 和延迟重试 |
-| 多进程 | fork 后重建锁、线程和刷新状态 | 1.17.1 Worker 仍可能多进程运行 | 保留进程隔离处理，避免继承失效刷新状态 |
-| S3 操作失败 | KMS 模式下刷新凭据后重试一次 | 官方无此公司规则 | 只增加一次受控重试，不叠加无限重试 |
-| exists | 仅对象不存在返回 false | 官方错误处理不同 | 保留公司错误区分，其他异常继续抛出 |
-| 预签名 / 流式读取 | 旧公司实现没有新版能力 | 1.17.1 已提供 | 完整保留官方实现，只改为读取当前有效 Client |
-| 配置 | 公司有 KMS、刷新时区等配置 | 1.17.1 配置目录发生变化 | 将配置放到新版对应 service 配置，不把旧 .env 整份覆盖进新版 |
-
-### 3.11 文件路径与租户私钥
-
-**来源：** origin/feature/20260825_S3 中对象前缀、应用目录、Tenant 私钥路径和缓存能力。
-
-| 项目 | 当前能力 | 1.17.1 变化 | 本次方案 |
-| --- | --- | --- | --- |
-| 对象前缀 | 对象存储统一增加 Dify/ 前缀 | 官方直接使用文件 key | 在公共 Storage 层统一处理对象前缀，已带前缀时不重复添加；本地和 Volume Storage 不加对象前缀 |
-| 上传目录 | 文件按 Tenant、可选 App 和 UUID 组织 | 新版 FileService 没有公司 app_id 参数 | 在新版 FileService 上增加可选 app_id，并校验 UUID 与租户归属 |
-| 上传入口 | Console、Service API、WebApp、远程上传都需要传递应用身份 | 新版各入口参数结构变化 | 只补必要参数透传，应用入口使用已鉴权 app_id，不信任请求自报其他应用身份 |
-| Workflow 文件 | 节点结果、草稿变量可能落对象存储 | 新版调用链仍存在 | 补传真实 app_id，保留新版节点和草稿逻辑 |
-| 历史文件 | 数据库已保存旧 UploadFile.key | 新前缀规则不同 | 读取时兼容历史引用；不因升级主动搬迁全部对象 |
-| 私钥路径 | 使用 Dify/RSA_privateKey/{tenant_id}/private.pem | 官方默认私钥路径和 Provider 引用方式不同 | 新 Tenant 继续记录公司私钥路径，读取优先使用数据库引用 |
-| 私钥缓存 | 公司按 Tenant 使用独立缓存名 | 新版缓存键实现不同 | 使用最终公司缓存语义，只影响私钥缓存，不扩展为全局 Redis Key 规则 |
-| 旧私钥 | 真实历史对象位置需要核对 | migration 仅写路径字符串并不会搬对象 | 升级前核对数据库引用和对象副本，再决定回填；禁止凭空改路径或重新生成旧租户密钥 |
-
-### 3.12 数据库 Migration 与历史兼容
-
-公司在旧基线上增加了邀请、默认空间、归档、私钥以及执行调度等多条 migration。虽然执行调度代码本轮不迁，但升级旧数据库时仍不能删除历史 revision 或假装这些 migration 从未存在，否则旧库 Alembic 链无法正确接续。
-
-| 项目 | 处理原则 |
+| 项目 | 阶段一处理 |
 | --- | --- |
-| 官方 migration | 以 Dify 1.17.1 当前官方 migration 为基础，不回退官方修复 |
-| 本轮保留能力的 migration | 邀请、默认空间、归档、私钥等继续保留并适配新版模型 |
-| 已存在的调度表和历史 revision | 不删除旧表、旧数据和已执行记录；是否继续使用由后续调度评审决定 |
-| migration 链合流 | 根据旧库实际 alembic_version 和表结构设计合法的合流路径，不能直接 stamp 跳过未知变更 |
-| 新库 | 只创建本轮需要的业务结构和官方结构，不因为历史链存在就重新启用调度 Runtime |
-| 升级前检查 | 必须先读取目标环境 revision、公司表存在情况和关键数据，再确定最终 migration 执行顺序 |
+| 当前 1.14.2 数据库 | 保持不动，不执行 1.17.1 migration |
+| 1.17.1 数据库 | 使用独立升级数据库；本地当前为 `ai_studio_1171_dev` |
+| Schema | 在 1.17.1 独立数据库中验证官方 Schema 和阶段一公司能力需要的 Schema |
+| 历史数据 | 阶段一不做正式迁移；需要验证兼容时使用数据库副本或受控样本 |
+| Migration 链 | 先完成官方 1.17.1 与保留公司 revision 的合流设计和副本验证，正式旧库迁移放到第六章 |
+| 执行调度历史表 | 不因阶段一不启用调度代码而删除，最终去向由阶段三决定 |
 
----
+#### 3.2.4 Redis、Celery、Event Bus 与 Socket.IO
 
-## 四、部署与升级方案
-
-### 4.1 阶段一部署原则
-
-阶段一不主动申请新的 Agent 应用，优先复用公司当前已经存在的六个运行应用，在现有应用下增加独立的 1.17.1 升级部署或环境。如果公司平台支持“同一应用多部署”，推荐使用独立的 test-upgrade-1.17.1 部署；当前 test 环境保持不动。
-
-现有运行应用：
-
-| 应用 | 阶段一处理 | 说明 |
-| --- | --- | --- |
-| dify-api | 新增 1.17.1 升级部署 | Console / Service API 和登录、Workspace 等入口 |
-| dify-worker | 新增 1.17.1 升级部署 | 只运行 1.17.1 官方 General Worker |
-| dify-worker-beat | 新增 1.17.1 升级部署 | 保留官方周期 Celery Task |
-| dify-web | 新增 1.17.1 升级部署 | Console / WebApp |
-| dify-plugin-daemon | 使用 1.17.1 兼容版本独立验证 | 不改变现有职责 |
-| dify-sandbox | 使用 1.17.1 兼容版本独立验证 | 不改变现有职责 |
-
-阶段一不默认新增 dify-scheduler、Standard Worker、Critical Worker，也不默认申请 Agent Backend、Agent Local Sandbox 和 Agent SSRF Proxy。由于官方 1.17.1 已将 Agent Backend 纳入新版运行配置，正式部署前需要用目标代码验证：在不开放新 Agent 能力时，API / Worker 及现有 Workflow / Chatflow 是否可以在未部署 Agent Backend 的情况下正常启动和执行。若不存在运行时硬依赖，则阶段一完全不部署；若存在硬依赖，再把最小依赖组件单独作为阻塞项评审，不提前扩大本次范围。
-
-### 4.2 升级环境隔离
-
-阶段一目标是让 1.14.2 test 和 1.17.1 upgrade 可以同时存在，因此隔离边界不是 Pod，而是“部署 + 数据空间 + 路由”。
-
-| 资源 | 当前 1.14.2 test | 1.17.1 upgrade |
-| --- | --- | --- |
-| 应用部署 | 当前 test | 同应用下 test-upgrade-1.17.1 |
-| PostgreSQL | 当前测试数据库 | 独立升级数据库 / 数据库副本 |
-| Redis Cache | 当前 DB / Prefix | 独立 DB 和 Prefix |
-| Celery Broker / Result | 当前队列 | 独立 DB、Prefix 和队列命名空间 |
-| Redis Pub/Sub | 当前频道 | 独立频道前缀 |
-| S3 | 当前桶和 Key | 可复用基础设施，但新写入使用明确前缀；历史 Key 只读兼容 |
-| 路由 | 当前测试域名 | 独立升级域名或独立路由 |
-| Secret | 当前环境 Secret | 升级环境单独配置，不复用源码内明文 |
-
-本地验证当前采用独立 PostgreSQL 数据库、Redis Cache DB 2、Celery DB 3 和 dify_1171_dev 前缀。正式测试平台可以更换具体编号和名称，但必须保持相同的隔离原则。
-
-### 4.3 构建与启动
-
-API、General Worker 和 Beat 继续复用同一套 API 后端源码与制品，通过不同运行角色区分；Web 使用独立 Web 制品。Sandbox 和 Plugin Daemon 继续按独立组件发布。
-
-| 角色 | 构建来源 | 运行职责 |
-| --- | --- | --- |
-| API | API 后端制品 | HTTP API、Console、Service API |
-| General Worker | API 后端制品 | 官方 Celery 异步任务 |
-| Beat | API 后端制品 | 官方周期任务 |
-| Web | Web 制品 | Console / WebApp 前端 |
-| Plugin Daemon | 独立镜像 / 制品 | Plugin 安装和执行 |
-| Sandbox | 独立镜像 / 制品 | Code Node 执行 |
-
-构建时使用 1.17.1 官方依赖和版本约束；公司 build.sh 只承担“如何产出公司平台需要的制品”，不再维护另一套 Dify 构建逻辑。
-
-### 4.4 升级执行顺序
-
-1. 固定 1.17.1 升级分支和目标 Commit。
-2. 为 1.17.1 准备独立 PostgreSQL、Redis 命名空间和升级路由。
-3. 对当前测试数据库做完整备份，并从备份或副本准备升级数据库。
-4. 在现有六个应用下创建独立 1.17.1 升级部署。
-5. 配置新版 DB、Redis、S3/KMS、SkyOA、Plugin、Sandbox 和服务间地址。
-6. 构建 API / Web 制品，并验证镜像或平台产物。
-7. 只对升级数据库执行一次 1.17.1 + 公司保留能力 migration。
-8. 启动 Plugin Daemon、Sandbox，再启动 API、General Worker、Beat 和 Web。
-9. 配置独立升级域名或路由，不影响现有 test。
-10. 完成第五章全部功能与数据兼容测试。
-11. 验证回滚后，再决定 feature 到 release 的合并和正式环境升级。
-
-### 4.5 数据库备份与 Migration
-
-升级前对目标数据库做完整 PostgreSQL 备份，并记录升级前 alembic_version。Migration 只能由一个明确的一次性步骤执行，不能让 API、Worker、Beat 的 init 脚本并发执行。
-
-迁移完成后至少确认：
-
-| 检查项 | 通过标准 |
+| 组件 | 阶段一处理 |
 | --- | --- |
-| Alembic revision | 等于目标 1.17.1 + 公司保留能力的最终 head |
-| 官方新增表结构 | 与目标代码一致 |
-| 默认 Workspace | 唯一且状态正常 |
-| 管理员 / Owner | 账号和成员关系保持 |
-| 邀请数据 | 历史邀请表和状态可读 |
-| 历史文件 | UploadFile.key 等原引用未丢失 |
-| 租户私钥 | 原租户仍能读取既有私钥 |
-| 调度历史表 | 不因本轮不迁运行代码而被删除 |
+| Redis Cache | 与 1.14.2 隔离；本地当前使用 DB 2 和 `dify_1171_dev` 前缀 |
+| Celery Broker / Result | 与旧 Worker 隔离；本地当前使用 DB 3 和相同环境前缀 |
+| Redis Pub/Sub | 不能依赖逻辑 DB 隔离，所有事件频道增加环境前缀 |
+| Event Bus | Sentinel 模式复用已连接的远程 Redis 客户端；非 Sentinel 保留独立 URL |
+| Socket.IO | 使用独立 RedisManager 连接同一套 Sentinel，构造 Sentinel URL 并传递认证、DB 和频道前缀 |
+| 队列数据 | 阶段一不迁移旧 Celery 队列，新旧 Worker 不消费对方任务 |
 
-### 4.6 回滚
+#### 3.2.5 平台构建
 
-回滚时先停止 1.17.1 upgrade 流量和 Worker，保存新版日志，再恢复到上一稳定部署。是否需要恢复数据库取决于旧代码能否兼容已升级 Schema；默认不使用 Alembic downgrade 作为回滚手段。
+| 项目 | 阶段一处理 |
+| --- | --- |
+| API / Worker / Beat | 共用 1.17.1 API 后端制品，通过不同启动角色区分 |
+| Web | 独立 Web 制品 |
+| build.sh | 保留公司平台制品入口，只适配 1.17.1 依赖、目录和构建产物 |
+| Node / pnpm | 使用 1.17.1 官方版本要求，不恢复旧版本限制 |
+| Web Host | 保留公司 SERVER_HOST 需求，同时兼容新版 pnpm 启动参数 |
+| 数据库命令 | 使用目标 1.17.1 实际 migration 命令；阶段一只操作独立升级数据库 |
 
-如果旧代码不兼容新版数据库，则使用发布前 PostgreSQL 备份恢复旧库；Redis 不作为业务数据回滚源，不能通过重新塞回旧队列的方式恢复任务。
+### 3.3 验证内容
 
----
-
-## 五、测试与验收
-
-### 5.1 基础运行
+#### 3.3.1 基础运行
 
 | 检查项 | 通过标准 |
 | --- | --- |
 | API | Health 200，版本和目标 Commit 正确 |
-| Web | 页面、JS、CSS 和图片加载正常 |
-| General Worker | Worker 可启动、可 ping，只消费 1.17.1 官方队列 |
-| Beat | 单实例正常发布官方周期任务 |
-| Sandbox | Code Node 可执行 |
-| Plugin Daemon | Health 正常，插件安装和调用链路正常 |
-| PostgreSQL | 实际连接升级数据库 |
-| Redis | Cache、Broker、Result 实际使用升级环境 DB / Prefix |
+| Web | 页面、JS、CSS、图片和基础 Console API 正常 |
+| General Worker | 可启动、可 ping，只消费 1.17.1 官方队列 |
+| Beat | 单实例运行，使用升级环境 Broker |
+| Plugin Daemon | Health 正常，基础认证与插件连接正常 |
+| Sandbox | Health 正常，Code Node 可执行 |
+| PostgreSQL | 实际连接 1.17.1 独立数据库 |
+| Redis | Cache、Broker、Result、频道均使用升级环境隔离空间 |
 
-### 5.2 SkyOA 与账号
-
-| 场景 | 通过标准 |
-| --- | --- |
-| SkyOA 登录入口 | 只在配置启用时显示 |
-| OAuth 回调 | code、state、nonce、Cookie 生命周期正常 |
-| 已绑定账号 | 保留原 account_id |
-| 邮箱匹配 | 大小写和首尾空格兼容，重复账号拒绝自动合并 |
-| 待激活账号 | 只按原规则更新 OA 资料 |
-| 日志 | 不输出 Client Secret、授权码、Token、完整身份信息 |
-
-### 5.3 工作空间
+#### 3.3.2 账号与工作空间
 
 | 场景 | 通过标准 |
 | --- | --- |
-| 初始管理员 | 仅未初始化环境可创建，失败不会清理既有数据 |
-| 邀请 | 接受、过期、撤销、重发旧 Token、邮箱不符、重复接受均符合原规则 |
-| 默认空间 | 全局唯一，新账号和无空间账号能正确加入 |
-| current workspace | 始终只有一个有效 current，不会落到 archived Workspace |
-| 创建 | 支持指定 owner，重复请求按既有幂等规则处理 |
-| 查询 | 分页、日期和 owner 查询正常 |
-| 切换 | 校验成员关系和状态 |
-| 归档 | 归档后 current 自动收敛到有效 Workspace |
+| SkyOA 登录 | Provider、回调、state/nonce、绑定和邮箱匹配符合原业务规则 |
+| 管理员初始化 | 只在未初始化环境执行，失败不清理既有数据 |
+| 邀请注册 | 接受、过期、撤销、邮箱不符、重复接受符合原规则 |
+| 默认空间 | 全局唯一，无空间账号正确加入 |
+| current workspace | 始终只有一个有效 current，不落到 archived Workspace |
+| Workspace 管理 | 创建、指定 owner、查询、筛选、切换和归档正常 |
 
-### 5.4 Dify 官方功能回归
-
-本轮不再验证公司托管执行链路，而是确认 1.17.1 官方能力在公司环境中能够正常运行。
+#### 3.3.3 1.17.1 官方能力回归
 
 | 类型 | 核心验证 |
 | --- | --- |
-| Workflow | 创建、运行、Streaming、停止和运行记录 |
-| Chatflow | 多轮会话、消息和 Workflow 执行 |
-| Chat / Completion | 基础 Streaming / Blocking、消息落库 |
-| Human Input | 使用 1.17.1 官方暂停和恢复 |
-| Schedule | 使用官方定时触发链路 |
-| Console 调试 | Draft、Single Node、Iteration、Loop 使用官方调试能力 |
-| Agent | 阶段一只验证现有业务不会被新版 Agent 链路影响；新 Agent 功能不作为通过条件 |
+| Workflow | 创建、运行、Streaming、Stop、运行记录 |
+| Chatflow | 多轮会话和 Workflow 执行 |
+| Chat / Completion | Streaming / Blocking、消息落库 |
+| Human Input | 只验证 1.17.1 官方暂停与恢复 |
+| Schedule | 只验证 1.17.1 官方定时触发 |
+| Console 调试 | Draft、Single Node、Iteration、Loop 使用官方能力 |
+| Agent | 阶段一只确认现有业务不会被新 Agent 链路阻断 |
 
-### 5.5 Redis、Event Bus 与 Socket.IO
+#### 3.3.4 Redis 与实时协作
 
 | 场景 | 通过标准 |
 | --- | --- |
-| Cache 隔离 | 1.14.2 和 1.17.1 不读取对方缓存 |
-| Celery 隔离 | 两版 Worker 不消费对方队列 |
-| Event Bus | Sentinel 模式下跨 API / Worker 实际业务消息可送达 |
-| Pub/Sub 隔离 | 新旧频道不会互串 |
-| Socket.IO | 不连接本机 Redis，能够连接远程 Sentinel |
+| Cache 隔离 | 1.14.2 与 1.17.1 不读取对方缓存 |
+| Celery 隔离 | 两版 Worker 不消费对方任务 |
+| Event Bus | 实际 API / Worker 业务事件可跨进程送达 |
+| Socket.IO | 连接远程 Sentinel，不回退本机 Redis |
 | WebSocket | Engine.IO / Socket.IO 握手成功 |
-| 实时协作 | 登录后 Workflow 协作事件可跨 API 实例正常同步 |
+| Workflow 协作 | 登录后实时协作事件可跨 API 实例同步 |
 
-### 5.6 S3、KMS、文件与私钥
+#### 3.3.5 S3、KMS、文件与私钥
 
 | 场景 | 通过标准 |
 | --- | --- |
-| KMS | 能获取凭据，协议和日志均不暴露敏感信息 |
-| 凭据刷新 | 定时刷新成功；刷新失败继续使用旧 Client 并可重试 |
-| S3 读写 | 上传、读取、下载、删除、exists、预签名正常 |
-| 应用目录 | app_id 校验和租户归属正确 |
-| 历史文件 | 旧 UploadFile.key 仍能读取 |
-| 新文件 | 使用新的统一目录和对象前缀规则 |
-| 私钥 | 旧租户私钥继续可读，新租户记录真实私钥路径 |
-| 删除 | 数据库记录和对象删除行为一致 |
+| KMS | 凭据获取与刷新正常，日志不输出敏感信息 |
+| S3 | 上传、读取、下载、删除、exists、预签名和流式读取正常 |
+| 历史文件 | 旧 UploadFile.key 可访问 |
+| 新文件 | 新目录和对象前缀规则正确 |
+| 私钥 | 新租户记录真实私钥路径；历史私钥兼容验证通过 |
+| 失败清理 | Workspace 创建失败只清理由本次创建的私钥对象 |
 
-### 5.7 发布通过条件
-
-只有以下条件全部满足，阶段一才认为基线迁移完成：
-
-- 六个现有运行应用均来自同一目标 Commit，基础 Health 正常。
-- PostgreSQL migration 成功，旧业务数据和历史 revision 可读。
-- SkyOA、管理员初始化、邀请、默认 Workspace 和 Workspace 管理全部通过。
-- Workflow、Chatflow、Chat、Completion、Human Input、Schedule 和 Console 调试的官方链路通过回归。
-- Cache、Celery、Event Bus 和 Socket.IO 在 Sentinel 环境中连接正确且新旧环境隔离。
-- KMS、S3、历史文件、租户私钥通过。
-- Plugin Daemon、Sandbox 通过业务调用。
-- 回滚流程和数据库备份可用。
-- 待评审的公司调度能力没有被阶段一代码隐式重新启用。
+阶段一通过后保留 1.14.2 与 1.17.1 两套隔离环境，不执行正式切换。
 
 ---
 
-## 六、实施计划
+## 四、阶段二：1.17.1 新能力升级
 
-状态说明：✅ 已完成　🟡 已完成基础验证 / 仍需业务验收　⬜ 待实施　🔶 待评审
+### 4.1 功能升级
 
-| 顺序 | 能力 | 当前状态 | 下一步 |
+| 能力 | 实施方式 | 是否新增运行组件 |
+| --- | --- | --- |
+| Workflow / Chatflow 新能力 | 直接基于阶段一稳定基线验证并开放需要的产品能力 | 否 |
+| Human Input 增强 | 使用 1.17.1 官方能力，不重新接入旧公司调度 | 否 |
+| WebApp 增强 | 按业务需要启用新版展示能力 | 否 |
+| Unified / Knowledge Tracing | 验证公司 Trace 环境和数据链路后启用 | 视现有可观测部署而定 |
+| difyctl | 按运维需求启用 | 否 |
+| 知识库与检索增强 | 按实际文档类型、向量库和检索需求启用 | 视数据源与向量库而定 |
+| 多模态与 Tool 新参数 | 随应用需求启用 | 否 |
+| 新 Agent App / Skills | 单独进行产品和技术验证 | 是，可能需要 Agent Runtime |
+| Agent Sandbox | 按选定 Agent 能力验证代码 / Shell 执行边界 | 是 |
+| 数据治理新能力 | 与公司已有数据治理、KMS 和清理机制对齐后启用 | 视具体能力而定 |
+
+### 4.2 组件与部署
+
+阶段二只为最终确认启用的新能力增加组件，不提前申请空闲应用。
+
+| 组件 / 资源 | 处理 |
+| --- | --- |
+| Agent Backend | 只有新 Agent 能力确认启用后才新增应用、流水线、部署和 Secret |
+| Agent Local Sandbox | 只有选择 Local Sandbox 后才新增独立运行组件 |
+| Agent SSRF Proxy | 根据公司网络方案选择官方组件或公司等价代理能力 |
+| API / Worker | 保持阶段一 1.17.1 基线，增加新能力所需配置和依赖 |
+| Plugin / Sandbox | 复用现有组件；新增能力需要不同版本时独立验证 |
+| PostgreSQL / Redis | 继续使用 1.17.1 upgrade 隔离环境，新增 Schema 或 Key 空间随功能验证 |
+| 分支 / 流水线 | 继续在 1.17.1 升级分支和独立流水线上开发验证，不切换当前 1.14.2 环境 |
+
+### 4.3 验证内容
+
+| 验证方向 | 内容 |
+| --- | --- |
+| 产品能力 | 每个实际启用的新能力分别完成创建、配置、执行和异常路径测试 |
+| 运行组件 | Agent Backend / Local Sandbox / Proxy 等新增组件完成 Health、依赖和重启恢复验证 |
+| 网络与安全 | Sandbox 出网、SSRF Proxy、Secret 和内部认证满足公司网络与安全要求 |
+| 数据 | 新能力新增表、缓存和对象存储数据只写入升级环境 |
+| 兼容性 | 新能力启用后，阶段一现有 Workflow、Chatflow、账号、Workspace 和存储能力继续通过回归 |
+| 运维 | 新增组件必须具备独立流水线、配置、日志和回滚方式 |
+
+---
+
+## 五、阶段三：执行调度能力评审
+
+### 5.1 功能评审
+
+评审顺序统一为：**业务必要性 → 1.17.1 官方覆盖程度 → 直接迁移可行性 → 重写方案 → 是否取消。**
+
+| 能力 | 评审重点 | 可能结果 |
+| --- | --- | --- |
+| Policy / Admission / Priority | 是否仍需要统一准入、优先级和容量治理 | 迁移 / 重写 / 取消 |
+| Job / Scheduler / Lease / Outbox | 是否仍需要独立任务状态和派发中心 | 迁移 / 重写 / 缩减 / 取消 |
+| Standard / Critical Worker | 是否仍需要双资源池以及公司级资源隔离 | 迁移 / 重写 / 取消 |
+| Workflow / Chatflow 托管执行 | 官方执行是否已经满足现有业务治理要求 | 接官方 / 重写外围治理 / 保留托管 |
+| Chat / Completion / Agent 托管 | 不同应用类型是否仍需要统一公司 Job | 接官方 / 重写 / 保留 |
+| Console 调试 | 官方 Draft / Node / Iteration / Loop 是否足够 | 使用官方 / 增加外围治理 |
+| Human Input | 官方 Pause / Resume 是否足够 | 使用官方 / 增加外围治理 |
+| Schedule | 官方 Trigger / Schedule 是否足够 | 使用官方 / 增加公司准入 |
+| 任务中心 | 若不保留公司 Job，任务中心是否仍有存在基础 | 保留 / 重做 / 取消 |
+| 调度监控与审计 | 最终调度方案需要哪些 Health、OTel 和 Audit | 保留 / 重做 / 取消 |
+
+### 5.2 架构与组件评审
+
+| 方案方向 | 架构含义 | 组件影响 |
+| --- | --- | --- |
+| 使用 1.17.1 官方执行 | 取消公司应用执行调度层，正式应用直接走官方 Runtime | 不新增 Scheduler / Standard / Critical Worker，任务中心随之缩减或取消 |
+| 外围治理重写 | 保留准入、优先级或资源治理，但不接管官方 Runtime 内部执行 | 可能保留轻量 Job / Policy 服务，Worker 继续使用官方机制 |
+| 直接迁移旧调度 | 尽量保留现有 Scheduler、Job、双 Worker 和任务中心 | 需要逐项适配新版应用入口、Session、SSE、Human Input、Schedule 和 Agent |
+| 基于 1.17.1 重写托管执行 | 保留现有业务目标，但按 1.17.1 官方执行契约重新设计 | 重新定义 Scheduler / Job / Worker 与官方 Runtime 的边界 |
+
+阶段三结束时必须形成最终组件清单：哪些公司执行组件继续存在、哪些重写、哪些删除，以及对应数据库表、队列、接口和 DevOps 应用是否继续保留。
+
+### 5.3 评审验证
+
+| 验证项 | 内容 |
+| --- | --- |
+| 官方能力覆盖 | 对 Workflow、Chatflow、Chat、Completion、Agent、Human Input、Schedule 分别验证官方能力能否满足现有业务要求 |
+| PoC | 对需要保留的调度能力做最小链路验证，不先整体搬旧代码 |
+| Job 映射 | 若保留公司 Job，验证与 workflow_run_id / task_id / message 等新版标识的关系 |
+| Streaming / Blocking | 验证官方 SSE、最终结果、Stop / Cancel 与公司治理需求的差距 |
+| Worker | 若保留专用 Worker，验证新版执行入口、Session 生命周期和队列职责 |
+| 暂停恢复 | 若保留 Human Input 托管，验证官方 WorkflowPause / ResumptionContext 的可接入方式 |
+| Schedule | 若保留定时任务托管，验证官方 Trigger / Schedule 与公司准入边界 |
+| 结论 | 每项输出“迁移 / 重写 / 取消”及工作量，作为第六章最终收束输入 |
+
+---
+
+## 六、最终收束与正式迁移
+
+三阶段完成并确定最终功能和组件范围后，再执行正式环境的整体收束。本章处理的是最终切换，不参与前三阶段的双基线验证。
+
+### 6.1 分支与流水线收束
+
+| 项目 | 最终处理 |
+| --- | --- |
+| 目标代码 | 固定最终 1.17.1 公司版本 Commit |
+| 分支 | 将阶段一、二及阶段三最终保留能力收束到正式 1.17.1 发布分支 |
+| 流水线 | 以最终分支建立正式 API / Web / Worker / 其他保留组件流水线 |
+| 临时升级流水线 | 正式切换稳定后下线阶段验证用流水线 |
+| 制品 | 所有正式组件记录同一版本、Commit 和构建号 |
+
+### 6.2 部署收束
+
+| 项目 | 最终处理 |
+| --- | --- |
+| 基础六组件 | API、Worker、Beat、Web、Plugin Daemon、Sandbox 使用最终 1.17.1 版本 |
+| 阶段二新增组件 | 只保留实际启用的新能力所需组件 |
+| 阶段三执行组件 | 只部署最终评审决定保留或重写的 Scheduler / Worker / Task 服务 |
+| 配置 | 将升级环境验证过的配置转换为目标环境配置，Secret 继续由 DevOps 注入 |
+| 路由 | 正式切换时将目标域名 / 流量指向 1.17.1 部署 |
+| 临时升级部署 | 稳定观察后删除 `test-upgrade-1.17.1` 等临时部署 |
+
+### 6.3 数据迁移
+
+| 项目 | 最终处理 |
+| --- | --- |
+| PostgreSQL 备份 | 切换前完整备份目标旧库并验证备份可读取 |
+| Schema Migration | 在正式目标库一次性执行 1.17.1 官方 migration + 最终保留的公司 migration |
+| 账号 / Workspace | 保留 account_id、Tenant、成员关系、默认空间和归档状态 |
+| 调度历史表 | 根据阶段三结论保留、只读留存或继续使用；不因代码取消直接删除历史数据 |
+| Redis | 不迁移旧 Cache、Celery 队列和 Result；新版本从干净命名空间启动 |
+| S3 | 默认不全量搬对象；保留历史 Key 兼容。若最终路径策略要求搬迁，再单独执行对象迁移 |
+| 租户私钥 | 先核对数据库引用和真实对象，再按最终路径方案处理，禁止重新生成旧租户密钥 |
+
+### 6.4 正式切换
+
+1. 固定最终 Commit、构建号和配置版本。
+2. 停止旧版会产生新任务的入口、Worker 和 Beat。
+3. 完成 PostgreSQL 全库备份。
+4. 执行最终数据库 Migration。
+5. 发布最终确定的 1.17.1 组件。
+6. 验证 API、Web、Worker、Plugin、Sandbox 及阶段二/三新增组件。
+7. 执行账号、Workspace、Workflow、Chatflow、存储和最终调度方案的 Smoke Test。
+8. 切换正式路由或流量。
+9. 观察运行状态、错误率、队列和数据写入。
+10. 稳定后下线旧 1.14.2 部署和临时升级环境。
+
+### 6.5 回滚
+
+| 场景 | 回滚处理 |
+| --- | --- |
+| 代码或组件异常 | 路由切回旧版并停止新版 Worker / Beat / 新增组件 |
+| 数据库仍兼容旧版 | 保留当前数据库，仅回滚运行组件 |
+| 数据库不兼容旧版 | 使用发布前 PostgreSQL 备份恢复 |
+| Redis | 不通过恢复旧队列进行回滚，避免重复消费 |
+| S3 / 文件 | 优先保持对象不变，通过数据库引用和代码回滚恢复访问 |
+| 新增组件 | Agent / 调度等独立组件按各自流水线回滚，不影响基础六组件 |
+
+---
+
+## 七、实施计划
+
+状态说明：✅ 已完成　🟡 基础验证已完成 / 仍需业务验证　⬜ 待实施　🔶 待评审
+
+| 阶段 | 能力 | 当前状态 | 下一步 |
 | --- | --- | --- | --- |
-| 1 | Dify 1.17.1 基线与升级分支 | ✅ | 固定最终升级 Commit |
-| 2 | 平台构建与部署支持 | 🟡 | 本地源码运行已通过，补 build.sh 制品、镜像和平台发布验证 |
-| 3 | PostgreSQL / Redis 隔离 | 🟡 | 本地基础连接已通过，部署环境准备独立资源 |
-| 4 | Redis Event Bus / Socket.IO Sentinel | 🟡 | 单测和本地连接通过，补真实 Workflow / API-Worker 业务验证 |
-| 5 | SkyOA 登录 | ⬜ | 按 3.4 迁入并完成登录、账号匹配和绑定测试 |
-| 6 | 管理员初始化 | ⬜ | 按 3.5 迁入，并验证失败定向清理 |
-| 7 | 邀请注册 | ⬜ | 按 3.6 迁入并验证完整邀请生命周期 |
-| 8 | 默认工作空间 | ⬜ | 按 3.7 迁入并完成旧库 migration 验证 |
-| 9 | 工作空间管理 | ⬜ | 按 3.8 迁入，确认新版管理页面位置 |
-| 10 | SSE Header | ⬜ | 只迁通用修复和普通 SSE 回归测试 |
-| 11 | S3 / KMS | ⬜ | 按最终协议迁入 Provider、刷新和重试能力 |
-| 12 | 文件路径 / 租户私钥 | ⬜ | 核对旧对象真实位置后实施路径和 migration |
-| 13 | Migration 链合流 | ⬜ | 根据旧库 revision 和表结构完成最终合流方案 |
-| 14 | 升级环境完整部署 | ⬜ | 在现有六个应用下建立隔离升级部署 |
-| 15 | 全量功能回归与回滚 | ⬜ | 按第五章完成验收 |
-| 阶段二 | 1.17.1 新 Agent / Skills / Local Sandbox | 🔶 | 阶段一基线稳定后，按业务价值和运行依赖逐项评估启用 |
-| 阶段三 | 公司执行调度 / 任务中心 / 专用 Worker | 🔶 | 在新版能力边界明确后，评估迁移、重写或取消 |
-
-实施顺序优先遵循依赖关系：先完成运行环境和账号入口，再完成 Workspace 治理和存储能力，最后合流数据库 migration 并进入完整部署回归。执行调度相关能力不与阶段一并行强行迁入，避免再次把旧 Runtime 耦合带到 1.17.1。
+| 阶段一 | Dify 1.17.1 基线与升级分支 | ✅ | 固定阶段一目标 Commit |
+| 阶段一 | PostgreSQL / Redis 隔离 | 🟡 | 本地已验证，补 DevOps 升级环境 |
+| 阶段一 | Redis Event Bus / Socket.IO Sentinel | 🟡 | 单测和本地连接通过，补真实业务和登录协作验证 |
+| 阶段一 | 平台构建与部署支持 | 🟡 | 补独立流水线、制品和 `test-upgrade-1.17.1` 部署验证 |
+| 阶段一 | SkyOA 登录 | ⬜ | 按 3.1 迁入并验证 |
+| 阶段一 | 管理员初始化 | ⬜ | 按 3.1 迁入并验证 |
+| 阶段一 | 邀请注册 | ⬜ | 按 3.1 迁入并验证 |
+| 阶段一 | 默认工作空间 | ⬜ | 按 3.1 迁入并验证 |
+| 阶段一 | 工作空间管理 | ⬜ | 按 3.1 迁入并确认新版页面位置 |
+| 阶段一 | SSE Header | ⬜ | 只迁通用修复 |
+| 阶段一 | S3 / KMS | ⬜ | 迁入最终 Provider、刷新和重试能力 |
+| 阶段一 | 文件路径 / 租户私钥 | ⬜ | 核对历史对象后迁入 |
+| 阶段一 | 全量回归 | ⬜ | 完成 3.3 全部验证，保持双基线并行 |
+| 阶段二 | 1.17.1 新功能 | ⬜ | 按业务价值逐项选择并验证 |
+| 阶段二 | Agent Runtime 组件 | ⬜ | 只有确认启用 Agent 能力后再申请应用和流水线 |
+| 阶段三 | 执行调度能力 | 🔶 | 对每项输出迁移 / 重写 / 取消结论 |
+| 阶段三 | 最终组件清单 | 🔶 | 确定 Scheduler、专用 Worker、任务中心及监控是否保留 |
+| 最终收束 | 分支 / 流水线 / 部署 | ⬜ | 三阶段完成后统一收束 |
+| 最终收束 | 正式数据迁移与切换 | ⬜ | 按第六章执行 |
