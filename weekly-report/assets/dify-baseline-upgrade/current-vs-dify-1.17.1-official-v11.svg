@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+  <defs>
+    <style>
+      .t{font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;fill:#172033}.title{font-size:31px;font-weight:700}.sub{font-size:15px;fill:#667085}.h{font-size:22px;font-weight:700}.label{font-size:16px;font-weight:600}.small{font-size:13px;fill:#667085}.tiny{font-size:12px;fill:#667085}.panel{fill:#fff;stroke:#e4e7ec;stroke-width:1.4}.group{fill:#f8fafc;stroke:#e4e7ec;stroke-width:1.2}.mod{fill:#fff;stroke:#d0d5dd;stroke-width:1.1}.blue{fill:#eef4ff;stroke:#b2ccff}.purple{fill:#f4f3ff;stroke:#c7c3ff}.green{fill:#ecfdf3;stroke:#abefc6}.amber{fill:#fffaeb;stroke:#fedf89}.gray{fill:#f2f4f7;stroke:#d0d5dd}.dash{stroke-dasharray:8 7}.line{stroke:#98a2b3;stroke-width:1.5;fill:none}.strong{stroke:#6172f3;stroke-width:2.2;fill:none}.icon{fill:none;stroke:#475467;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.iconb{fill:none;stroke:#444ce7;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#98a2b3"/></marker>
+    <marker id="arrowB" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#6172f3"/></marker>
+    <symbol id="browser" viewBox="0 0 32 32"><rect x="3" y="5" width="26" height="22" rx="3" class="icon"/><path d="M3 11h26M8 8h.1M12 8h.1M16 8h.1" class="icon"/></symbol>
+    <symbol id="server" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="9" rx="2" class="icon"/><rect x="4" y="19" width="24" height="9" rx="2" class="icon"/><path d="M9 8h.1M9 23h.1M14 8h9M14 23h9" class="icon"/></symbol>
+    <symbol id="db" viewBox="0 0 32 32"><ellipse cx="16" cy="7" rx="11" ry="4" class="icon"/><path d="M5 7v9c0 2.2 4.9 4 11 4s11-1.8 11-4V7M5 16v9c0 2.2 4.9 4 11 4s11-1.8 11-4v-9" class="icon"/></symbol>
+    <symbol id="users" viewBox="0 0 32 32"><circle cx="12" cy="11" r="4" class="icon"/><circle cx="22" cy="12" r="3" class="icon"/><path d="M4 26c.8-5 4-8 8-8s7.2 3 8 8M19 20c3.6.1 6 2.2 7 6" class="icon"/></symbol>
+    <symbol id="lock" viewBox="0 0 32 32"><rect x="6" y="13" width="20" height="15" rx="3" class="icon"/><path d="M10 13V9a6 6 0 0 1 12 0v4M16 19v4" class="icon"/></symbol>
+    <symbol id="queue" viewBox="0 0 32 32"><path d="M5 8h16M5 16h22M5 24h12" class="icon"/><circle cx="25" cy="8" r="2" class="icon"/><circle cx="21" cy="24" r="2" class="icon"/></symbol>
+    <symbol id="cube" viewBox="0 0 32 32"><path d="M16 3 27 9v14l-11 6L5 23V9zM5 9l11 6 11-6M16 15v14" class="icon"/></symbol>
+    <symbol id="network" viewBox="0 0 32 32"><circle cx="7" cy="16" r="3" class="icon"/><circle cx="25" cy="7" r="3" class="icon"/><circle cx="25" cy="25" r="3" class="icon"/><path d="M10 15 22 8M10 17l12 7" class="icon"/></symbol>
+    <symbol id="spark" viewBox="0 0 32 32"><path d="M16 3l2.8 8.2L27 14l-8.2 2.8L16 25l-2.8-8.2L5 14l8.2-2.8z" class="icon"/><path d="M25 3v6M22 6h6" class="icon"/></symbol>
+  </defs>
+  <rect width="1600" height="980" fill="#ffffff"/>
+  <text x="800" y="48" text-anchor="middle" class="t title">当前公司架构 vs Dify 1.17.1 官方架构</text>
+  <text x="800" y="76" text-anchor="middle" class="t sub">左侧展示当前 1.14.2 公司增强形态；右侧仅展示 1.17.1 官方能力边界，不代表本次全部启用</text>
+
+  <rect x="55" y="110" width="700" height="815" rx="24" class="panel"/>
+  <rect x="845" y="110" width="700" height="815" rx="24" class="panel"/>
+  <text x="95" y="153" class="t h">当前：Dify 1.14.2 + 公司增强</text>
+  <text x="885" y="153" class="t h">官方：Dify 1.17.1</text>
+
+  <rect x="90" y="185" width="630" height="96" rx="18" class="group"/>
+  <text x="112" y="211" class="t small">访问层</text>
+  <g transform="translate(128,226)"><use href="#browser" width="30" height="30"/><text x="42" y="21" class="t label">Web / Console / WebApp</text></g>
+  <g transform="translate(410,226)"><use href="#server" width="30" height="30"/><text x="42" y="21" class="t label">Service API</text></g>
+
+  <rect x="90" y="305" width="630" height="228" rx="18" class="blue"/>
+  <text x="112" y="333" class="t small">公司增强层</text>
+  <g transform="translate(118,353)"><use href="#users" width="34" height="34"/><text x="46" y="18" class="t label">SkyOA / Workspace</text><text x="46" y="38" class="t tiny">登录、默认空间、Owner、归档</text></g>
+  <g transform="translate(410,353)"><use href="#lock" width="34" height="34"/><text x="46" y="18" class="t label">S3 / KMS / 文件</text><text x="46" y="38" class="t tiny">凭据、路径、租户私钥</text></g>
+  <g transform="translate(118,425)"><use href="#queue" width="34" height="34"/><text x="46" y="18" class="t label">Policy / Admission / Priority</text><text x="46" y="38" class="t tiny">公司托管执行准入</text></g>
+  <g transform="translate(410,425)"><use href="#network" width="34" height="34"/><text x="46" y="18" class="t label">Job / Scheduler / Lease</text><text x="46" y="38" class="t tiny">任务派发与状态治理</text></g>
+  <g transform="translate(118,486)"><use href="#server" width="34" height="34"/><text x="46" y="18" class="t label">Standard / Critical Worker</text></g>
+  <g transform="translate(410,486)"><use href="#browser" width="34" height="34"/><text x="46" y="18" class="t label">任务中心 / 托管调试</text></g>
+
+  <rect x="90" y="558" width="630" height="150" rx="18" class="green"/>
+  <text x="112" y="586" class="t small">Dify 1.14.2 官方运行组件</text>
+  <g transform="translate(118,605)"><use href="#server" width="34" height="34"/><text x="46" y="20" class="t label">API</text></g>
+  <g transform="translate(260,605)"><use href="#server" width="34" height="34"/><text x="46" y="20" class="t label">General Worker</text></g>
+  <g transform="translate(500,605)"><use href="#queue" width="34" height="34"/><text x="46" y="20" class="t label">Beat</text></g>
+  <g transform="translate(118,657)"><use href="#cube" width="34" height="34"/><text x="46" y="20" class="t label">Plugin Daemon</text></g>
+  <g transform="translate(360,657)"><use href="#cube" width="34" height="34"/><text x="46" y="20" class="t label">Sandbox</text></g>
+
+  <rect x="90" y="735" width="630" height="150" rx="18" class="amber"/>
+  <text x="112" y="763" class="t small">基础设施</text>
+  <g transform="translate(118,785)"><use href="#db" width="34" height="34"/><text x="46" y="20" class="t label">PostgreSQL</text></g>
+  <g transform="translate(330,785)"><use href="#network" width="34" height="34"/><text x="46" y="20" class="t label">Redis Sentinel</text></g>
+  <g transform="translate(555,785)"><use href="#lock" width="34" height="34"/><text x="46" y="20" class="t label">S3 / KMS</text></g>
+  <text x="118" y="855" class="t tiny">公司能力直接叠加在旧基线之上，部分执行能力深入 Runtime / Worker 链路</text>
+
+  <rect x="880" y="185" width="630" height="96" rx="18" class="group"/>
+  <text x="902" y="211" class="t small">访问层</text>
+  <g transform="translate(918,226)"><use href="#browser" width="30" height="30"/><text x="42" y="21" class="t label">Web / Console / WebApp</text></g>
+  <g transform="translate(1200,226)"><use href="#server" width="30" height="30"/><text x="42" y="21" class="t label">Service API</text></g>
+
+  <rect x="880" y="305" width="630" height="144" rx="18" class="green"/>
+  <text x="902" y="333" class="t small">Application / Workflow 能力</text>
+  <g transform="translate(918,352)"><use href="#server" width="34" height="34"/><text x="46" y="18" class="t label">Workflow / Chatflow</text><text x="46" y="38" class="t tiny">官方执行与 WorkflowRun</text></g>
+  <g transform="translate(1200,352)"><use href="#browser" width="34" height="34"/><text x="46" y="18" class="t label">Chat / Completion</text><text x="46" y="38" class="t tiny">Message / Conversation</text></g>
+  <g transform="translate(918,405)"><use href="#users" width="34" height="34"/><text x="46" y="18" class="t label">Human Input / Schedule</text></g>
+  <g transform="translate(1200,405)"><use href="#spark" width="34" height="34"/><text x="46" y="18" class="t label">Agent</text></g>
+
+  <rect x="880" y="474" width="630" height="132" rx="18" class="green"/>
+  <text x="902" y="502" class="t small">核心运行组件</text>
+  <g transform="translate(918,522)"><use href="#server" width="34" height="34"/><text x="46" y="20" class="t label">API</text></g>
+  <g transform="translate(1055,522)"><use href="#server" width="34" height="34"/><text x="46" y="20" class="t label">Worker</text></g>
+  <g transform="translate(1190,522)"><use href="#queue" width="34" height="34"/><text x="46" y="20" class="t label">Beat</text></g>
+  <g transform="translate(1320,522)"><use href="#cube" width="34" height="34"/><text x="46" y="20" class="t label">Plugin / Sandbox</text></g>
+
+  <rect x="880" y="630" width="630" height="128" rx="18" class="purple"/>
+  <text x="902" y="658" class="t small">1.17.1 新增 Agent 运行链路（本次不默认启用）</text>
+  <g transform="translate(918,681)"><use href="#spark" width="34" height="34"/><text x="46" y="18" class="t label">Agent Backend</text></g>
+  <g transform="translate(1160,681)"><use href="#cube" width="34" height="34"/><text x="46" y="18" class="t label">Local Sandbox</text></g>
+  <g transform="translate(1360,681)"><use href="#network" width="34" height="34"/><text x="46" y="18" class="t label">SSRF Proxy</text></g>
+
+  <rect x="880" y="785" width="630" height="100" rx="18" class="amber"/>
+  <text x="902" y="813" class="t small">基础设施</text>
+  <g transform="translate(918,831)"><use href="#db" width="32" height="32"/><text x="42" y="20" class="t label">PostgreSQL</text></g>
+  <g transform="translate(1120,831)"><use href="#network" width="32" height="32"/><text x="42" y="20" class="t label">Redis</text></g>
+  <g transform="translate(1265,831)"><use href="#lock" width="32" height="32"/><text x="42" y="20" class="t label">Object Storage</text></g>
+
+  <path d="M775 480 H825" class="strong" marker-end="url(#arrowB)"/>
+  <text x="800" y="455" text-anchor="middle" class="t small">基线升级</text>
+  <text x="800" y="510" text-anchor="middle" class="t tiny">能力重新取舍</text>
+</svg>
