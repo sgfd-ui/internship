@@ -24,30 +24,17 @@
 
 ### 2.2 本次迁移架构
 
-![Dify 1.17.1 本次迁移内容](assets/dify-baseline-upgrade/dify-1.17.1-migration-scope-v11.svg)
+![Dify 1.17.1 三阶段迁移路径](assets/dify-baseline-upgrade/dify-1.17.1-migration-scope-v12.svg)
 
-第二张图表示本次实际迁移内容：左侧是当前公司能力，中间是迁移或适配方式，右侧是最终接入的 Dify 1.17.1 官方能力。阶段一只处理当前必须保留的企业能力；1.17.1 新 Agent 链路后置；公司执行调度能力不直接进入本轮迁移，而是在新版基线稳定后重新评审。
+本次升级按固定顺序分为三个阶段推进：
 
-### 2.3 Dify 1.17.1 新增能力
+**当前 Dify 1.14.2 → 阶段一：现有能力迁移 → 形成可运行的 Dify 1.17.1 稳定基线 → 阶段二：升级 1.17.1 新能力 → 阶段三：评审执行调度相关能力。**
 
-以下表格只说明 1.14.2 到 1.17.1 的主要新增产品能力，不代表本次全部启用。阶段一以兼容现有业务为目标，新能力只在不需要额外公司改造时随基线获得；需要新增运行组件或改变业务使用方式的能力后置评估。
+阶段一先解决当前业务能否完整运行在 1.17.1 上，是本轮升级的主体和上线前提；阶段二只在稳定基线形成后选择性启用 1.17.1 新功能；阶段三最后处理与旧 Runtime、Worker 和任务状态深度耦合的公司执行调度能力，并根据业务必要性决定迁移、重写或取消。图中的箭头表示实施顺序，不代表阶段三一定保留全部旧能力。
 
-| 能力方向 | 1.17.1 新增或增强能力 | 能力说明 | 本次处理 |
-| --- | --- | --- | --- |
-| Workflow 与应用编排 | 自然语言生成 Workflow / Chatflow、运行记录导出、节点定位、LLM Environment 等 | 提升工作流创建、调试和配置复用能力 | 随基线保留，不做公司定制 |
-| Human Input | 富表单、Loop / Iteration 内 Human Input | 官方暂停和恢复能力增强 | 使用官方能力，本轮不接入公司调度 |
-| Agent | 新 Agent App、Agent Skills、Agent DSL、Agent Home Snapshot | 引入新的 Agent 应用和运行模型 | 后续评估 |
-| Agent Runtime | Agent Backend、Local Sandbox、Agent SSRF Proxy 等 | 为新版 Agent 提供独立运行、工作区和网络隔离 | 后续评估，不作为阶段一默认部署 |
-| WebApp | 应用描述和输入提示等展示能力 | 改善 Chatbot、Agent、Chatflow 的应用页面体验 | 随基线保留 |
-| 可观测 | Unified Tracing、Knowledge Tracing | 统一查看应用、Workflow、Tool 和知识检索链路 | 随基线保留 |
-| CLI | difyctl | 支持通过命令行查看和执行 Dify 应用 | 后续按运维需要评估 |
-| 知识库与检索 | Excel 图片解析、ODT、TiDB 混合检索等 | 扩展知识库导入和检索能力 | 随基线保留，按实际数据源启用 |
-| 多模态与工具 | 文件直接传入多模态模型、日期参数类型 | 扩展模型输入和 Tool 参数表达 | 随基线保留 |
-| 安全与数据治理 | 外部 KMS Provider、会话清理等 | 增强密钥、数据生命周期和平台治理能力 | 与公司 KMS 需求结合适配 |
+### 2.3 阶段一：现有能力迁移
 
-### 2.4 本次迁移功能
-
-本轮确定迁移的范围来自当前 1.14.2 已在使用的企业能力，以及升级到 1.17.1 后必须完成的运行环境适配。
+阶段一只迁移当前 1.14.2 已经在使用、且升级后仍必须保留的公司能力，同时完成 1.17.1 在公司运行环境中的基础适配。阶段一完成后需要形成一套不依赖旧托管执行链路、可以独立运行和回归的 Dify 1.17.1 基线。
 
 | 能力方向 | 当前能力 | 本次迁移或适配内容 | 1.17.1 落点 |
 | --- | --- | --- | --- |
@@ -64,22 +51,40 @@
 | S3 / KMS | KMS 凭据、刷新、S3 Client | 将公司 KMS Provider 接入 1.17.1 Storage，保留新版预签名和流式读取 | Storage Provider |
 | 文件与租户私钥 | Dify 前缀、租户/应用目录、历史文件、RSA 私钥路径和缓存 | 统一新版读写路径并兼容历史引用，不做无必要的全量对象搬迁 | Storage / Tenant |
 
-### 2.5 待评审功能
+### 2.4 阶段二：1.17.1 新能力升级
 
-以下能力与旧 Dify 1.14.2 Runtime、Controller、Generator、Celery 执行和公司 Job 状态深度耦合，而 1.17.1 的应用执行、Workflow、Human Input、Agent 和异步任务链路已经发生变化。直接搬迁旧代码会继续形成对新版 Runtime 的侵入，因此本轮不预设“继续保留”。后续需要先确认业务必要性和官方能力覆盖程度，再决定是直接迁移、围绕 1.17.1 重新实现，还是取消该能力。
+阶段二在阶段一稳定基线通过完整回归后再进行。这里关注的是 1.17.1 相比 1.14.2 新增或显著增强的产品能力，不要求一次性全部开放；需要新增运行组件、改变业务使用方式或增加运维成本的能力单独评估后启用。
 
-| 能力方向 | 待评审项 | 为什么工作量大 | 可能的改造方向 | 状态 |
+| 能力方向 | 1.17.1 新增或增强能力 | 能力说明 | 阶段二处理 |
+| --- | --- | --- | --- |
+| Workflow 与应用编排 | 自然语言生成 Workflow / Chatflow、运行记录导出、节点定位、LLM Environment 等 | 提升工作流创建、调试和配置复用能力 | 基线稳定后按实际使用场景开放 |
+| Human Input | 富表单、Loop / Iteration 内 Human Input | 官方暂停和恢复能力增强 | 优先使用官方能力，不接入旧公司调度 |
+| Agent | 新 Agent App、Agent Skills、Agent DSL、Agent Home Snapshot | 引入新的 Agent 应用和运行模型 | 单独验证产品需求后启用 |
+| Agent Runtime | Agent Backend、Local Sandbox、Agent SSRF Proxy 等 | 为新版 Agent 提供独立运行、工作区和网络隔离 | 仅在启用对应 Agent 能力时评估部署 |
+| WebApp | 应用描述和输入提示等展示能力 | 改善 Chatbot、Agent、Chatflow 的应用页面体验 | 按业务需要开放 |
+| 可观测 | Unified Tracing、Knowledge Tracing | 统一查看应用、Workflow、Tool 和知识检索链路 | 基线稳定后验证公司环境兼容性 |
+| CLI | difyctl | 支持通过命令行查看和执行 Dify 应用 | 按运维需求评估 |
+| 知识库与检索 | Excel 图片解析、ODT、TiDB 混合检索等 | 扩展知识库导入和检索能力 | 按实际数据源和检索需求启用 |
+| 多模态与工具 | 文件直接传入多模态模型、日期参数类型 | 扩展模型输入和 Tool 参数表达 | 随具体应用场景启用 |
+| 安全与数据治理 | 外部 KMS Provider、会话清理等 | 增强密钥、数据生命周期和平台治理能力 | 与公司现有 KMS 和治理能力分别评估，避免重复实现 |
+
+### 2.5 阶段三：执行调度能力评审
+
+阶段三在 1.17.1 稳定基线和新版能力边界明确后再进行。以下能力与旧 Dify 1.14.2 Runtime、Controller、Generator、Celery 执行以及公司 Job 状态深度耦合，而 1.17.1 的应用执行、Workflow、Human Input、Agent 和异步任务链路已经变化，因此不能默认直接搬迁。
+
+评审顺序固定为：**先判断旧能力是否仍有业务必要性 → 再判断 1.17.1 官方能力是否已经覆盖 → 确认仍需保留后，再比较直接迁移与基于新版执行链路重写。** 最终结论可以是迁移、重写或取消。
+
+| 能力方向 | 待评审项 | 为什么需要重新评审 | 可能的处理方向 | 状态 |
 | --- | --- | --- | --- | --- |
-| 托管执行准入 | Policy、Admission、Priority、容量限制 | 深度介入正式应用入口和执行准入，新版官方执行参数与异步链路已变化 | 评估是否仍需统一准入；若需要，优先设计 Runtime 外围控制层而不是恢复旧入口改造 | 待评审 |
+| 托管执行准入 | Policy、Admission、Priority、容量限制 | 深度介入正式应用入口和执行准入，新版官方执行参数与异步链路已变化 | 评估是否仍需统一准入；若保留，优先设计 Runtime 外围控制层 | 待评审 |
 | 调度中心 | Job、Scheduler、Lease、Outbox、Generation | 旧任务状态、派发、恢复和 Worker 生命周期互相绑定 | 评估整体重写、缩减为外围任务治理，或取消 | 待评审 |
-| 专用 Worker | Standard / Critical Worker | 旧 Worker 直接承接公司调度并调用旧执行链路 | 评估是否在官方 Worker 外围做资源治理，避免复制官方 Runtime | 待评审 |
-| 正式应用托管 | Workflow、Chatflow、Chat、Completion、Agent | 1.17.1 各应用执行入口、Session、消息和结果管理已变化 | 评估继续统一托管是否有足够收益；否则直接使用官方执行 | 待评审 |
-| Console 调试 | Draft、Single Node、Iteration、Loop | 与草稿快照、前端状态、节点事件、SSE 高度耦合 | 优先复用官方调试；确需治理时再增加独立外围能力 | 待评审 |
+| 专用 Worker | Standard / Critical Worker | 旧 Worker 直接承接公司调度并调用旧执行链路 | 评估是否仍需要专用资源池，以及能否建立在官方 Worker 外围 | 待评审 |
+| 正式应用托管 | Workflow、Chatflow、Chat、Completion、Agent | 1.17.1 各应用执行入口、Session、消息和结果管理已变化 | 评估继续统一托管是否仍有收益，否则直接使用官方执行 | 待评审 |
+| Console 调试 | Draft、Single Node、Iteration、Loop | 与草稿快照、前端状态、节点事件、SSE 高度耦合 | 优先复用官方调试；确需治理时再增加外围能力 | 待评审 |
 | Human Input | Pause、Resume、Retry | 1.17.1 已有新的 WorkflowPause、ResumptionContext 和恢复链路 | 评估完全使用官方能力，或仅增加外围状态治理 | 待评审 |
 | Schedule | 正式和草稿定时触发 | 1.17.1 Trigger / Schedule 链路与旧轮询方案不同 | 评估直接使用官方调度还是增加公司准入 | 待评审 |
 | 任务管理 | Query、Cancel、Stop、Retry、Streaming / Blocking Result | 旧任务中心建立在公司 Job 状态模型上 | 根据调度能力最终取舍决定是否继续存在 | 待评审 |
-| 调度监控与审计 | Worker / Scheduler Health、OTel、执行审计 | 指标、审计主体与旧调度模型绑定 | 若调度能力重做，再同步设计；本轮保留官方基础监控 | 待评审 |
-
+| 调度监控与审计 | Worker / Scheduler Health、OTel、执行审计 | 指标、审计主体与旧调度模型绑定 | 如果调度能力保留或重写，再同步设计；本轮使用官方基础监控 | 待评审 |
 ---
 
 ## 三、具体迁移方案
