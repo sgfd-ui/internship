@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120">
+  <defs>
+    <style>
+      .t{font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;fill:#172033}.title{font-size:31px;font-weight:700}.sub{font-size:15px;fill:#667085}.h{font-size:20px;font-weight:700}.label{font-size:16px;font-weight:600}.small{font-size:13px;fill:#667085}.tiny{font-size:12px;fill:#667085}.panel{fill:#fff;stroke:#e4e7ec;stroke-width:1.4}.row{fill:#fff;stroke:#e4e7ec;stroke-width:1.1}.blue{fill:#eef4ff;stroke:#b2ccff}.purple{fill:#f4f3ff;stroke:#c7c3ff}.green{fill:#ecfdf3;stroke:#abefc6}.amber{fill:#fffaeb;stroke:#fedf89}.gray{fill:#f2f4f7;stroke:#d0d5dd}.dash{stroke-dasharray:8 7}.line{stroke:#98a2b3;stroke-width:1.6;fill:none}.bline{stroke:#6172f3;stroke-width:2.1;fill:none}.icon{fill:none;stroke:#475467;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#98a2b3"/></marker>
+    <marker id="arrowB" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#6172f3"/></marker>
+    <symbol id="browser" viewBox="0 0 32 32"><rect x="3" y="5" width="26" height="22" rx="3" class="icon"/><path d="M3 11h26M8 8h.1M12 8h.1M16 8h.1" class="icon"/></symbol>
+    <symbol id="server" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="9" rx="2" class="icon"/><rect x="4" y="19" width="24" height="9" rx="2" class="icon"/><path d="M9 8h.1M9 23h.1M14 8h9M14 23h9" class="icon"/></symbol>
+    <symbol id="users" viewBox="0 0 32 32"><circle cx="12" cy="11" r="4" class="icon"/><circle cx="22" cy="12" r="3" class="icon"/><path d="M4 26c.8-5 4-8 8-8s7.2 3 8 8M19 20c3.6.1 6 2.2 7 6" class="icon"/></symbol>
+    <symbol id="lock" viewBox="0 0 32 32"><rect x="6" y="13" width="20" height="15" rx="3" class="icon"/><path d="M10 13V9a6 6 0 0 1 12 0v4M16 19v4" class="icon"/></symbol>
+    <symbol id="queue" viewBox="0 0 32 32"><path d="M5 8h16M5 16h22M5 24h12" class="icon"/><circle cx="25" cy="8" r="2" class="icon"/><circle cx="21" cy="24" r="2" class="icon"/></symbol>
+    <symbol id="network" viewBox="0 0 32 32"><circle cx="7" cy="16" r="3" class="icon"/><circle cx="25" cy="7" r="3" class="icon"/><circle cx="25" cy="25" r="3" class="icon"/><path d="M10 15 22 8M10 17l12 7" class="icon"/></symbol>
+    <symbol id="spark" viewBox="0 0 32 32"><path d="M16 3l2.8 8.2L27 14l-8.2 2.8L16 25l-2.8-8.2L5 14l8.2-2.8z" class="icon"/><path d="M25 3v6M22 6h6" class="icon"/></symbol>
+    <symbol id="cube" viewBox="0 0 32 32"><path d="M16 3 27 9v14l-11 6L5 23V9zM5 9l11 6 11-6M16 15v14" class="icon"/></symbol>
+  </defs>
+  <rect width="1600" height="1120" fill="#fff"/>
+  <text x="800" y="48" text-anchor="middle" class="t title">Dify 1.17.1 基线升级：本次迁移路径</text>
+  <text x="800" y="77" text-anchor="middle" class="t sub">只迁当前必须保留的企业能力；1.17.1 新能力后置；执行调度能力进入独立评审</text>
+
+  <rect x="80" y="106" width="1440" height="78" rx="20" class="purple"/>
+  <g transform="translate(112,127)"><use href="#spark" width="34" height="34"/></g>
+  <text x="160" y="137" class="t label">1.17.1 新能力</text>
+  <text x="160" y="159" class="t small">新 Agent / Skills / Agent Backend / Local Sandbox 等不作为阶段一迁移目标，基线稳定后单独评估启用方式</text>
+  <text x="1425" y="148" text-anchor="end" class="t label">阶段二</text>
+
+  <text x="265" y="235" text-anchor="middle" class="t h">当前公司能力</text>
+  <text x="800" y="235" text-anchor="middle" class="t h">迁移 / 适配处理</text>
+  <text x="1335" y="235" text-anchor="middle" class="t h">Dify 1.17.1 最终落点</text>
+  <line x1="530" y1="218" x2="530" y2="860" stroke="#eaecf0"/>
+  <line x1="1070" y1="218" x2="1070" y2="860" stroke="#eaecf0"/>
+
+  <rect x="80" y="270" width="1440" height="102" rx="18" class="row"/>
+  <g transform="translate(120,300)"><use href="#server" width="38" height="38"/><text x="52" y="17" class="t label">平台构建与部署</text><text x="52" y="39" class="t small">API / Web 打包、启动参数、环境配置</text></g>
+  <path d="M480 321 H650" class="bline" marker-end="url(#arrowB)"/><text x="565" y="307" text-anchor="middle" class="t small">保留平台接入</text>
+  <g transform="translate(680,295)"><rect width="240" height="50" rx="14" class="blue"/><text x="120" y="21" text-anchor="middle" class="t label">按 1.17.1 构建方式适配</text><text x="120" y="40" text-anchor="middle" class="t tiny">保留新版 Node / pnpm / migration</text></g>
+  <path d="M950 321 H1120" class="bline" marker-end="url(#arrowB)"/>
+  <g transform="translate(1160,300)"><use href="#server" width="38" height="38"/><text x="52" y="17" class="t label">API / Worker / Beat / Web</text><text x="52" y="39" class="t small">官方 1.17.1 运行角色</text></g>
+
+  <rect x="80" y="388" width="1440" height="102" rx="18" class="row"/>
+  <g transform="translate(120,418)"><use href="#users" width="38" height="38"/><text x="52" y="17" class="t label">SkyOA 登录</text><text x="52" y="39" class="t small">Provider、回调、账号匹配、绑定</text></g>
+  <path d="M480 439 H650" class="bline" marker-end="url(#arrowB)"/><text x="565" y="425" text-anchor="middle" class="t small">协议保留，账号模型适配</text>
+  <g transform="translate(680,413)"><rect width="240" height="50" rx="14" class="blue"/><text x="120" y="21" text-anchor="middle" class="t label">OAuth + Session 适配</text><text x="120" y="40" text-anchor="middle" class="t tiny">复用新版 Account / Identity</text></g>
+  <path d="M950 439 H1120" class="bline" marker-end="url(#arrowB)"/>
+  <g transform="translate(1160,418)"><use href="#users" width="38" height="38"/><text x="52" y="17" class="t label">Account / Identity</text><text x="52" y="39" class="t small">官方登录与账号体系</text></g>
+
+  <rect x="80" y="506" width="1440" height="102" rx="18" class="row"/>
+  <g transform="translate(120,536)"><use href="#users" width="38" height="38"/><text x="52" y="17" class="t label">工作空间治理</text><text x="52" y="39" class="t small">管理员、邀请、默认空间、Owner、归档</text></g>
+  <path d="M480 557 H650" class="bline" marker-end="url(#arrowB)"/><text x="565" y="543" text-anchor="middle" class="t small">保留业务规则</text>
+  <g transform="translate(680,531)"><rect width="240" height="50" rx="14" class="blue"/><text x="120" y="21" text-anchor="middle" class="t label">Tenant / Session / RBAC 适配</text><text x="120" y="40" text-anchor="middle" class="t tiny">不恢复旧整套实现</text></g>
+  <path d="M950 557 H1120" class="bline" marker-end="url(#arrowB)"/>
+  <g transform="translate(1160,536)"><use href="#users" width="38" height="38"/><text x="52" y="17" class="t label">Workspace / Tenant</text><text x="52" y="39" class="t small">官方成员与空间能力</text></g>
+
+  <rect x="80" y="624" width="1440" height="102" rx="18" class="row"/>
+  <g transform="translate(120,654)"><use href="#lock" width="38" height="38"/><text x="52" y="17" class="t label">S3 / KMS / 文件 / 私钥</text><text x="52" y="39" class="t small">公司对象存储和数据安全规则</text></g>
+  <path d="M480 675 H650" class="bline" marker-end="url(#arrowB)"/><text x="565" y="661" text-anchor="middle" class="t small">Provider 化迁移</text>
+  <g transform="translate(680,649)"><rect width="240" height="50" rx="14" class="blue"/><text x="120" y="21" text-anchor="middle" class="t label">凭据刷新 + Key 兼容</text><text x="120" y="40" text-anchor="middle" class="t tiny">保留新版预签名与流式读取</text></g>
+  <path d="M950 675 H1120" class="bline" marker-end="url(#arrowB)"/>
+  <g transform="translate(1160,654)"><use href="#lock" width="38" height="38"/><text x="52" y="17" class="t label">Storage Provider</text><text x="52" y="39" class="t small">1.17.1 存储基础能力</text></g>
+
+  <rect x="80" y="742" width="1440" height="102" rx="18" class="row"/>
+  <g transform="translate(120,772)"><use href="#network" width="38" height="38"/><text x="52" y="17" class="t label">Redis / SSE 通用适配</text><text x="52" y="39" class="t small">Sentinel、Event Bus、Socket.IO、Header</text></g>
+  <path d="M480 793 H650" class="bline" marker-end="url(#arrowB)"/><text x="565" y="779" text-anchor="middle" class="t small">连接方式与协议适配</text>
+  <g transform="translate(680,767)"><rect width="240" height="50" rx="14" class="blue"/><text x="120" y="21" text-anchor="middle" class="t label">复用基础设施，隔离命名空间</text><text x="120" y="40" text-anchor="middle" class="t tiny">Event Bus 复用 / Socket.IO 独立连接</text></g>
+  <path d="M950 793 H1120" class="bline" marker-end="url(#arrowB)"/>
+  <g transform="translate(1160,772)"><use href="#network" width="38" height="38"/><text x="52" y="17" class="t label">Redis / Socket.IO / SSE</text><text x="52" y="39" class="t small">1.17.1 官方通信能力</text></g>
+
+  <rect x="80" y="885" width="1440" height="172" rx="22" class="gray dash"/>
+  <text x="112" y="921" class="t h">待评审：执行调度相关能力不进入本轮迁移</text>
+  <g transform="translate(120,950)"><use href="#queue" width="38" height="38"/><text x="52" y="17" class="t label">Policy / Admission / Priority</text><text x="52" y="39" class="t small">Job / Scheduler / Lease / Task Center</text></g>
+  <g transform="translate(470,950)"><use href="#server" width="38" height="38"/><text x="52" y="17" class="t label">Standard / Critical Worker</text><text x="52" y="39" class="t small">正式执行 / Console / Human Input / Schedule</text></g>
+  <path d="M850 981 H1040" class="line dash" marker-end="url(#arrow)"/>
+  <g transform="translate(875,936)"><rect width="160" height="42" rx="12" class="amber"/><text x="80" y="26" text-anchor="middle" class="t label">迁移 / 重写 / 取消</text></g>
+  <g transform="translate(1085,950)"><use href="#server" width="38" height="38"/><text x="52" y="17" class="t label">1.17.1 官方 Runtime</text><text x="52" y="39" class="t small">先评估业务必要性，再决定接入方式</text></g>
+  <text x="112" y="1030" class="t tiny">评审重点：旧能力是否仍必要、官方能力是否已覆盖、若保留应直接迁移还是围绕新版执行链路重新实现</text>
+</svg>
