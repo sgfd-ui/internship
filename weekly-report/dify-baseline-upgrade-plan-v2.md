@@ -170,6 +170,30 @@
 | 流水线 | 当前 1.14.2 test 流水线 | 1.17.1 独立流水线 | 分别绑定对应分支、Commit 和制品 |
 | 部署 | 当前 test 部署 | `test-upgrade-1.17.1` | 在现有应用下新增隔离部署，当前 test 保持不动 |
 
+##### 部署补充：Git 安装
+
+Dify 1.17.1 后端依赖中包含通过 Git 仓库引用的 Python 依赖，`uv sync --dev` 在解析和安装该类依赖时需要容器内存在 Git 可执行程序。因此 API、Worker、Beat 共用的后端运行环境需要补充 Git。
+
+| 项目 | 处理方案 |
+| --- | --- |
+| Git | 后端基础运行环境安装 Git，并保证 `git` 命令在 PATH 中可用 |
+| 初始化顺序 | 先确认 Git 可用，再执行 `uv sync --dev`，随后执行数据库 Migration |
+| 阶段一部署 | 现有基础镜像未包含 Git 时，在 DevOps 初始化脚本中先安装 Git，再执行依赖同步和 Migration |
+| 最终收束 | 将 Git 固化到 1.17.1 后端基础镜像，避免每次部署重复安装 |
+| 影响组件 | API、General Worker、Beat 共用同一套后端依赖，因此统一使用包含 Git 的后端运行环境 |
+
+阶段一初始化顺序统一为：
+
+```bash
+安装 / 检查 Git
+        ↓
+uv sync --dev
+        ↓
+uv run flask db upgrade
+        ↓
+启动 API / Worker / Beat
+```
+
 #### 3.2.2 平台构建与启动
 
 **来源：** `origin/feature/20260624_test_1` 的平台部署支持；1.17.1 冲突按新版行为处理。
