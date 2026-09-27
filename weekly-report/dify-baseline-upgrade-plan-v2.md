@@ -203,10 +203,10 @@
 
 | 资源 | 隔离方案 |
 | --- | --- |
-| PostgreSQL | 共用同一 PostgreSQL 服务，1.17.1 使用独立数据库 |
-| Redis Cache | 共用同一 Redis Sentinel，1.17.1 使用独立 DB 和 `dify_1171_dev` 前缀 |
-| Celery Broker / Result | 共用同一 Redis Sentinel，使用独立 DB、完整 Sentinel URL 和 `dify_1171_dev` 前缀 |
-| Redis Pub/Sub | 使用独立 Channel Prefix 区分 1.14.2 与 1.17.1，不依赖 Redis DB 隔离 |
+| PostgreSQL | 共用同一 PostgreSQL 服务，1.17.1 使用独立数据库 `ai_studio_1171_dev` |
+| Redis Cache | 共用同一 Redis Sentinel，1.17.1 使用 Redis DB 2，Key Prefix 为 `dify_1171_dev` |
+| Celery Broker / Result | 共用同一 Redis Sentinel，Broker 与 Result 使用 Redis DB 3，Key Prefix 为 `dify_1171_dev` |
+| Redis Pub/Sub | 使用 `dify_1171_dev` 作为 Channel Prefix 区分 1.14.2 与 1.17.1，不依赖 Redis DB 隔离 |
 | Plugin Daemon | 使用独立插件数据库与 Redis 空间，不与 Dify 主库和主缓存混用 |
 
 #### 3.2.5 Event Bus 与 Socket.IO Sentinel 适配
