@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="720" viewBox="0 0 1700 720">
+<defs>
+<style>
+.t{font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;fill:#172033}
+.title{font-size:31px;font-weight:700}.sub{font-size:15px;fill:#667085}
+.h{font-size:20px;font-weight:700}.label{font-size:16px;font-weight:600}.small{font-size:13px;fill:#667085}.tiny{font-size:12px;fill:#667085}
+.gray{fill:#f8fafc;stroke:#d0d5dd;stroke-width:1.4}.blue{fill:#eef4ff;stroke:#b2ccff;stroke-width:1.4}
+.green{fill:#ecfdf3;stroke:#abefc6;stroke-width:1.4}.purple{fill:#f4f3ff;stroke:#c7c3ff;stroke-width:1.4}
+.amber{fill:#fffaeb;stroke:#fedf89;stroke-width:1.4}.line{stroke:#6172f3;stroke-width:2.5;fill:none}
+.pline{stroke:#7f56d9;stroke-width:2.5;fill:none}.aline{stroke:#f79009;stroke-width:2.5;fill:none}
+.icon{fill:none;stroke:#475467;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+</style>
+<marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#6172f3"/></marker>
+<marker id="p" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#7f56d9"/></marker>
+<marker id="o" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#f79009"/></marker>
+<symbol id="branch" viewBox="0 0 32 32"><circle cx="8" cy="7" r="3" class="icon"/><circle cx="24" cy="25" r="3" class="icon"/><circle cx="8" cy="25" r="3" class="icon"/><path d="M8 10v12M11 10c0 8 13 4 13 12" class="icon"/></symbol>
+<symbol id="db" viewBox="0 0 32 32"><ellipse cx="16" cy="7" rx="11" ry="4" class="icon"/><path d="M5 7v9c0 2.2 4.9 4 11 4s11-1.8 11-4V7M5 16v9c0 2.2 4.9 4 11 4s11-1.8 11-4v-9" class="icon"/></symbol>
+<symbol id="spark" viewBox="0 0 32 32"><path d="M16 3l2.8 8.2L27 14l-8.2 2.8L16 25l-2.8-8.2L5 14l8.2-2.8z" class="icon"/><path d="M25 3v6M22 6h6" class="icon"/></symbol>
+<symbol id="queue" viewBox="0 0 32 32"><path d="M5 8h16M5 16h22M5 24h12" class="icon"/><circle cx="25" cy="8" r="2" class="icon"/><circle cx="21" cy="24" r="2" class="icon"/></symbol>
+<symbol id="server" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="9" rx="2" class="icon"/><rect x="4" y="19" width="24" height="9" rx="2" class="icon"/><path d="M9 8h.1M9 23h.1M14 8h9M14 23h9" class="icon"/></symbol>
+</defs>
+<rect width="1700" height="720" fill="#fff"/>
+<text x="850" y="48" text-anchor="middle" class="t title">Dify 1.17.1 升级实施路径</text>
+<text x="850" y="77" text-anchor="middle" class="t sub">1.17.1 独立升级线持续演进，最终再收束到原有 DevOps 组件与正式数据</text>
+
+<!-- top flow -->
+<rect x="45" y="125" width="210" height="108" rx="20" class="gray"/>
+<text x="150" y="156" text-anchor="middle" class="t small">当前环境</text>
+<text x="150" y="184" text-anchor="middle" class="t h">Dify 1.14.2</text>
+<text x="150" y="210" text-anchor="middle" class="t tiny">现有组件 + 现有数据</text>
+
+<path d="M265 179 H325" class="line" marker-end="url(#a)"/>
+
+<rect x="335" y="110" width="250" height="138" rx="20" class="blue"/>
+<text x="460" y="141" text-anchor="middle" class="t small">阶段一</text>
+<text x="460" y="169" text-anchor="middle" class="t h">现有能力迁移</text>
+<text x="460" y="195" text-anchor="middle" class="t tiny">独立 1.17.1 分支 / 流水线 / 部署</text>
+<text x="460" y="218" text-anchor="middle" class="t tiny">现有六组件 + 公司功能适配</text>
+
+<path d="M595 179 H655" class="line" marker-end="url(#a)"/>
+
+<rect x="665" y="125" width="225" height="108" rx="20" class="green"/>
+<text x="778" y="156" text-anchor="middle" class="t small">阶段一结束后</text>
+<text x="778" y="184" text-anchor="middle" class="t h">数据迁到独立 1.17</text>
+<text x="778" y="210" text-anchor="middle" class="t tiny">旧 1.14.2 数据保持不动</text>
+
+<path d="M900 179 H960" class="pline" marker-end="url(#p)"/>
+
+<rect x="970" y="110" width="250" height="138" rx="20" class="purple"/>
+<text x="1095" y="141" text-anchor="middle" class="t small">阶段二</text>
+<text x="1095" y="169" text-anchor="middle" class="t h">1.17.1 新能力升级</text>
+<text x="1095" y="195" text-anchor="middle" class="t tiny">基于阶段一版本继续增加能力</text>
+<text x="1095" y="218" text-anchor="middle" class="t tiny">按能力增加 Agent / WebSocket 等组件</text>
+
+<path d="M1230 179 H1290" class="aline" marker-end="url(#o)"/>
+
+<rect x="1300" y="110" width="250" height="138" rx="20" class="amber"/>
+<text x="1425" y="141" text-anchor="middle" class="t small">阶段三</text>
+<text x="1425" y="169" text-anchor="middle" class="t h">执行调度能力处理</text>
+<text x="1425" y="195" text-anchor="middle" class="t tiny">迁移 / 重写 / 取消</text>
+<text x="1425" y="218" text-anchor="middle" class="t tiny">形成最终代码与组件清单</text>
+
+<!-- convergence arrow -->
+<path d="M1425 258 V310 H850" class="aline" marker-end="url(#o)"/>
+<rect x="570" y="315" width="560" height="105" rx="22" class="green"/>
+<text x="850" y="348" text-anchor="middle" class="t small">三阶段完成后</text>
+<text x="850" y="379" text-anchor="middle" class="t h">最终收束到原有 DevOps 组件</text>
+<text x="850" y="405" text-anchor="middle" class="t tiny">最终 1.17.1 制品替换原组件部署 · 正式数据执行最终 Migration · 临时升级环境下线</text>
+
+<!-- lower detail -->
+<rect x="120" y="480" width="420" height="165" rx="20" class="gray"/>
+<g transform="translate(150,510)"><use href="#branch" width="34" height="34"/><text x="48" y="16" class="t label">独立 1.17.1 升级线</text></g>
+<text x="150" y="565" class="t small">release/1.17.1：官方基线</text>
+<text x="150" y="591" class="t small">feature/20260920_1.17.1_UPGRADE：迁移开发</text>
+<text x="150" y="617" class="t small">test_1.17.1_UPGRADE：部署验证</text>
+
+<rect x="640" y="480" width="420" height="165" rx="20" class="purple"/>
+<g transform="translate(670,510)"><use href="#spark" width="34" height="34"/><text x="48" y="16" class="t label">阶段二组件增量</text></g>
+<text x="670" y="565" class="t small">Agent Backend / Local Sandbox / Agent SSRF Proxy</text>
+<text x="670" y="591" class="t small">API WebSocket（实时协作，可选独立运行角色）</text>
+<text x="670" y="617" class="t small">是否新增“应用”还是“部署”在阶段二确定</text>
+
+<rect x="1160" y="480" width="420" height="165" rx="20" class="amber"/>
+<g transform="translate(1190,510)"><use href="#queue" width="34" height="34"/><text x="48" y="16" class="t label">阶段三最终决定</text></g>
+<text x="1190" y="565" class="t small">Scheduler / Standard / Critical Worker</text>
+<text x="1190" y="591" class="t small">Job / Task Center / 执行治理</text>
+<text x="1190" y="617" class="t small">决定保留、重写或下线后再进入最终收束</text>
+</svg>
