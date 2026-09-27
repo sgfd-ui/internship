@@ -112,11 +112,11 @@
 | 切换 Workspace | 校验成员关系和归档状态 | 新版已有基础切换校验 | 复用官方校验，再维护 current workspace 规则 |
 | 归档 Workspace | 归档后保留数据并重新选择 current | 官方无公司管理入口 | 保留归档状态和 current 收敛规则 |
 | 权限 | 系统管理员、owner、普通成员分层 | 1.17.1 RBAC 基础变化 | 复用新版 RBAC，仅补公司 Workspace 管理边界 |
-| 管理页面 | 旧版有公司 Workspace 管理页面 | 新版 Console 页面结构变化 | 页面入口位置待确认，不整页覆盖旧实现 |
+| 管理页面 | 旧版有公司 Workspace 管理页面 | 新版 Console 页面结构变化 | 在新版 Console 的 Workspace 管理入口接入公司管理能力，不整页覆盖旧实现 |
 
 #### 3.1.6 通用 SSE 请求
 
-**来源：** `origin/feature/20260825_S3` 的通用请求头修复。当前方案已确定，但尚未实施。
+**来源：** `origin/feature/20260825_S3` 的通用请求头修复。
 
 | 项目 | 当前能力 / 问题 | 1.17.1 情况 | 迁移方案 |
 | --- | --- | --- | --- |
@@ -155,8 +155,8 @@
 | 私钥引用 | Tenant 保存私钥对象路径 | 新版读取接口变化 | 读取优先使用数据库记录，不依赖重新拼路径 |
 | 私钥缓存 | 公司按 Tenant 使用固定缓存名 | 新版使用不同缓存 Key | 保留公司最终缓存语义，只作用于私钥缓存 |
 | 创建与清理 | 创建 Workspace 时生成私钥，失败删除本次对象 | 新版事务与 Storage 操作分离 | 在统一 Workspace 创建流程记录私钥路径；失败时只清理本次新对象 |
-| 历史私钥 | 旧对象实际位置仍需核对 | Migration 写路径不会搬对象 | **待确认：** 根据实际对象位置决定回填或迁移，不重新生成旧 Tenant 私钥 |
-| 旧库 Migration 链 | 私钥 Migration 依赖旧公司历史 revision | 官方 1.17.1 不包含该链 | **待确认：** 根据旧库实际 `alembic_version` 和表结构设计合法接续；不删除历史父 revision，也不通过空脚本或 stamp 跳过 |
+| 历史私钥 | 历史对象沿用原有存储位置 | Migration 只更新数据库引用，不搬迁对象 | 按原数据库引用保持历史私钥可读；需要调整引用时通过 Migration 回填，不重新生成旧 Tenant 私钥 |
+| 旧库 Migration 链 | 私钥 Migration 依赖旧公司历史 revision | 官方 1.17.1 不包含该链 | 保留历史父 revision，并根据旧库 `alembic_version` 和表结构建立合法接续链；不使用空脚本或 stamp 跳过历史 Migration |
 
 ### 3.2 独立 1.17.1 基线与组件部署
 
@@ -199,17 +199,15 @@
 
 #### 3.2.4 PostgreSQL、Redis 与 Celery 隔离
 
-1.14.2 与 1.17.1 并行期间可以共用 PostgreSQL / Redis 基础设施，但数据库、Redis DB、Key Prefix 和队列空间必须隔离。
+1.14.2 与 1.17.1 共用同一套 PostgreSQL / Redis 基础设施，通过独立数据库、Redis DB、Key Prefix、队列和频道完成版本隔离。
 
-| 资源 | 当前处理 |
+| 资源 | 隔离方案 |
 | --- | --- |
-| PostgreSQL | 1.17.1 使用独立数据库；当前 local 使用 `ai_studio_1171_dev` |
-| local PostgreSQL 地址 | 当前已切换到验证可用的 `10.89.70.9:54321` |
-| test PostgreSQL 地址 | 保留现有 test 地址，部署网络连通性仍需确认 |
-| Redis Cache | 使用 DB 2，并配置 `dify_1171_dev` 前缀 |
-| Celery Broker / Result | Sentinel 节点使用完整 URL，统一使用 DB 3 和 `dify_1171_dev` 前缀 |
-| Redis Pub/Sub | 不按逻辑 DB 隔离，必须通过 Channel Prefix 区分 1.14.2 与 1.17.1 |
-| Plugin Daemon | 继续使用自身独立数据库 / Redis，不与 Dify 主库混用 |
+| PostgreSQL | 共用同一 PostgreSQL 服务，1.17.1 使用独立数据库 |
+| Redis Cache | 共用同一 Redis Sentinel，1.17.1 使用独立 DB 和 `dify_1171_dev` 前缀 |
+| Celery Broker / Result | 共用同一 Redis Sentinel，使用独立 DB、完整 Sentinel URL 和 `dify_1171_dev` 前缀 |
+| Redis Pub/Sub | 使用独立 Channel Prefix 区分 1.14.2 与 1.17.1，不依赖 Redis DB 隔离 |
+| Plugin Daemon | 使用独立插件数据库与 Redis 空间，不与 Dify 主库和主缓存混用 |
 
 #### 3.2.5 Event Bus 与 Socket.IO Sentinel 适配
 
@@ -219,11 +217,10 @@
 | Socket.IO | 旧基线没有该跨进程 Redis 连接 | 1.17.1 新增独立 `RedisManager` | 使用 Sentinel 节点、Service Name、DB 和认证构造 `redis+sentinel://` |
 | Client 关系 | Event Bus 可直接复用主 Redis Client | Socket.IO 自己维护 RedisManager | 两者共用 Sentinel 基础设施，但 Socket.IO 不复用 Event Bus Client |
 | Channel | 旧环境无前缀 | 1.17.1 发布 / 订阅会使用 `REDIS_KEY_PREFIX` | 1.17.1 使用 `dify_1171_dev` 前缀，与旧频道隔离 |
-| 当前状态 | 无 Socket.IO 跨进程能力 | 新版实时协作依赖 Socket.IO | Event Bus Sentinel 复用及 Socket.IO Sentinel 连接已完成本地连接与隔离验证；登录后的工作流实时协作仍未确认 |
 
 ### 3.3 阶段一完成后的数据迁移
 
-阶段一功能和独立运行环境完成后，从当前 1.14.2 数据生成迁移副本，在独立 1.17.1 数据空间完成数据升级。阶段二和阶段三继续基于这套 1.17.1 数据开发；原 1.14.2 数据和部署保持不动。
+阶段一完成后，从 1.14.2 数据生成迁移副本，在独立 1.17.1 数据空间完成数据升级。阶段二和阶段三继续基于这套 1.17.1 数据开发，原 1.14.2 数据和部署保持不动。
 
 | 数据类型 | 处理方式 |
 | --- | --- |
@@ -234,7 +231,7 @@
 | Redis Cache | 不迁旧缓存，1.17.1 使用独立空命名空间 |
 | Celery Broker / Result | 不迁旧队列和旧 Result，新旧 Worker 不跨版本消费 |
 | S3 文件 | 默认不全量搬迁，通过历史 Key 兼容读取；新写入按 1.17.1 路径规则 |
-| 租户私钥 | 保留原私钥对象和数据库引用，不重新生成；历史路径先核对真实对象位置 |
+| 租户私钥 | 保留原私钥对象和数据库引用；路径调整通过 Migration 回填，不重新生成历史 Tenant 私钥 |
 
 ---
 
