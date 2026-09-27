@@ -172,20 +172,40 @@
 
 ##### 部署补充：Git 安装
 
-Dify 1.17.1 后端依赖中包含通过 Git 仓库引用的 Python 依赖，`uv sync --dev` 在解析和安装该类依赖时需要容器内存在 Git 可执行程序。因此 API、Worker、Beat 共用的后端运行环境需要补充 Git。
+Dify 1.17.1 的后端依赖中，`flask-restx` 改为从 Git 仓库获取指定提交，`uv sync --dev` 在安装该依赖时需要容器内存在 Git。旧版从 PyPI 安装该依赖，因此原运行环境没有这一要求。
+
+公司正式初始化脚本不在仓库内维护，由 DevOps 平台统一管理，容器中的执行位置为 `.init/init_shell.sh`。阶段一使用平台可编辑的初始化脚本补充 Git，正式收束时由运维统一固化。
 
 | 项目 | 处理方案 |
 | --- | --- |
-| Git | 后端基础运行环境安装 Git，并保证 `git` 命令在 PATH 中可用 |
-| 初始化顺序 | 先确认 Git 可用，再执行 `uv sync --dev`，随后执行数据库 Migration |
-| 阶段一部署 | 现有基础镜像未包含 Git 时，在 DevOps 初始化脚本中先安装 Git，再执行依赖同步和 Migration |
-| 最终收束 | 将 Git 固化到 1.17.1 后端基础镜像，避免每次部署重复安装 |
-| 影响组件 | API、General Worker、Beat 共用同一套后端依赖，因此统一使用包含 Git 的后端运行环境 |
+| 临时处理位置 | DevOps 平台当前可编辑的初始化脚本 |
+| Git 安装 | 在原 `uv sync --dev` 之前检查 `git`；不存在时安装 Git，并输出版本 |
+| 原初始化流程 | 原依赖安装、数据库 Migration 和启动流程保持不变，不在附加脚本中重复执行 |
+| 正式处理 | 由运维将 Git 安装加入正式 init 的 `uv sync --dev` 之前；也可以直接使用预装 Git 的后端基础镜像 |
+| 影响组件 | API、General Worker、Beat 共用后端依赖环境，统一使用包含 Git 的运行环境 |
+| 仓库代码 | 不修改 `build.sh`、依赖声明和锁文件，不在仓库新增本地 init 脚本 |
 
-阶段一初始化顺序统一为：
+平台附加脚本只负责 Git 检查和安装：
 
 ```bash
-安装 / 检查 Git
+#!/bin/bash
+set -e
+
+echo "==> 检查 Git..."
+if ! command -v git >/dev/null 2>&1; then
+  echo "==> Git 不存在，开始安装..."
+  apt-get update
+  apt-get install -y --no-install-recommends git
+fi
+echo "==> Git 版本: $(git --version)"
+```
+
+执行关系为：
+
+```text
+平台附加脚本：安装 / 检查 Git
+        ↓
+正式 .init/init_shell.sh
         ↓
 uv sync --dev
         ↓
