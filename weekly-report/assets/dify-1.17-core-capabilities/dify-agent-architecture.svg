@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1250" height="570" viewBox="0 0 1250 570">
+<style>.t{font-family:Arial,'Noto Sans SC',sans-serif;fill:#172033}.h{font-size:24px;font-weight:700}.m{font-size:17px;font-weight:700}.s{font-size:13px;fill:#626c7d}.box{fill:#fff;stroke:#d8deea;stroke-width:2}.a{fill:#eef3ff;stroke:#9bb4f0;stroke-width:2}.soft{fill:#f6f7fa;stroke:#d8deea;stroke-width:2}.line{stroke:#8995a8;stroke-width:2;fill:none;marker-end:url(#ar)}</style><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#8995a8"/></marker></defs>
+<rect width="1250" height="570" rx="24" fill="#fafbfc"/><text x="625" y="45" text-anchor="middle" class="t h">Dify Agent 架构</text>
+<rect x="60" y="105" width="260" height="360" rx="20" class="soft"/><text x="190" y="145" text-anchor="middle" class="t m">Dify Platform</text>
+<rect x="95" y="180" width="190" height="58" rx="12" class="box"/><text x="190" y="215" text-anchor="middle" class="t s">Agent Builder / Config</text>
+<rect x="95" y="260" width="190" height="58" rx="12" class="box"/><text x="190" y="295" text-anchor="middle" class="t s">Tool / Knowledge</text>
+<rect x="95" y="340" width="190" height="58" rx="12" class="box"/><text x="190" y="375" text-anchor="middle" class="t s">Workflow / Web App</text>
+<rect x="405" y="105" width="430" height="360" rx="20" class="a"/><text x="620" y="145" text-anchor="middle" class="t m">Agent Runtime</text>
+<rect x="450" y="185" width="145" height="65" rx="12" class="box"/><text x="522" y="215" text-anchor="middle" class="t m">Agent Loop</text><text x="522" y="236" text-anchor="middle" class="t s">Decision</text>
+<rect x="645" y="185" width="145" height="65" rx="12" class="box"/><text x="717" y="215" text-anchor="middle" class="t m">Skills</text><text x="717" y="236" text-anchor="middle" class="t s">Reusable capability</text>
+<rect x="450" y="315" width="145" height="65" rx="12" class="box"/><text x="522" y="345" text-anchor="middle" class="t m">Files</text><text x="522" y="366" text-anchor="middle" class="t s">Workspace data</text>
+<rect x="645" y="315" width="145" height="65" rx="12" class="box"/><text x="717" y="345" text-anchor="middle" class="t m">Sandbox</text><text x="717" y="366" text-anchor="middle" class="t s">Shell / Code</text>
+<rect x="920" y="145" width="270" height="280" rx="20" class="soft"/><text x="1055" y="185" text-anchor="middle" class="t m">Execution Environment</text>
+<rect x="960" y="225" width="190" height="62" rx="12" class="box"/><text x="1055" y="262" text-anchor="middle" class="t s">Local Agent Runtime</text>
+<rect x="960" y="325" width="190" height="62" rx="12" class="box"/><text x="1055" y="362" text-anchor="middle" class="t s">E2B Sandbox</text>
+<path d="M320 285 H405" class="line"/><path d="M835 285 H920" class="line"/>
+</svg>
