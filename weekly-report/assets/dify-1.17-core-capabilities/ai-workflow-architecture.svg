@@ -1,11 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="520" viewBox="0 0 1300 520">
-<style>.t{font-family:Arial,'Noto Sans SC',sans-serif;fill:#172033}.h{font-size:24px;font-weight:700}.m{font-size:17px;font-weight:700}.s{font-size:13px;fill:#626c7d}.box{fill:#fff;stroke:#d8deea;stroke-width:2}.a{fill:#eef3ff;stroke:#9bb4f0;stroke-width:2}.line{stroke:#8995a8;stroke-width:2;fill:none;marker-end:url(#ar)}</style><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#8995a8"/></marker></defs>
-<rect width="1300" height="520" rx="24" fill="#fafbfc"/><text x="650" y="45" text-anchor="middle" class="t h">AI Workflow 生成架构</text>
-<rect x="50" y="180" width="175" height="95" rx="16" class="box"/><text x="137" y="220" text-anchor="middle" class="t m">Natural Language</text><text x="137" y="246" text-anchor="middle" class="t s">Create / Refine</text>
-<rect x="285" y="150" width="190" height="155" rx="18" class="a"/><text x="380" y="195" text-anchor="middle" class="t m">Planner</text><text x="380" y="225" text-anchor="middle" class="t s">理解需求</text><text x="380" y="248" text-anchor="middle" class="t s">规划 Nodes / Edges</text>
-<rect x="535" y="120" width="205" height="215" rx="18" class="box"/><text x="637" y="165" text-anchor="middle" class="t m">Node Builders</text><text x="637" y="198" text-anchor="middle" class="t s">并行生成节点配置</text><rect x="570" y="225" width="135" height="52" rx="10" class="a"/><text x="637" y="256" text-anchor="middle" class="t s">Tool Context</text>
-<rect x="800" y="150" width="190" height="155" rx="18" class="box"/><text x="895" y="195" text-anchor="middle" class="t m">Postprocess</text><text x="895" y="225" text-anchor="middle" class="t s">组装 Graph</text><text x="895" y="248" text-anchor="middle" class="t s">Auto Layout / Validate</text>
-<rect x="1050" y="180" width="195" height="95" rx="16" class="a"/><text x="1147" y="220" text-anchor="middle" class="t m">Workflow Graph</text><text x="1147" y="246" text-anchor="middle" class="t s">Nodes · Edges · Viewport</text>
-<path d="M225 227 H285" class="line"/><path d="M475 227 H535" class="line"/><path d="M740 227 H800" class="line"/><path d="M990 227 H1050" class="line"/>
-<text x="650" y="405" text-anchor="middle" class="t s">Planner 负责结构规划，Node Builders 负责节点语义配置，Postprocess 负责组装、布局与校验</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="760" viewBox="0 0 1500 760">
+<defs>
+  <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8Z" fill="#8090a8"/></marker>
+  <style>
+    .t{font-family:Arial,'Noto Sans SC',sans-serif;fill:#172033}.title{font-size:30px;font-weight:700}.h{font-size:21px;font-weight:700}.m{font-size:16px;font-weight:700}.s{font-size:13px;fill:#667085}
+    .panel{fill:#fff;stroke:#d9e0ea;stroke-width:2}.blue{fill:#eef4ff;stroke:#9eb7ef;stroke-width:2}.soft{fill:#f7f8fa;stroke:#d9e0ea;stroke-width:2}.chip{fill:#fff;stroke:#cfd8e6;stroke-width:1.5}
+    .line{stroke:#8090a8;stroke-width:2.2;fill:none;marker-end:url(#arrow)}.dash{stroke:#a5b1c2;stroke-width:1.8;stroke-dasharray:7 6;fill:none;marker-end:url(#arrow)}
+  </style>
+</defs>
+<rect width="1500" height="760" rx="28" fill="#fafbfc"/>
+<text x="750" y="52" text-anchor="middle" class="t title">AI Workflow 实现架构</text>
+
+<rect x="70" y="118" width="250" height="140" rx="20" class="panel"/>
+<circle cx="115" cy="165" r="21" fill="#eef4ff" stroke="#9eb7ef"/><text x="115" y="172" text-anchor="middle" class="t m">U</text>
+<text x="205" y="166" text-anchor="middle" class="t h">User Input</text>
+<text x="195" y="202" text-anchor="middle" class="t s">/create：Instruction</text>
+<text x="195" y="226" text-anchor="middle" class="t s">/refine：Instruction + Current Graph</text>
+
+<rect x="70" y="330" width="250" height="165" rx="20" class="soft"/>
+<text x="195" y="370" text-anchor="middle" class="t h">Context</text>
+<rect x="105" y="395" width="180" height="42" rx="11" class="chip"/><text x="195" y="421" text-anchor="middle" class="t s">Installed Tool Catalogue</text>
+<rect x="105" y="448" width="180" height="42" rx="11" class="chip"/><text x="195" y="474" text-anchor="middle" class="t s">Current Graph Summary</text>
+
+<rect x="400" y="118" width="220" height="140" rx="20" class="soft"/>
+<circle cx="445" cy="165" r="21" fill="#fff" stroke="#cfd8e6"/><text x="445" y="172" text-anchor="middle" class="t m">R</text>
+<text x="535" y="166" text-anchor="middle" class="t h">Tool Router</text>
+<text x="510" y="205" text-anchor="middle" class="t s">大 Tool Catalogue 时</text>
+<text x="510" y="228" text-anchor="middle" class="t s">筛选 Relevant Tools</text>
+
+<rect x="700" y="118" width="245" height="220" rx="22" class="blue"/>
+<circle cx="747" cy="165" r="22" fill="#fff" stroke="#9eb7ef"/><text x="747" y="172" text-anchor="middle" class="t m">P</text>
+<text x="835" y="166" text-anchor="middle" class="t h">Planner</text>
+<rect x="742" y="203" width="160" height="40" rx="10" class="chip"/><text x="822" y="228" text-anchor="middle" class="t s">Node Selection</text>
+<rect x="742" y="251" width="160" height="40" rx="10" class="chip"/><text x="822" y="276" text-anchor="middle" class="t s">Edge / Branch Plan</text>
+<text x="822" y="318" text-anchor="middle" class="t s">Refine: keep / update / add</text>
+
+<rect x="1030" y="118" width="230" height="220" rx="22" class="panel"/>
+<circle cx="1077" cy="165" r="22" fill="#f2f4f7" stroke="#cfd8e6"/><text x="1077" y="172" text-anchor="middle" class="t m">B</text>
+<text x="1165" y="166" text-anchor="middle" class="t h">Node Builders</text>
+<text x="1145" y="205" text-anchor="middle" class="t s">Bounded Parallel</text>
+<rect x="1068" y="230" width="154" height="40" rx="10" class="chip"/><text x="1145" y="255" text-anchor="middle" class="t s">Node Schema</text>
+<rect x="1068" y="278" width="154" height="40" rx="10" class="chip"/><text x="1145" y="303" text-anchor="middle" class="t s">Semantic Config</text>
+
+<rect x="1320" y="118" width="140" height="220" rx="22" class="soft"/>
+<text x="1390" y="166" text-anchor="middle" class="t h">Postprocess</text>
+<text x="1390" y="208" text-anchor="middle" class="t s">Defaults</text>
+<text x="1390" y="232" text-anchor="middle" class="t s">Assemble</text>
+<text x="1390" y="256" text-anchor="middle" class="t s">Layout</text>
+<text x="1390" y="280" text-anchor="middle" class="t s">Validate</text>
+
+<path d="M320 188 H400" class="line"/><path d="M620 188 H700" class="line"/><path d="M945 228 H1030" class="line"/><path d="M1260 228 H1320" class="line"/>
+<path d="M320 410 H660 V260 H700" class="dash"/>
+
+<rect x="590" y="435" width="520" height="170" rx="22" class="panel"/>
+<text x="850" y="475" text-anchor="middle" class="t h">Workflow Graph</text>
+<rect x="635" y="505" width="130" height="52" rx="12" class="chip"/><text x="700" y="537" text-anchor="middle" class="t m">Nodes</text>
+<rect x="785" y="505" width="130" height="52" rx="12" class="chip"/><text x="850" y="537" text-anchor="middle" class="t m">Edges</text>
+<rect x="935" y="505" width="130" height="52" rx="12" class="chip"/><text x="1000" y="537" text-anchor="middle" class="t m">Viewport</text>
+<path d="M1390 338 V395 H850 V435" class="line"/>
+
+<rect x="585" y="640" width="530" height="64" rx="16" class="blue"/>
+<text x="850" y="678" text-anchor="middle" class="t h">Preview → Apply → Canvas</text>
+<path d="M850 605 V640" class="line"/>
 </svg>
