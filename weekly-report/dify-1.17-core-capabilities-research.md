@@ -4,547 +4,247 @@
 
 ### 1.1 背景
 
-Dify 1.17 在 Workflow 构建与 Agent 应用形态上提供了新的能力。本次调研不对 1.14.2 至 1.17.1 的全部版本变化进行逐项盘点，而是聚焦两个与当前 Agent 开发直接相关的核心功能：
+Dify 1.16 引入两项核心能力：
 
-1. **AI Workflow**：通过自然语言辅助创建和修改 Workflow，降低人工拆分节点、配置参数和调整流程的成本。
-2. **Dify Agent**：以独立 Agent 应用承载复杂任务执行，使 Agent 可以围绕用户目标自主组织和调用所需能力。
+| 能力 | 作用 | 核心变化 |
+| --- | --- | --- |
+| AI Workflow | 用自然语言创建、修改 Workflow | 从手工搭建转为 AI 辅助搭建 |
+| Dify Agent | 自主完成多步骤复杂任务 | 从 Workflow 内 Agent Node 扩展为独立 Agent 应用 |
 
-### 1.2 调研目的
+### 1.2 调研目标
 
-本次调研围绕“使用、实现、不足、增强”四个问题展开：
-
-1. **如何使用**：明确功能入口、配置方式、典型使用流程和适用场景。
-2. **如何实现**：分析核心架构、执行流程、关键模块及源码实现。
-3. **存在什么不足**：通过实际 Case 验证能力边界，定位原生能力在真实复杂场景中的问题。
-4. **如何增强**：针对已验证的问题分析原因，并设计可落地的增强方案。
+1. 分析两项能力的**使用方式与实现机制**。
+2. 通过真实 Case 测试其**能力边界与不足**。
+3. 针对已发现的问题设计**增强方案**。
 
 ### 1.3 调研范围
 
-| 功能 | 核心调研问题 |
-| --- | --- |
-| AI Workflow | AI 如何根据自然语言创建、理解和修改 Dify Workflow |
-| Dify Agent | 新版 Agent 如何围绕用户目标自主组织能力并完成复杂任务 |
-
-本次调研重点分析 Dify 自身新增的平台能力。Skill、Sandbox、Tool、MCP、Knowledge 等能力不单独作为调研主题，而是在 Dify Agent 的实现与执行过程中按需分析。
+![Dify 1.17 核心能力](./assets/dify-1.17-core-capabilities/overview.svg)
 
 ---
 
-## 二、整体能力架构
+## 二、AI Workflow
 
-### 2.1 功能定位
+### 2.1 功能
 
-本节说明 AI Workflow 与 Dify Agent 在 Dify 整体体系中的位置，以及两者分别解决的问题。
+AI Workflow 将自然语言需求转换为 Dify Workflow，并支持对已有 Workflow 继续修改。
 
-待调研内容：
-
-- AI Workflow 面向的使用对象与核心目标
-- Dify Agent 面向的使用对象与核心目标
-- 两类能力与现有 Workflow、Tool、Knowledge、MCP 等能力的关系
-- AI Workflow 与 Dify Agent 之间是否存在组合使用方式
-
-### 2.2 整体架构
-
-待补充整体架构图，重点表达：
-
-```text
-                        Dify 1.17
-                           │
-             ┌─────────────┴─────────────┐
-             │                           │
-        AI Workflow                  Dify Agent
-             │                           │
-      Workflow 构建辅助              复杂任务执行
-             │                           │
-      Create / Refine            Agent Runtime
-             │                           │
-             └──────────┬────────────────┘
-                        │
-                   Dify Runtime
-                        │
-          Model / Tool / MCP / Knowledge
-```
-
-### 2.3 两类能力关系
-
-待回答：
-
-- AI Workflow 是否只负责 Workflow 构建，还是参与运行阶段
-- Dify Agent 与传统 Workflow Agent Node 的关系
-- Agent 是否能够作为 Workflow 的组成部分被调用
-- 两类能力组合后能够覆盖哪些开发和执行场景
-
----
-
-## 三、AI Workflow 调研
-
-### 3.1 功能介绍
-
-#### 3.1.1 功能定位
-
-待回答：
-
-- AI Workflow 解决什么问题
-- 与传统人工搭建 Workflow 相比改变了哪些步骤
-- 支持哪些 AI 辅助操作
-- 适合哪些 Workflow 开发场景
-
-#### 3.1.2 核心能力
-
-重点调研：
-
-- 自然语言创建 Workflow
-- 基于已有 Workflow 进行自然语言修改
-- 节点选择与组合
-- Tool 选择与配置
-- 节点参数生成
-- Workflow Graph / DSL 生成与修改
-
-### 3.2 使用方式
-
-#### 3.2.1 创建 Workflow
-
-记录完整使用流程：
-
-```text
-自然语言描述需求
-      ↓
-AI 生成 Workflow
-      ↓
-Canvas 展示
-      ↓
-人工检查 / 调整
-      ↓
-运行验证
-```
-
-待记录：
-
-- 功能入口
-- 输入形式
-- 生成过程
-- 生成结果
-- 用户可以进行的二次调整
-- 生成失败或结果不符合预期时的处理方式
-
-#### 3.2.2 修改已有 Workflow
-
-记录完整使用流程：
-
-```text
-已有 Workflow
-      ↓
-输入修改要求
-      ↓
-AI 理解当前 Workflow
-      ↓
-修改节点 / 连线 / 配置
-      ↓
-人工确认
-      ↓
-运行验证
-```
-
-待记录：
-
-- 如何指定修改目标
-- 支持哪些修改类型
-- 修改前后如何展示
-- 是否支持连续修改
-- 是否能够保持未要求修改的原有逻辑
-
-### 3.3 实现原理
-
-#### 3.3.1 整体实现流程
-
-重点分析以下链路：
-
-```text
-User Prompt
-    ↓
-需求理解
-    ↓
-Workflow Planning
-    ↓
-节点 / Tool 选择
-    ↓
-节点参数配置
-    ↓
-Workflow Graph / DSL
-    ↓
-Canvas
-```
-
-#### 3.3.2 核心模块
-
-待从源码确认：
-
-- 请求入口
-- Prompt 与上下文组织
-- Workflow Planner
-- Node 能力描述与选择机制
-- Tool 获取与选择机制
-- Graph / DSL 生成机制
-- Workflow 校验机制
-- 生成结果写入 Canvas 的流程
-
-#### 3.3.3 Create 实现
-
-待回答：
-
-- 自然语言需求如何转换为 Workflow 结构
-- 模型可以获取哪些 Dify 节点信息
-- 模型可以获取哪些 Workspace Tool 信息
-- 节点配置由 LLM 直接生成还是由确定性逻辑补全
-- 生成后是否存在结构或参数校验
-
-#### 3.3.4 Refine 实现
-
-待回答：
-
-- AI 如何读取当前 Workflow
-- 当前 Workflow 以什么形式提供给模型
-- 如何定位需要修改的节点和连线
-- 如何控制修改范围
-- 如何生成修改后的 Workflow
-- 是否存在 Diff、校验或回滚机制
-
-### 3.4 能力实测
-
-测试由简单到复杂逐级进行，具体 Case 在调研阶段补充。
-
-| 测试层级 | Case | 主要观察项 | 结果 |
-| --- | --- | --- | --- |
-| 1 | 简单线性 Workflow | 节点、连线、参数 | 待测试 |
-| 2 | 条件分支 Workflow | 分支条件与路径 | 待测试 |
-| 3 | 多 Tool Workflow | Tool 选择与参数 | 待测试 |
-| 4 | Agent Workflow | Agent 节点配置与上下文 | 待测试 |
-| 5 | 已有 Workflow 修改 | 修改准确性与影响范围 | 待测试 |
-| 6 | 推荐分析真实 Workflow | 综合可用性 | 待测试 |
-
-每个 Case 统一记录：
-
-- 输入需求
-- AI 生成 / 修改结果
-- 一次成功情况
-- 节点结构是否正确
-- 参数是否正确
-- Tool 是否正确
-- 是否需要人工修改
-- 失败点及错误信息
-
-### 3.5 能力边界与不足
-
-本节不预设结论，只记录源码分析和实测能够验证的问题。
-
-统一按以下结构整理：
-
-| 问题 | 触发场景 | 实际表现 | 原因分析 | 影响 |
-| --- | --- | --- | --- | --- |
-| 待调研 | 待调研 | 待调研 | 待调研 | 待调研 |
-
-问题分析重点关注：
-
-- 需求理解
-- Workflow Planning
-- Node 选择
-- Tool 选择
-- 参数生成
-- Graph 生成
-- Refine 修改范围
-- 复杂 Workflow 理解
-- 生成结果可执行性
-
-### 3.6 增强方案
-
-仅针对 3.5 已验证的问题设计增强，不额外引入与问题无关的能力。
-
-每项方案统一说明：
-
-1. 原生问题
-2. 问题产生位置
-3. 增强目标
-4. 修改 / 扩展位置
-5. 实现方案
-6. 与 Dify 原生能力的边界
-7. 预期效果
-8. 验证方式
-
-待补充 AI Workflow 增强架构图。
-
----
-
-## 四、Dify Agent 调研
-
-### 4.1 功能介绍
-
-#### 4.1.1 功能定位
-
-待回答：
-
-- 新版 Dify Agent 解决什么问题
-- 与传统 Chatbot / Workflow / Agent Node 的区别
-- Agent 应用能够配置哪些能力
-- 适合处理哪些任务
-
-#### 4.1.2 核心能力
-
-根据实际产品与源码确认，重点关注：
-
-- Agent 指令与上下文
-- Tool
-- Knowledge
-- Skill
-- MCP
-- Sandbox / 文件
-- 多步骤任务执行
-- Agent 在 Workflow 中的使用方式
-
-以上能力以实际版本支持情况为准，不预设实现结论。
-
-### 4.2 使用方式
-
-选择一个真实复杂任务记录完整执行过程：
-
-```text
-用户任务
-   ↓
-Dify Agent
-   ↓
-理解目标
-   ↓
-选择 / 调用能力
-   ↓
-获得执行结果
-   ↓
-继续决策与执行
-   ↓
-最终结果
-```
-
-待记录：
-
-- Agent 创建方式
-- 基础配置
-- Tool / Knowledge / Skill 等能力配置
-- 用户输入方式
-- Agent 实际执行过程
-- 中间过程可观察内容
-- 最终结果形式
-
-### 4.3 实现原理
-
-#### 4.3.1 整体架构
-
-待从源码确认新版 Agent 的实际内部架构，并补充架构图。
-
-重点分析：
-
-```text
-                  Dify Agent
-                      │
-                 Agent Runtime
-                      │
-          ┌───────────┼───────────┐
-          ↓           ↓           ↓
-        Model       Tools       Context
-          │           │           │
-          └──── Execution Loop ───┘
-                      │
-                 Observation
-                      │
-                 Next Action
-```
-
-该图仅作为调研拆解框架，最终以源码分析结果为准。
-
-#### 4.3.2 核心模块
-
-待确认：
-
-- Agent 请求入口
-- Agent Runtime
-- Model 调用
-- Agent Loop
-- Tool / MCP 调用
-- Skill 加载
-- Knowledge 使用
-- Sandbox / 文件处理
-- Context 管理
-- 状态管理
-- 终止条件
-- 执行结果输出
-
-#### 4.3.3 任务执行流程
-
-重点回答：
-
-- Agent 如何理解用户目标
-- 如何决定下一步操作
-- 如何选择可用能力
-- Tool Observation 如何进入下一轮决策
-- 多步骤任务状态如何保存
-- 长任务如何执行
-- 失败后如何处理
-- Agent 如何判断任务完成
-
-#### 4.3.4 与现有 Dify 能力的关系
-
-重点分析：
-
-- 新版 Agent 与 Agent Node 的关系
-- 新版 Agent 与 Workflow 的关系
-- Skill 在 Agent 中承担什么职责
-- Tool 与 MCP 如何接入
-- Sandbox 在什么场景下参与执行
-- Agent 是否能够被其他 Workflow / Agent 复用
-
-### 4.4 能力实测
-
-测试由简单到复杂逐级进行。
-
-| 测试层级 | Case | 主要观察项 | 结果 |
-| --- | --- | --- | --- |
-| 1 | 简单任务 | 基础执行流程 | 待测试 |
-| 2 | 单 Tool | Tool 选择与参数 | 待测试 |
-| 3 | 多 Tool | 多步骤规划与 Tool 切换 | 待测试 |
-| 4 | 多步骤复杂任务 | 执行链与状态保持 | 待测试 |
-| 5 | 文件 / Sandbox 任务 | 文件处理与执行环境 | 待测试 |
-| 6 | 推荐分析真实任务 | 综合可用性 | 待测试 |
-
-每个 Case 统一记录：
-
-- 用户目标
-- Agent 配置
-- 实际执行步骤
-- Tool / Skill / Knowledge 使用情况
-- 中间结果
-- 最终结果
-- 是否完成任务
-- 人工介入情况
-- 失败点及错误信息
-
-### 4.5 能力边界与不足
-
-本节仅整理源码与实测确认的问题。
-
-| 问题 | 触发场景 | 实际表现 | 原因分析 | 影响 |
-| --- | --- | --- | --- | --- |
-| 待调研 | 待调研 | 待调研 | 待调研 | 待调研 |
-
-问题分析重点关注：
-
-- 目标理解
-- 任务规划
-- Tool 选择
-- 参数生成
-- Context 管理
-- 多步骤状态
-- 长任务执行
-- 错误恢复
-- 执行可控性
-- 可观察性
-
-### 4.6 增强方案
-
-仅针对 4.5 已验证的问题设计增强。
-
-每项方案统一说明：
-
-1. 原生问题
-2. 问题产生位置
-3. 增强目标
-4. 修改 / 扩展位置
-5. 实现方案
-6. 与 Dify 原生能力的边界
-7. 预期效果
-8. 验证方式
-
-待补充 Dify Agent 增强架构图。
-
----
-
-## 五、综合分析与增强架构
-
-### 5.1 能力对比
-
-调研完成后统一填写。
-
-| 对比项 | AI Workflow | Dify Agent |
+| 能力 | 输入 | 输出 |
 | --- | --- | --- |
-| 解决的问题 | Workflow 构建 | 复杂任务执行 |
-| 使用阶段 | 待调研 | 待调研 |
-| AI 决策对象 | 待调研 | 待调研 |
-| 核心实现机制 | 待调研 | 待调研 |
-| 原生能力边界 | 待调研 | 待调研 |
-| 主要问题 | 待调研 | 待调研 |
-| 增强方向 | 待调研 | 待调研 |
+| Create | Workflow 自然语言需求 | 新 Workflow |
+| Refine | 已有 Workflow + 修改要求 | 修改后的 Workflow |
 
-### 5.2 问题汇总
+1.16 对 /create、/refine 的生成流程进行了增强；1.17 进一步让生成器优先选择 Workspace 中已经安装并完成配置的 Tool。
 
-将第三章和第四章发现的问题统一分类，区分：
+### 2.2 使用流程
 
-- Dify 原生能力已经能够满足的问题
-- 可以通过配置 / Prompt / Tool 设计解决的问题
-- 需要扩展 Dify 能力解决的问题
-- 当前没有必要解决的问题
+#### Create
 
-避免为了二次开发而二次开发。
-
-### 5.3 增强原则
-
-增强方案遵循以下原则：
-
-1. **基于已验证问题**：没有源码或实测依据的问题不进入增强范围。
-2. **优先复用原生能力**：原生配置能够解决的问题不修改底层实现。
-3. **控制修改边界**：增强点尽量与 Dify 原有能力解耦，避免无必要侵入。
-4. **保持升级能力**：需要修改源码时明确修改位置和影响范围，降低后续版本升级成本。
-5. **可验证**：每项增强都需要对应测试 Case 与评价方式。
-
-### 5.4 整体增强架构
-
-待调研完成后根据实际问题设计，不提前确定增强模块。
-
-```text
-                 Enhancement
-                      │
-          ┌───────────┴───────────┐
-          ↓                       ↓
-   AI Workflow 增强          Dify Agent 增强
-          │                       │
-          └───────────┬───────────┘
-                      ↓
-                 Dify 1.17.1
+```mermaid
+flowchart LR
+    A[输入自然语言需求] --> B["Cmd/Ctrl + K · /create"]
+    B --> C[AI 生成 Workflow]
+    C --> D[预览 Workflow]
+    D --> E[Apply]
+    E --> F[Canvas]
+    F --> G[调试与调整]
 ```
+
+#### Refine
+
+```mermaid
+flowchart LR
+    A[已有 Workflow] --> B["Cmd/Ctrl + K · /refine"]
+    B --> C[输入修改要求]
+    C --> D[AI 生成修改结果]
+    D --> E[预览修改]
+    E --> F[Apply]
+    F --> G[更新 Canvas]
+```
+
+| 场景 | 示例 |
+| --- | --- |
+| 从零创建 | 创建一个推荐异常分析 Workflow，查询指标后分析异常原因并输出结论 |
+| 增加逻辑 | 在 Tool 查询失败后增加错误处理分支 |
+| 调整结构 | 将两个独立查询改为并行执行 |
+| 修改节点 | 调整 LLM Prompt 或节点参数 |
+
+### 2.3 实现架构
+
+![AI Workflow 架构](./assets/dify-1.17-core-capabilities/ai-workflow-architecture.svg)
+
+Dify 1.17.1 Workflow Generator 的核心生成链路：
+
+```mermaid
+flowchart LR
+    A[Natural-language Instruction] --> B[Planner]
+    B --> C[Node / Edge Plan]
+    C --> D[Node Builders]
+    D --> E[Semantic Node Config]
+    E --> F[Postprocess]
+    F --> G[Graph Validation]
+    G --> H[Workflow Graph]
+```
+
+| 模块 | 作用 |
+| --- | --- |
+| Planner | 将需求拆成节点与边的结构计划 |
+| Node Builder | 根据节点计划生成具体节点配置 |
+| Parallel Build | 并行生成多个节点配置，缩短生成时间 |
+| Postprocess | 组装节点与边、自动布局并校验 Graph |
+| Tool Context | 将 Workspace 可用 Tool 纳入生成上下文 |
+
+最终输出 Dify Workflow Graph，包括 nodes、edges 和 viewport，再进入预览与 Apply 流程。
+
+### 2.4 能力实测
+
+| Case | 目标 | 观察项 | 结果 |
+| --- | --- | --- | --- |
+| 简单线性 Workflow | 验证基础生成 | 节点、连线、参数 | 待测 |
+| 条件分支 | 验证结构规划 | 分支条件、路径 | 待测 |
+| 多 Tool | 验证 Tool 使用 | Tool 选择、参数 | 待测 |
+| 复杂 Agent Workflow | 验证复杂编排 | 节点结构、上下文 | 待测 |
+| Refine | 验证局部修改 | 修改准确性、影响范围 | 待测 |
+| 推荐分析 Workflow | 验证真实业务可用性 | 完整度、人工修改量 | 待测 |
+
+### 2.5 不足与增强
+
+| 原生问题 | 表现 | 原因 | 增强方案 |
+| --- | --- | --- | --- |
+| 待测 |  |  |  |
 
 ---
 
-## 六、调研结论
+## 三、Dify Agent
 
-最终结论不重复功能介绍，集中回答以下问题。
+### 3.1 功能
 
-### 6.1 AI Workflow
+Dify Agent 是独立 Agent 应用。用户给出任务后，Agent 在 Linux Sandbox 中执行任务，并可使用 Dify 的 Tool、Knowledge、Skill 和文件。
 
-- 原生能力能够覆盖哪些 Workflow 构建场景
-- 主要能力边界是什么
-- 是否适合当前项目直接使用
-- 哪些问题需要增强
-- 推荐的增强优先级
+| 能力 | 作用 |
+| --- | --- |
+| Base Prompt | 定义 Agent 角色与长期指令 |
+| Tool | 调用 Dify Tool 与外部能力 |
+| Knowledge | 使用 Workspace Knowledge |
+| Skill | 封装可复用 Agent 能力 |
+| Files | 为 Agent 提供长期使用的文件 |
+| Linux Sandbox | 执行 Shell、代码并管理运行环境 |
+| Workflow Integration | 在 Workflow 中调用已有 Agent 或 Inline Agent |
+| Web App | 将 Agent 直接发布为应用 |
 
-### 6.2 Dify Agent
+### 3.2 使用流程
 
-- 原生 Agent 能够覆盖哪些复杂任务
-- 主要能力边界是什么
-- 与当前 Agent 架构相比可以替代 / 简化哪些部分
-- 哪些问题需要增强
-- 推荐的增强优先级
+#### 创建 Agent
 
-### 6.3 最终方案
+```mermaid
+flowchart LR
+    A[Create Agent] --> B[配置 Base Prompt]
+    B --> C[添加 Tool / Knowledge]
+    C --> D[添加 Skill / Files]
+    D --> E[配置 Sandbox]
+    E --> F[Preview]
+    F --> G[Publish]
+```
 
-明确划分：
+Dify 同时提供 Agent Builder，可通过对话配置 Sandbox、安装依赖、创建 Skill 和文件。
 
-- **直接使用**：Dify 原生能力已经满足需求
-- **配置增强**：通过 Prompt、Tool、Skill、Workflow 配置解决
-- **二次开发**：确有必要修改或扩展 Dify
-- **暂不处理**：收益不足或当前没有实际需求
+#### 执行任务
 
-最终形成 AI Workflow 与 Dify Agent 的使用建议、增强范围及后续实施优先级。
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant A as Dify Agent
+    participant S as Sandbox
+    participant T as Tool / Knowledge
+
+    U->>A: 提交任务
+    A->>A: 分析当前任务
+    A->>T: 调用所需能力
+    T-->>A: 返回结果
+    A->>S: Shell / Code / File 操作
+    S-->>A: 返回执行结果
+    A->>A: 根据结果继续执行
+    A-->>U: 最终结果
+```
+
+### 3.3 实现架构
+
+![Dify Agent 架构](./assets/dify-1.17-core-capabilities/dify-agent-architecture.svg)
+
+| 层 | 主要职责 |
+| --- | --- |
+| Dify Platform | Agent 配置、Tool、Knowledge、Workflow 集成、发布与管理 |
+| Agent Runtime | Agent 执行、Sandbox、Skill、文件和任务运行环境 |
+
+1.16 新增独立 Agent 应用及 Agent Builder；Agent 可以直接发布为 Web App，也可以作为 Workflow 节点使用。1.17 增加 E2B Sandbox backend，可在本地 Agent Runtime 与 E2B Sandbox 之间选择。
+
+### 3.4 Workflow 集成
+
+```mermaid
+flowchart LR
+    A[Workflow] --> B[Agent Node]
+    B --> C{Agent 来源}
+    C -->|Reuse| D[Workspace Agent]
+    C -->|Inline| E[Inline Agent]
+    D --> F[执行 Task]
+    E --> F
+    F --> G[输出]
+    G --> H[Next Node]
+```
+
+Agent 从 Workflow 内的一次性节点配置，扩展为可独立创建、发布并在 Workflow 中复用的应用能力。
+
+### 3.5 能力实测
+
+| Case | 目标 | 观察项 | 结果 |
+| --- | --- | --- | --- |
+| 单 Tool | 验证基础调用 | Tool 选择、参数 | 待测 |
+| 多 Tool | 验证连续执行 | 调用顺序、结果利用 | 待测 |
+| 多步骤任务 | 验证自主执行 | 步骤规划、状态保持 | 待测 |
+| 文件任务 | 验证文件处理 | 文件读写、结果传递 | 待测 |
+| Sandbox 任务 | 验证环境执行 | Shell、Code、依赖 | 待测 |
+| 推荐分析任务 | 验证真实业务可用性 | 完成度、人工介入 | 待测 |
+
+### 3.6 不足与增强
+
+| 原生问题 | 表现 | 原因 | 增强方案 |
+| --- | --- | --- | --- |
+| 待测 |  |  |  |
+
+---
+
+## 四、综合分析
+
+### 4.1 能力关系
+
+| | AI Workflow | Dify Agent |
+| --- | --- | --- |
+| 目标 | 降低 Workflow 构建成本 | 提升复杂任务自主执行能力 |
+| 用户输入 | Workflow 构建 / 修改需求 | 业务任务 |
+| AI 输出 | Workflow Graph | 任务执行结果 |
+| 主要阶段 | 开发阶段 | 运行阶段 |
+| 核心对象 | Node / Edge / Config | Tool / Skill / Sandbox / Context |
+| 最终载体 | Workflow | Agent App |
+
+### 4.2 增强方案
+
+实测后根据两类问题分别设计增强模块：
+
+```mermaid
+flowchart TB
+    A[实测问题] --> B{问题来源}
+    B --> C[AI Workflow]
+    B --> D[Dify Agent]
+    C --> E[Workflow 增强方案]
+    D --> F[Agent 增强方案]
+    E --> G[Dify 1.17.1]
+    F --> G
+```
+
+| 输出 | 内容 |
+| --- | --- |
+| 原生能力 | 可以直接使用的能力 |
+| 能力边界 | 实测确认的限制 |
+| 增强点 | 需要补充的能力 |
+| 增强架构 | 与 Dify 1.17.1 的集成方式 |
+| 验证结果 | 增强前后的 Case 对比 |
