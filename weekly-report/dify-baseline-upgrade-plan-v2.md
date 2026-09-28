@@ -218,8 +218,6 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 | Web | 现有 `dify-web` 应用增加 1.17.1 upgrade 部署 |
 | Plugin Daemon | 沿用现有应用，部署 1.17.1 对应版本 |
 | Sandbox | 沿用现有应用，部署 1.17.1 对应版本 |
-| Agent Runtime 组件 | 阶段一不新增，阶段二根据实际新功能决定 |
-| 公司 Scheduler / Standard / Critical Worker | 阶段一不部署，阶段三统一处理 |
 
 #### 3.2.4 PostgreSQL、Redis 与 Celery 隔离
 
