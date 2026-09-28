@@ -326,35 +326,40 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 
 ## 五、阶段三：执行调度能力评审
 
-阶段三不直接把旧公司调度代码搬到 1.17.1。原因是这部分能力不是独立业务功能，而是直接包在 Dify 的应用执行、Runtime、Worker、任务状态、Human Input 和 Schedule 链路外层；1.17.1 对这些底层链路已经有较大变化，因此需要先判断公司能力是否仍有必要、官方能力是否已经覆盖，以及保留后应该接在哪一层。
+原有公司调度管理围绕统一准入、优先级、Job、Scheduler、双 Worker、任务中心、Console 调试、Human Input、Schedule、监控审计等能力进行了较多扩展，整体设计偏重，其中部分能力并不是当前业务必须保留。与此同时，1.17.1 的应用执行、Runtime、Worker、任务状态、Human Input 和 Trigger / Schedule 链路已经发生较大变化，旧实现不能直接平移。
 
-### 5.1 为什么需要评审
+因此阶段三不默认全量迁移，而是先重新评估每项能力的实际业务价值和迁移成本，再决定 **完整迁移、基于 1.17.1 重写、部分保留，或直接使用官方能力**。
 
-| 能力方向 | 当前公司能力 | 1.17.1 主要变化 | 为什么需要评审 |
-| --- | --- | --- | --- |
-| 托管执行准入 | Policy、Admission、Priority、容量限制 | 应用入口、异步执行参数和执行任务模型变化 | 需要先判断公司统一准入和优先级是否仍有业务价值，再决定直接迁移、外围重写或取消 |
-| 调度中心 | Job、Scheduler、Lease、Outbox、Generation | 任务状态、官方执行标识和 Worker 生命周期变化 | 旧调度中心与旧 Runtime 高度绑定，不能原样搬入；需要判断保留完整调度中心还是缩减为外围治理 |
-| 专用 Worker | Standard / Critical Worker | 旧 Worker 直接消费公司队列并调用旧 Runtime | 1.17.1 执行入口已经变化，需要先确认是否仍需要双资源池，再决定新的 Worker 接入方式 |
-| 正式应用托管 | Workflow、Chatflow、Chat、Completion、Agent | 各应用执行入口、Session、Message、WorkflowRun 和结果管理均发生变化 | 不同应用不能继续统一套旧执行入口，需要评估继续托管还是直接使用官方执行 |
-| Console 调试 | Draft、Single Node、Iteration、Loop | 调试入口、节点事件、草稿状态和前端运行状态变化 | 旧调试托管逻辑与新版调试链路耦合较深，需要判断是否还有必要重新接入公司治理 |
-| Human Input | Pause、Resume、Retry | 1.17.1 已提供 WorkflowPause、ResumptionContext 和新的恢复链路 | 官方已经覆盖核心暂停恢复能力，需要判断公司 generation / fence 等治理是否仍需保留 |
-| Schedule | 正式和草稿定时触发 | 1.17.1 Trigger / Schedule 链路变化 | 直接迁旧轮询和调度可能产生重复执行，需要判断使用官方 Schedule 还是增加公司准入层 |
-| 任务管理 | Query、Cancel、Stop、Retry、Streaming / Blocking Result | 旧任务中心依赖公司 Job 状态和执行标识 | 是否保留任务中心取决于 Job / Scheduler 最终是否继续存在 |
-| 调度监控与审计 | Worker / Scheduler Health、OTel、执行审计 | 指标和审计主体依赖旧 Scheduler / Worker / Job 模型 | 监控对象会随最终调度架构变化，需要在架构确定后再决定保留或重做 |
+### 5.1 高工作量迁移项
 
-### 5.2 评审输出
+以下工作量表示：**如果决定继续保留对应公司能力，在 1.17.1 上完成适配或重写所需的主要开发成本**。各项存在公共执行链路，预计时间不能直接逐行相加。
 
-阶段三完成后需要形成一份确定的执行调度方案，而不是继续保留多套候选路径。
+| 能力方向 | 高工作量项 | 主要改造内容 | 工作量 | 预计时间 |
+| --- | --- | --- | --- | --- |
+| 托管执行引擎 | Managed Worker 与 1.17.1 Runtime 对接 | 重写 Worker 执行入口，接入 1.17.1 官方执行服务，同时保留 Job、Lease、容量和 Standard / Critical 调度 | 高 | **3～5 天** |
+| Workflow / Chatflow | 正式执行链路迁移 | 重做公司 Job 与 workflow_run_id / task_id 映射，接入新版执行任务、事件、失败终态和结果回写 | 高 | **3～4 天** |
+| Chat / Completion / Agent | 多应用类型托管执行 | 分应用适配新版 Generator / Service、Session、Message / Conversation、Streaming / Blocking 和终态提取 | 高 | **4～6 天** |
+| 结果交付 | Streaming / Blocking / Result | 重新建立 Job 与官方执行标识映射，适配排队、运行、失败、停止、断线重连和最终结果查询 | 高 | **2～3 天** |
+| 任务控制 | Stop / Cancel / Retry | queued 与 running 分别对接公司 Job 和官方停止；Retry 使用新 generation，避免旧结果覆盖 | 高 | **2～3 天** |
+| Console 调试 | Draft、Single Node、Iteration、Loop | 重新接新版调试执行入口，并恢复排队、停止、结果查询、SSE 和前端状态隔离 | 高 | **4～6 天** |
+| Human Input | Pause / Resume / Retry | 将公司 generation / fence 与 1.17.1 WorkflowPause、ResumptionContext、resume_app_execution 重新串联 | 高 | **3～5 天** |
+| API / WebApp 入口 | 托管路由接入 | 在新版 Controller / Service 上增加托管判断，并重新适配 Streaming / Blocking / Stop 协议 | 中到高 | **2～3 天** |
+| Schedule | 正式与草稿定时触发 | 基于 1.17.1 Trigger / Schedule 重新接入公司准入，避免旧轮询与官方链路重复执行 | 中到高 | **2～4 天** |
 
-| 评审结果 | 最终处理 |
+按公共执行链路合并计算，如果上述调度能力大部分继续保留，整体开发量约 **15～22 个工作日**；若 Agent、Human Input 或官方 Runtime 接入还需要额外抽象，预留 **20～25 个工作日**。
+
+### 5.2 评审结果
+
+评审后每项能力只保留一种处理方式：
+
+| 处理方式 | 适用情况 |
 | --- | --- |
-| 官方能力已覆盖且公司无额外业务诉求 | 删除对应公司执行改造，直接使用 1.17.1 官方执行链路 |
-| 仍需要统一准入、优先级或容量治理 | 将这些能力保留在官方 Runtime 外围，不重新侵入各应用内部执行实现 |
-| 仍需要公司 Job / Scheduler | 按 1.17.1 的执行标识、任务状态和 Worker 生命周期重新接入 |
-| 仍需要 Standard / Critical 资源池 | 基于新的官方执行入口重新实现专用 Worker，只保留资源池与治理职责 |
-| 任务中心、Health、OTel、Audit | 根据最终保留的 Job / Scheduler / Worker 重新确定数据源和管理入口 |
+| 完整迁移 | 公司能力仍有明确业务价值，且原设计与 1.17.1 变化较小 |
+| 基于 1.17.1 重写 | 能力需要保留，但旧实现与新版 Runtime / Worker / Session / Trigger 等接口已经不兼容 |
+| 部分保留 | 只保留准入、优先级、容量、资源池等仍有价值的治理能力，具体执行继续使用官方链路 |
+| 使用官方能力 | 1.17.1 已覆盖需求，原公司实现没有继续维护的必要 |
 
-阶段三最终输出包括：**保留功能清单、删除功能清单、需要重写的连接层、最终运行组件、数据库表与 Migration、Redis 队列与频道、DevOps 应用和启动角色**。
+阶段三最终固定：**保留功能、删除功能、需要重写的连接层、最终运行组件、数据库表与 Migration、Redis 队列与频道，以及 DevOps 应用和启动角色**。
 
 ---
 
