@@ -290,61 +290,71 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 
 ## 四、阶段二：1.17.1 新能力升级
 
-阶段二直接在阶段一形成的 1.17.1 分支、流水线、部署和数据上继续开发，不再创建第二套 1.17.1 基线。重点是确定每项新能力是否需要新增运行组件，以及在公司 DevOps 中以“新应用”还是“现有应用新增部署”的方式承载。
+阶段二直接基于阶段一形成的独立 1.17.1 版本继续升级，不再新建第二套基线。功能层只选择需要启用的 1.17.1 新能力；部署层只增加这些能力实际需要的运行组件。
 
-### 4.1 新能力与组件增量
+### 4.1 功能升级
 
-| 新能力 | 复用阶段一组件 | 需要新增的 1.17.1 运行组件 | DevOps 处理 | 当前结论 |
-| --- | --- | --- | --- | --- |
-| Workflow / Chatflow 新能力、Human Input 增强、WebApp 增强 | API / Web / Worker / Beat | 无固定新增组件 | 直接在现有 1.17.1 部署上增加配置或前后端能力 | 可直接基于阶段一升级 |
-| 新 Agent App / Agent Skills / Agent Home Snapshot | API / Web / Plugin Daemon | `agent_backend` | 倾向新增独立应用 `dify-agent-backend`、独立流水线和部署 | 需要确定是否启用 |
-| Agent 本地 Sandbox / Shell 工作区 | `agent_backend` | `local_sandbox` | 若选择 Local Runtime，新增 `dify-agent-local-sandbox` 应用或等价独立运行组件 | 待讨论 |
-| Agent Sandbox 出网隔离 | `local_sandbox` / API | `agent_ssrf_proxy` | 新增独立代理组件，或复用公司已有等价网络代理能力 | 待讨论 |
-| Workflow 实时协作 | API / Web / Redis | `api_websocket` 运行角色 | 官方使用同一 API 镜像的独立 WebSocket 进程；公司侧需要决定放在 `dify-api` 下新增部署还是单独应用 | 待讨论 |
-| Unified / Knowledge Tracing | API / Worker | 取决于公司现有 Trace 后端 | 优先复用现有可观测基础设施，不默认新增 Dify 应用 | 待讨论 |
-| 知识库 / 检索增强 | Worker / Plugin Daemon / 向量库 | 取决于具体数据源和 Vector Store | 只为实际启用的数据源增加依赖 | 按功能选择 |
-| difyctl、多模态文件、Tool 新参数 | 现有组件 | 无长期运行组件 | 不新增应用 | 可按需求启用 |
+| 能力方向 | 1.17.1 新增或增强能力 | 组件影响 | 阶段二处理 |
+| --- | --- | --- | --- |
+| Workflow 与应用编排 | 自然语言生成 Workflow / Chatflow、运行记录导出、节点定位、LLM Environment 等 | 主要复用 API / Web / Worker | 在阶段一 1.17.1 基线上直接启用 |
+| Human Input | 富表单、Loop / Iteration 内 Human Input | 复用官方 Workflow Runtime | 使用 1.17.1 官方能力 |
+| Agent | 新 Agent App、Agent Skills、Agent DSL、Agent Home Snapshot | 需要 Agent Backend；Local Runtime 还需要 Sandbox 与网络代理 | 作为阶段二重点新增能力接入 |
+| WebApp | 应用描述、输入提示等展示能力 | Web / API | 直接在现有 1.17.1 组件上升级 |
+| 可观测 | Unified Tracing、Knowledge Tracing | API / Worker / Trace 后端 | 接入现有公司可观测链路 |
+| CLI | difyctl | 无长期运行组件 | 作为运维工具使用，不新增应用 |
+| 知识库与检索 | Excel 图片解析、ODT、TiDB 混合检索等 | Worker / Plugin / Vector Store | 按现有知识库后端和数据源启用 |
+| 多模态与工具 | 文件直接传入多模态模型、日期参数类型 | API / Plugin | 随应用能力直接启用 |
+| 安全与数据治理 | 外部 KMS Provider、会话清理等 | Storage / 定时任务 | 与阶段一已有 KMS / Storage 能力合并使用 |
 
-### 4.2 组件部署待讨论项
+### 4.2 组件与部署
 
-| 讨论项 | 需要确定的内容 |
-| --- | --- |
-| Agent Runtime 后端 | 使用 Local Sandbox 还是其他 Runtime；决定是否需要 `local_sandbox` 和对应网络代理 |
-| Agent Backend 部署 | `agent_backend` 是否作为新的 DevOps 应用；对应流水线、Secret、Redis 和内部 API 地址如何管理 |
-| API WebSocket | 作为 `dify-api` 下的新部署，还是独立 `dify-api-websocket` 应用 |
-| Agent SSRF Proxy | 使用官方独立代理组件，还是复用公司已有网络代理能力 |
-| Redis | Agent Backend 使用的 Redis DB / Prefix 是否继续复用现有 Sentinel，并如何与 API / Celery 隔离 |
-| 新组件流水线 | 每个新增应用是否需要独立代码构建，还是直接使用官方/统一镜像制品 |
-| 最终组件数量 | 只有实际启用能力需要的组件才进入最终架构，未启用能力不提前申请应用 |
+阶段二沿用阶段一已经部署的 API、General Worker、Beat、Web、Plugin Daemon 和 Sandbox；只为 1.17.1 新能力补充额外运行角色。
+
+| 对应能力 | 新增运行组件 | DevOps 部署方式 | 与阶段一的关系 |
+| --- | --- | --- | --- |
+| 新 Agent App / Skills / Agent Home | `agent_backend` | 新增独立应用 `dify-agent-backend`，独立部署和运行配置 | 调用阶段一 API、Plugin Daemon、Redis 等基础服务 |
+| Agent Local Runtime / Shell Workspace | `local_sandbox` | 新增独立应用 `dify-agent-local-sandbox` | 只服务 Agent Runtime，不替换阶段一 `dify-sandbox` |
+| Agent Sandbox 出网隔离 | `agent_ssrf_proxy` | 作为 Agent Runtime 独立网络代理组件部署 | 与 `local_sandbox` 配套使用 |
+| Workflow 实时协作 | `api_websocket` | 复用 API 后端制品，在 `dify-api` 下增加独立 WebSocket 部署 | 使用阶段一 Socket.IO / Redis Sentinel 配置 |
+| Unified / Knowledge Tracing | Trace 后端连接 | 不新增 Dify 核心应用，接入公司现有 Trace 基础设施 | API / Worker 增加对应配置 |
+| 知识库与检索增强 | Plugin / Vector Store 依赖 | 复用 Plugin Daemon、Worker 和现有向量数据库；仅增加对应 Provider 配置 | 不额外复制核心服务 |
+| difyctl / WebApp / 多模态与 Tool 增强 | 无 | 不新增长期运行组件 | 直接使用阶段一现有组件 |
+
+新增应用继续使用独立 1.17.1 分支和流水线体系，和阶段一组件使用同一版本基线；新增组件的 Redis、Secret、内部服务地址和网络策略随对应应用单独配置。
 
 ---
 
-## 五、阶段三：执行调度能力处理
+## 五、阶段三：执行调度能力评审
 
-阶段三基于完成阶段二后的 1.17.1 版本处理现有公司执行调度能力。每项能力最终只保留一种结果：继续迁移、按 1.17.1 重写，或取消并使用官方能力。
+阶段三不直接把旧公司调度代码搬到 1.17.1。原因是这部分能力不是独立业务功能，而是直接包在 Dify 的应用执行、Runtime、Worker、任务状态、Human Input 和 Schedule 链路外层；1.17.1 对这些底层链路已经有较大变化，因此需要先判断公司能力是否仍有必要、官方能力是否已经覆盖，以及保留后应该接在哪一层。
 
-### 5.1 功能范围
+### 5.1 为什么需要评审
 
-| 能力方向 | 当前能力 | 1.17.1 变化 | 处理方向 |
+| 能力方向 | 当前公司能力 | 1.17.1 主要变化 | 为什么需要评审 |
 | --- | --- | --- | --- |
-| 执行准入 | Policy、Admission、Priority、容量限制 | 应用入口和异步执行参数变化 | 迁移 / 外围重写 / 取消 |
-| 调度中心 | Job、Scheduler、Lease、Outbox、Generation | 任务状态与官方执行标识、Worker 生命周期变化 | 迁移 / 重写 / 缩减 / 取消 |
-| 专用 Worker | Standard / Critical Worker | 旧 Worker 直接调用旧 Runtime | 迁移 / 基于官方执行重写 / 取消 |
-| 正式应用托管 | Workflow、Chatflow、Chat、Completion、Agent | 各应用执行入口、Session、消息和结果管理变化 | 继续托管 / 直接接官方 |
-| Console / Human Input / Schedule | 草稿调试、暂停恢复、定时触发 | 1.17.1 已提供新的官方执行链路 | 继续治理 / 使用官方 |
-| 任务中心 | Query、Cancel、Stop、Retry、Streaming / Blocking Result | 原任务中心依赖公司 Job | 保留 / 重做 / 取消 |
-| 监控与审计 | Worker / Scheduler Health、OTel、执行审计 | 指标主体取决于最终调度架构 | 随最终方案保留或重做 |
+| 托管执行准入 | Policy、Admission、Priority、容量限制 | 应用入口、异步执行参数和执行任务模型变化 | 需要先判断公司统一准入和优先级是否仍有业务价值，再决定直接迁移、外围重写或取消 |
+| 调度中心 | Job、Scheduler、Lease、Outbox、Generation | 任务状态、官方执行标识和 Worker 生命周期变化 | 旧调度中心与旧 Runtime 高度绑定，不能原样搬入；需要判断保留完整调度中心还是缩减为外围治理 |
+| 专用 Worker | Standard / Critical Worker | 旧 Worker 直接消费公司队列并调用旧 Runtime | 1.17.1 执行入口已经变化，需要先确认是否仍需要双资源池，再决定新的 Worker 接入方式 |
+| 正式应用托管 | Workflow、Chatflow、Chat、Completion、Agent | 各应用执行入口、Session、Message、WorkflowRun 和结果管理均发生变化 | 不同应用不能继续统一套旧执行入口，需要评估继续托管还是直接使用官方执行 |
+| Console 调试 | Draft、Single Node、Iteration、Loop | 调试入口、节点事件、草稿状态和前端运行状态变化 | 旧调试托管逻辑与新版调试链路耦合较深，需要判断是否还有必要重新接入公司治理 |
+| Human Input | Pause、Resume、Retry | 1.17.1 已提供 WorkflowPause、ResumptionContext 和新的恢复链路 | 官方已经覆盖核心暂停恢复能力，需要判断公司 generation / fence 等治理是否仍需保留 |
+| Schedule | 正式和草稿定时触发 | 1.17.1 Trigger / Schedule 链路变化 | 直接迁旧轮询和调度可能产生重复执行，需要判断使用官方 Schedule 还是增加公司准入层 |
+| 任务管理 | Query、Cancel、Stop、Retry、Streaming / Blocking Result | 旧任务中心依赖公司 Job 状态和执行标识 | 是否保留任务中心取决于 Job / Scheduler 最终是否继续存在 |
+| 调度监控与审计 | Worker / Scheduler Health、OTel、执行审计 | 指标和审计主体依赖旧 Scheduler / Worker / Job 模型 | 监控对象会随最终调度架构变化，需要在架构确定后再决定保留或重做 |
 
-### 5.2 对最终组件的影响
+### 5.2 评审输出
 
-| 最终方向 | 组件结果 |
+阶段三完成后需要形成一份确定的执行调度方案，而不是继续保留多套候选路径。
+
+| 评审结果 | 最终处理 |
 | --- | --- |
-| 完全使用 1.17.1 官方执行 | 不再部署公司 Scheduler / Standard / Critical Worker；任务中心和调度管理同步缩减或下线 |
-| 保留外围治理 | 保留轻量 Policy / Job / Admission 能力，官方 Worker 继续负责实际执行 |
-| 继续托管执行 | 需要重新接入 1.17.1 Runtime，并保留或重写 Scheduler、Job、Standard / Critical Worker |
-| 部分能力保留 | 按功能拆分最终组件，只保留仍有业务价值的调度服务和管理入口 |
+| 官方能力已覆盖且公司无额外业务诉求 | 删除对应公司执行改造，直接使用 1.17.1 官方执行链路 |
+| 仍需要统一准入、优先级或容量治理 | 将这些能力保留在官方 Runtime 外围，不重新侵入各应用内部执行实现 |
+| 仍需要公司 Job / Scheduler | 按 1.17.1 的执行标识、任务状态和 Worker 生命周期重新接入 |
+| 仍需要 Standard / Critical 资源池 | 基于新的官方执行入口重新实现专用 Worker，只保留资源池与治理职责 |
+| 任务中心、Health、OTel、Audit | 根据最终保留的 Job / Scheduler / Worker 重新确定数据源和管理入口 |
 
-阶段三结束后形成最终的代码范围、数据库范围、队列范围和 DevOps 组件清单，随后进入最终收束。
+阶段三最终输出包括：**保留功能清单、删除功能清单、需要重写的连接层、最终运行组件、数据库表与 Migration、Redis 队列与频道、DevOps 应用和启动角色**。
 
 ---
 
