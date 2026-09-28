@@ -244,47 +244,224 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 
 ### 3.3 阶段一完成后的数据迁移
 
-阶段一功能与新环境结构完成后，将 1.14.2 的同一时间点业务快照导入当前独立开发库 `ai_studio_1171_dev`。目标库继续保留已经建立的 1.17.1 Schema 和当前 `alembic_version`，不另建一套迁移库，也不把旧库的 Migration 版本覆盖到目标库。旧 1.14.2 环境继续运行，快照之后的新数据不自动同步。
+阶段一功能和数据库结构完成后，将 1.14.2 在同一时间点的 PostgreSQL 业务快照一次性导入当前 1.17.1 开发库 `ai_studio_1171_dev`。目标库保留已经建立的 1.17.1 Schema 和当前 `alembic_version`，不重新执行旧库 Migration，也不覆盖目标库的版本记录。
 
-#### 3.3.1 导入原则
+本次只迁 PostgreSQL 业务数据。旧 1.14.2 环境继续运行，快照之后的新数据不自动同步；S3 对象、Redis、向量库、Plugin Daemon 数据库和私钥文件不由迁移脚本搬运，只在数据导入后核对数据库引用。
 
-| 项目 | 处理方式 |
+#### 3.3.1 执行步骤
+
+| 步骤 | 操作 | 主要处理 | 输出 |
+| --- | --- | --- | --- |
+| 1 | `inspect` | 读取源库和 `ai_studio_1171_dev` 的表、字段、主外键、唯一约束、索引和 `alembic_version`；生成字段映射并检查类型兼容 | Schema、版本、表数量和 Mapping 清单 |
+| 2 | `export` | 在源库开启 `REPEATABLE READ` 一致性事务，逐表导出业务快照 | 每表 JSONL、行数、SHA-256 校验值和快照元数据 |
+| 3 | `backup-target` | 在写入前对 `ai_studio_1171_dev` 执行完整 `pg_dump` | `target-before.dump` |
+| 4 | `apply` | 再次检查目标 Schema 未变化；按外键依赖倒序清理核准的目标测试数据，再按正序写入转换后的旧数据 | 单事务导入结果及序列恢复 |
+| 5 | `verify` | 对比导入前快照与目标库行数，并输出差异报告 | `counts-after.json`、`differences.json`、`report.json` |
+| 6 | 业务核对 | 检查账号/OA、默认 Workspace、owner/current、应用、Workflow、知识库、历史文件引用和旧密钥可读性 | 阶段二继续使用的 1.17.1 开发数据 |
+
+执行命令固定为：
+
+```bash
+cd api
+
+export SOURCE_DB_HOST=...
+export SOURCE_DB_PORT=5432
+export SOURCE_DB_USERNAME=...
+export SOURCE_DB_PASSWORD=...
+export SOURCE_DB_DATABASE=...
+
+export TARGET_DB_HOST=...
+export TARGET_DB_PORT=...
+export TARGET_DB_USERNAME=...
+export TARGET_DB_PASSWORD=...
+export TARGET_DB_DATABASE=ai_studio_1171_dev
+
+export MIGRATION_WORK_DIR=/data/dify-migration/$(date +%Y%m%d_%H%M%S)
+
+uv run python scripts/migrate_snapshot.py inspect
+uv run python scripts/migrate_snapshot.py export
+uv run python scripts/migrate_snapshot.py backup-target
+uv run python scripts/migrate_snapshot.py apply
+uv run python scripts/migrate_snapshot.py verify
+```
+
+连接密码只通过环境变量提供，不写入脚本参数、日志和迁移产物；`MIGRATION_WORK_DIR` 放在 Git 工作区之外，快照、备份和报告文件不提交仓库。
+
+#### 3.3.2 Inspect：先确定哪些数据可以迁
+
+`inspect` 不写数据，先完成三件事：
+
+1. 确认源库和目标库不是同一个数据库，且目标数据库固定为 `ai_studio_1171_dev`。
+2. 比较两边表和字段，源字段在新版没有对应字段、字段类型不兼容、或目标新增必填字段没有默认值时直接停止。
+3. 生成明确的迁移清单。只有显式列入排除范围的表或字段才跳过，不通过名称猜测“执行相关数据”。
+
+关键保护：
+
+```python
+TARGET_DATABASE = "ai_studio_1171_dev"
+
+EXCLUDED_TABLES = {
+    "alembic_version",
+}
+
+EXCLUDED_COLUMNS: dict[str, set[str]] = {}
+```
+
+字段映射采用“能明确转换才迁”的规则。例如账号补齐新版 `normalized_email`，模型类型按 1.17.1 名称转换：
+
+```python
+MODEL_TYPE_RENAMES = {
+    "text-generation": "llm",
+    "embeddings": "text-embedding",
+    "reranking": "rerank",
+}
+
+def normalize_email(value):
+    return value.strip().lower() if value is not None else None
+```
+
+旧 `alembic_version` 不导入，目标库继续使用阶段一当前 Migration Head。
+
+#### 3.3.3 Export：生成一致性业务快照
+
+源库全程只读，在同一个 `REPEATABLE READ` 事务中逐表读取，避免导出过程中各表对应到不同时间点。
+
+每张表输出一个 JSONL 文件，同时记录：
+
+- 表行数；
+- SHA-256；
+- 源数据库名；
+- 源库 `alembic_version`。
+
+导出的日期、UUID、bytes 等类型使用显式编码，导入时按原类型恢复，不统一转成普通字符串。
+
+#### 3.3.4 Backup：写入前先备份目标库
+
+在修改 `ai_studio_1171_dev` 前执行一次完整备份：
+
+```bash
+pg_dump \
+  --format=custom \
+  --no-owner \
+  --no-privileges \
+  --host "$TARGET_DB_HOST" \
+  --port "$TARGET_DB_PORT" \
+  --username "$TARGET_DB_USERNAME" \
+  --dbname "ai_studio_1171_dev" \
+  --file "$MIGRATION_WORK_DIR/target-before.dump"
+```
+
+`apply` 只有在 `target-before.dump` 已存在时才允许执行。
+
+#### 3.3.5 Apply：单事务替换业务数据
+
+正式写入前重新读取目标 Schema；如果目标结构与 `inspect` 时不一致，停止导入并重新执行 `inspect`。
+
+写入顺序由外键关系自动计算：
+
+```text
+父表 → 子表       导入顺序
+子表 → 父表       清理顺序
+```
+
+核心写入必须处于同一个数据库事务中：
+
+```python
+with target.begin() as conn:
+    for table in reversed(order):
+        conn.execute(text(f'DELETE FROM "{table}"'))
+
+    for table in order:
+        for row in snapshot_rows(table):
+            mapped = map_row(table, row, target_schema[table])
+            conn.execute(metadata.tables[table].insert().values(**mapped))
+
+    reset_sequences(conn, order)
+```
+
+其中：
+
+- 只清理 Mapping 中明确标记为 `copy` 的目标业务表；
+- 不执行无范围清库或 `CASCADE`；
+- 保留原业务 ID 和外键关系；
+- 新版新增字段使用明确的转换值、数据库默认值或可空值；
+- 任意表写入失败时整个事务回滚；
+- `alembic_version`、S3、Redis、向量库、插件库和私钥文件都不在这个事务中修改。
+
+#### 3.3.6 数据范围
+
+| 数据范围 | 迁移处理 |
 | --- | --- |
-| 目标库 | 直接使用 `ai_studio_1171_dev`，导入前完成目标库备份 |
-| Schema | 保留阶段一已经建立的 1.17.1 表结构、字段、索引和约束 |
-| Alembic | 保留目标库现有 `alembic_version`；旧库 revision 只作为数据结构和转换规则来源 |
-| 数据源 | 从 1.14.2 源库读取同一时间点的一致性业务快照 |
-| 导入范围 | 只导入已纳入迁移清单的业务数据和历史记录 |
-| 调度数据 | 公司调度专用表和字段排除，不因名称包含“执行”而误删官方历史数据 |
-| 写入方式 | 暂停 1.17.1 开发环境写入和后台消费，在同一事务中替换核准的测试业务数据并导入快照 |
-| 旧环境 | 1.14.2 数据库、Redis、会话和队列保持不变，不切换访问入口 |
+| 账号与 OA 身份 | 保留 account_id、状态、邮箱和 OA open_id；按新版规则生成 `normalized_email`，不自动合并冲突账号 |
+| Workspace 与成员 | 保留 Tenant ID、owner、成员角色、默认空间、归档状态和 current 关系 |
+| 邀请与创建记录 | 保留邀请 Token 摘要、状态、有效期、角色和 Workspace 创建幂等记录 |
+| 应用与 Workflow | 保留应用、Workflow 定义及版本信息，按字段 Mapping 写入新版结构 |
+| 知识库与文件记录 | 导入知识库、文档、分段和文件数据库记录，不移动真实对象 |
+| 会话与运行历史 | 保留会话、消息、运行和节点历史，不重新执行历史任务 |
+| 模型及工具凭据 | 保留加密内容和 Tenant 密钥引用，按新版模型类型和引用结构转换 |
+| 安装记录 | 保留原安装状态，不重新执行管理员初始化 |
+| 新版新增表 | 无旧数据来源的表保留阶段一现有结构和必要初始化值 |
+| 公司调度数据 | 按明确表和字段排除，阶段三评审后再决定是否迁移 |
 
-#### 3.3.2 数据范围
+不迁移以下内容：
 
-| 数据范围 | 迁移方案 |
+- 旧 Redis Cache、登录 Session、Celery 队列和 Result；
+- S3 文件对象；
+- 向量库集合；
+- Plugin Daemon 数据库和插件文件；
+- 公司调度专用数据；
+- 旧 `alembic_version`。
+
+#### 3.3.7 Verify：迁移结果校验
+
+脚本先做逐表行数对比：
+
+```python
+differences = {
+    table: {
+        "source": source_count,
+        "target": target_count,
+    }
+    for table in migrated_tables
+    if source_count != target_count
+}
+
+if differences:
+    raise RuntimeError("行数校验存在差异，停止后续使用")
+```
+
+行数一致后再做业务级检查：
+
+| 检查项 | 校验内容 |
 | --- | --- |
-| 账号与 OA 身份 | 保留 account_id、状态、邮箱和 OA open_id 绑定；生成新版 `normalized_email`，不自动合并冲突账号 |
-| Workspace 与成员 | 保留 Tenant ID、owner、成员角色、归档状态和 current；按新版唯一默认空间和唯一 current 约束导入 |
-| 邀请与创建记录 | 保留邀请 Token 摘要、状态、有效期、角色以及 Workspace 创建幂等记录 |
-| 应用与 Workflow | 保留应用、Workflow 定义及版本字段，按新版字段映射补充结构 |
-| 知识库与文件记录 | 按依赖顺序导入知识库、文档、分段和文件记录；对象本身不随数据库导入移动 |
-| 会话与运行历史 | 保留会话、消息、Workflow Run、节点记录和相关配置，不重新执行历史任务 |
-| 模型及工具凭据 | 保留加密内容和 Tenant 密钥引用，按新版模型类型和凭据引用关系转换 |
-| 安装记录 | 保留已安装状态和原安装记录，新字段按 1.17.1 结构补齐，不重新执行初始化 |
-| 新版新增表 | 没有旧数据来源的表保留阶段一结构，只写入明确需要的初始化值 |
-| 调度专用数据 | 按具体表和字段排除；阶段三最终决定的调度能力不在本次阶段一快照中迁入 |
+| 账号 / OA | account_id、邮箱、状态、open_id 绑定和 `normalized_email` |
+| Workspace | 默认空间唯一、owner 正确、成员角色正确、current 唯一且不指向归档空间 |
+| 邀请 | Token 摘要、状态、有效期和角色保持一致 |
+| 应用 / Workflow | 原应用和 Workflow 能正常打开，定义和历史记录仍关联原 ID |
+| 知识库 | Dataset、Document、Segment 关联完整，原向量引用仍能对应 |
+| 文件 | 数据库中的历史 Key 能访问现有 S3 对象 |
+| 私钥 | 历史 Tenant 继续使用原私钥解密已有加密数据 |
 
-#### 3.3.3 文件、私钥及外部数据
+迁移完成后的数据链路为：
 
-| 范围 | 处理方式 |
-| --- | --- |
-| S3 文件 | 只迁数据库记录，不移动、覆盖或删除共享对象；历史 Key 继续按兼容规则读取 |
-| 租户私钥 | 保留原公私钥对象和真实路径，继续使用原密钥解密历史数据，不重新生成 |
-| 向量库 | 保持现有配置和集合，不自动重建索引或删除旧集合 |
-| Plugin Daemon | 主库快照不覆盖插件数据库；插件数据继续由独立插件库管理 |
-| Redis | 不复制旧 Cache、登录 Session、Celery 队列和 Result；1.17.1 继续使用自己的隔离命名空间 |
-
-导入流程固定为：**备份 `ai_studio_1171_dev` → 获取 1.14.2 一致性快照 → 按表/字段迁移清单转换数据 → 暂停 1.17.1 开发环境写入 → 单事务导入 → 恢复开发环境**。源库全程只读，旧 1.14.2 环境继续运行。
+```text
+1.14.2 PostgreSQL
+      │
+      ├─ inspect
+      ├─ 一致性快照 export
+      ▼
+迁移数据包
+      │
+      ├─ backup ai_studio_1171_dev
+      ├─ Mapping / 数据转换
+      ▼
+ai_studio_1171_dev
+      │
+      ├─ 单事务 apply
+      └─ verify + 业务核对
+      ▼
+阶段二 / 阶段三继续开发
+```
 
 ---
 
