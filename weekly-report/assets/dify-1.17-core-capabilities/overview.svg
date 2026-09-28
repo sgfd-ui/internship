@@ -1,13 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430">
-<style>.t{font-family:Arial,'Noto Sans SC',sans-serif;fill:#172033}.h{font-size:25px;font-weight:700}.m{font-size:18px;font-weight:700}.s{font-size:14px;fill:#5d6678}.box{fill:#fff;stroke:#d9deea;stroke-width:2}.soft{fill:#f7f8fb;stroke:#d9deea;stroke-width:2}.line{stroke:#9aa5b7;stroke-width:2;fill:none}.accent{fill:#eef3ff;stroke:#9bb4f0;stroke-width:2}</style>
-<rect width="1200" height="430" rx="24" fill="#fafbfc"/>
-<text x="600" y="48" text-anchor="middle" class="t h">Dify 1.17 核心能力</text>
-<rect x="85" y="95" width="450" height="250" rx="20" class="accent"/><text x="310" y="140" text-anchor="middle" class="t h">AI Workflow</text><text x="310" y="170" text-anchor="middle" class="t s">AI 辅助 Workflow 开发</text>
-<rect x="130" y="205" width="150" height="72" rx="14" class="box"/><text x="205" y="235" text-anchor="middle" class="t m">Create</text><text x="205" y="258" text-anchor="middle" class="t s">自然语言创建</text>
-<rect x="340" y="205" width="150" height="72" rx="14" class="box"/><text x="415" y="235" text-anchor="middle" class="t m">Refine</text><text x="415" y="258" text-anchor="middle" class="t s">自然语言修改</text>
-<rect x="665" y="95" width="450" height="250" rx="20" class="soft"/><text x="890" y="140" text-anchor="middle" class="t h">Dify Agent</text><text x="890" y="170" text-anchor="middle" class="t s">自主执行复杂任务</text>
-<rect x="700" y="205" width="110" height="72" rx="14" class="box"/><text x="755" y="235" text-anchor="middle" class="t m">Tool</text><text x="755" y="258" text-anchor="middle" class="t s">能力调用</text>
-<rect x="835" y="205" width="110" height="72" rx="14" class="box"/><text x="890" y="235" text-anchor="middle" class="t m">Skill</text><text x="890" y="258" text-anchor="middle" class="t s">能力复用</text>
-<rect x="970" y="205" width="110" height="72" rx="14" class="box"/><text x="1025" y="235" text-anchor="middle" class="t m">Sandbox</text><text x="1025" y="258" text-anchor="middle" class="t s">任务执行</text>
-<path d="M535 220 H665" class="line"/><text x="600" y="205" text-anchor="middle" class="t s">Workflow 集成</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760">
+<defs>
+  <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8Z" fill="#8090a8"/></marker>
+  <style>
+    .t{font-family:Arial,'Noto Sans SC',sans-serif;fill:#172033}
+    .title{font-size:30px;font-weight:700}.h{font-size:22px;font-weight:700}.m{font-size:17px;font-weight:700}.s{font-size:14px;fill:#667085}
+    .panel{fill:#fff;stroke:#d9e0ea;stroke-width:2}.blue{fill:#eef4ff;stroke:#9eb7ef;stroke-width:2}.gray{fill:#f7f8fa;stroke:#d9e0ea;stroke-width:2}
+    .chip{fill:#fff;stroke:#cfd8e6;stroke-width:1.6}.line{stroke:#8090a8;stroke-width:2.2;fill:none;marker-end:url(#arrow)}
+  </style>
+</defs>
+<rect width="1400" height="760" rx="28" fill="#fafbfc"/>
+<text x="700" y="52" text-anchor="middle" class="t title">Dify 1.17 核心能力架构</text>
+
+<rect x="565" y="90" width="270" height="72" rx="18" class="panel"/>
+<circle cx="610" cy="126" r="18" fill="#e7efff" stroke="#9eb7ef"/><text x="610" y="132" text-anchor="middle" class="t m">D</text>
+<text x="725" y="134" text-anchor="middle" class="t h">Dify 1.17</text>
+
+<path d="M700 162 V205 M700 205 H365 V230 M700 205 H1035 V230" class="line"/>
+
+<rect x="120" y="230" width="490" height="230" rx="24" class="blue"/>
+<circle cx="175" cy="285" r="26" fill="#fff" stroke="#9eb7ef" stroke-width="2"/><text x="175" y="292" text-anchor="middle" class="t h">W</text>
+<text x="365" y="286" text-anchor="middle" class="t h">AI Workflow</text>
+<text x="365" y="318" text-anchor="middle" class="t s">面向 Workflow 开发阶段</text>
+<rect x="165" y="350" width="180" height="64" rx="14" class="chip"/><text x="255" y="378" text-anchor="middle" class="t m">Create / Refine</text><text x="255" y="401" text-anchor="middle" class="t s">自然语言 → Workflow</text>
+<rect x="385" y="350" width="180" height="64" rx="14" class="chip"/><text x="475" y="378" text-anchor="middle" class="t m">Graph Generation</text><text x="475" y="401" text-anchor="middle" class="t s">Planning / Config</text>
+
+<rect x="790" y="230" width="490" height="230" rx="24" class="gray"/>
+<circle cx="845" cy="285" r="26" fill="#fff" stroke="#b9c3d3" stroke-width="2"/><text x="845" y="292" text-anchor="middle" class="t h">A</text>
+<text x="1035" y="286" text-anchor="middle" class="t h">Dify Agent</text>
+<text x="1035" y="318" text-anchor="middle" class="t s">面向复杂任务运行阶段</text>
+<rect x="835" y="350" width="180" height="64" rx="14" class="chip"/><text x="925" y="378" text-anchor="middle" class="t m">Agent Loop</text><text x="925" y="401" text-anchor="middle" class="t s">Goal → Action</text>
+<rect x="1055" y="350" width="180" height="64" rx="14" class="chip"/><text x="1145" y="378" text-anchor="middle" class="t m">Capability</text><text x="1145" y="401" text-anchor="middle" class="t s">Tool / Skill / Files</text>
+
+<path d="M365 460 V505 H700 M1035 460 V505 H700 M700 505 V530" class="line"/>
+
+<rect x="190" y="530" width="1020" height="150" rx="24" class="panel"/>
+<circle cx="245" cy="585" r="24" fill="#f2f4f7" stroke="#cfd8e6"/><text x="245" y="592" text-anchor="middle" class="t h">R</text>
+<text x="350" y="590" text-anchor="middle" class="t h">Dify Runtime</text>
+<rect x="485" y="558" width="135" height="64" rx="14" class="chip"/><text x="552" y="596" text-anchor="middle" class="t m">Model</text>
+<rect x="640" y="558" width="135" height="64" rx="14" class="chip"/><text x="707" y="596" text-anchor="middle" class="t m">Tool</text>
+<rect x="795" y="558" width="135" height="64" rx="14" class="chip"/><text x="862" y="596" text-anchor="middle" class="t m">MCP</text>
+<rect x="950" y="558" width="180" height="64" rx="14" class="chip"/><text x="1040" y="596" text-anchor="middle" class="t m">Knowledge</text>
+<text x="700" y="655" text-anchor="middle" class="t s">AI Workflow 构建执行流程；Dify Agent 在运行时自主决定动作；两者共同复用 Dify Runtime 能力</text>
 </svg>
