@@ -1,17 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1250" height="570" viewBox="0 0 1250 570">
-<style>.t{font-family:Arial,'Noto Sans SC',sans-serif;fill:#172033}.h{font-size:24px;font-weight:700}.m{font-size:17px;font-weight:700}.s{font-size:13px;fill:#626c7d}.box{fill:#fff;stroke:#d8deea;stroke-width:2}.a{fill:#eef3ff;stroke:#9bb4f0;stroke-width:2}.soft{fill:#f6f7fa;stroke:#d8deea;stroke-width:2}.line{stroke:#8995a8;stroke-width:2;fill:none;marker-end:url(#ar)}</style><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#8995a8"/></marker></defs>
-<rect width="1250" height="570" rx="24" fill="#fafbfc"/><text x="625" y="45" text-anchor="middle" class="t h">Dify Agent 架构</text>
-<rect x="60" y="105" width="260" height="360" rx="20" class="soft"/><text x="190" y="145" text-anchor="middle" class="t m">Dify Platform</text>
-<rect x="95" y="180" width="190" height="58" rx="12" class="box"/><text x="190" y="215" text-anchor="middle" class="t s">Agent Builder / Config</text>
-<rect x="95" y="260" width="190" height="58" rx="12" class="box"/><text x="190" y="295" text-anchor="middle" class="t s">Tool / Knowledge</text>
-<rect x="95" y="340" width="190" height="58" rx="12" class="box"/><text x="190" y="375" text-anchor="middle" class="t s">Workflow / Web App</text>
-<rect x="405" y="105" width="430" height="360" rx="20" class="a"/><text x="620" y="145" text-anchor="middle" class="t m">Agent Runtime</text>
-<rect x="450" y="185" width="145" height="65" rx="12" class="box"/><text x="522" y="215" text-anchor="middle" class="t m">Agent Loop</text><text x="522" y="236" text-anchor="middle" class="t s">Decision</text>
-<rect x="645" y="185" width="145" height="65" rx="12" class="box"/><text x="717" y="215" text-anchor="middle" class="t m">Skills</text><text x="717" y="236" text-anchor="middle" class="t s">Reusable capability</text>
-<rect x="450" y="315" width="145" height="65" rx="12" class="box"/><text x="522" y="345" text-anchor="middle" class="t m">Files</text><text x="522" y="366" text-anchor="middle" class="t s">Workspace data</text>
-<rect x="645" y="315" width="145" height="65" rx="12" class="box"/><text x="717" y="345" text-anchor="middle" class="t m">Sandbox</text><text x="717" y="366" text-anchor="middle" class="t s">Shell / Code</text>
-<rect x="920" y="145" width="270" height="280" rx="20" class="soft"/><text x="1055" y="185" text-anchor="middle" class="t m">Execution Environment</text>
-<rect x="960" y="225" width="190" height="62" rx="12" class="box"/><text x="1055" y="262" text-anchor="middle" class="t s">Local Agent Runtime</text>
-<rect x="960" y="325" width="190" height="62" rx="12" class="box"/><text x="1055" y="362" text-anchor="middle" class="t s">E2B Sandbox</text>
-<path d="M320 285 H405" class="line"/><path d="M835 285 H920" class="line"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="830" viewBox="0 0 1500 830">
+<defs>
+  <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8Z" fill="#8090a8"/></marker>
+  <style>
+    .t{font-family:Arial,'Noto Sans SC',sans-serif;fill:#172033}.title{font-size:30px;font-weight:700}.h{font-size:21px;font-weight:700}.m{font-size:16px;font-weight:700}.s{font-size:13px;fill:#667085}
+    .panel{fill:#fff;stroke:#d9e0ea;stroke-width:2}.blue{fill:#eef4ff;stroke:#9eb7ef;stroke-width:2}.soft{fill:#f7f8fa;stroke:#d9e0ea;stroke-width:2}.chip{fill:#fff;stroke:#cfd8e6;stroke-width:1.5}
+    .line{stroke:#8090a8;stroke-width:2.2;fill:none;marker-end:url(#arrow)}.bi{stroke:#8090a8;stroke-width:2.2;fill:none}
+  </style>
+</defs>
+<rect width="1500" height="830" rx="28" fill="#fafbfc"/>
+<text x="750" y="52" text-anchor="middle" class="t title">Dify Agent 实现架构</text>
+
+<rect x="70" y="110" width="290" height="250" rx="22" class="soft"/>
+<circle cx="120" cy="158" r="22" fill="#fff" stroke="#cfd8e6"/><text x="120" y="165" text-anchor="middle" class="t m">P</text>
+<text x="220" y="160" text-anchor="middle" class="t h">Dify Platform</text>
+<rect x="105" y="195" width="220" height="42" rx="10" class="chip"/><text x="215" y="221" text-anchor="middle" class="t s">Agent Builder / Agent Soul</text>
+<rect x="105" y="247" width="220" height="42" rx="10" class="chip"/><text x="215" y="273" text-anchor="middle" class="t s">Workflow Agent Node</text>
+<rect x="105" y="299" width="220" height="42" rx="10" class="chip"/><text x="215" y="325" text-anchor="middle" class="t s">Web App / User Task</text>
+
+<rect x="430" y="110" width="280" height="250" rx="22" class="panel"/>
+<circle cx="480" cy="158" r="22" fill="#eef4ff" stroke="#9eb7ef"/><text x="480" y="165" text-anchor="middle" class="t m">A</text>
+<text x="575" y="160" text-anchor="middle" class="t h">Dify API</text>
+<rect x="470" y="195" width="200" height="42" rx="10" class="chip"/><text x="570" y="221" text-anchor="middle" class="t s">Resolve Agent Config</text>
+<rect x="470" y="247" width="200" height="42" rx="10" class="chip"/><text x="570" y="273" text-anchor="middle" class="t s">Prepare Model / Tool</text>
+<rect x="470" y="299" width="200" height="42" rx="10" class="chip"/><text x="570" y="325" text-anchor="middle" class="t s">Build Run Composition</text>
+
+<rect x="790" y="88" width="420" height="310" rx="24" class="blue"/>
+<circle cx="840" cy="138" r="23" fill="#fff" stroke="#9eb7ef"/><text x="840" y="145" text-anchor="middle" class="t m">R</text>
+<text x="1000" y="140" text-anchor="middle" class="t h">Agent Backend</text>
+<rect x="835" y="180" width="150" height="46" rx="11" class="chip"/><text x="910" y="208" text-anchor="middle" class="t s">Run Scheduler</text>
+<rect x="1015" y="180" width="150" height="46" rx="11" class="chip"/><text x="1090" y="208" text-anchor="middle" class="t s">Redis Run / Events</text>
+<rect x="835" y="246" width="330" height="112" rx="14" class="panel"/>
+<text x="1000" y="276" text-anchor="middle" class="t m">Agent Run Composition</text>
+<text x="1000" y="304" text-anchor="middle" class="t s">Prompt · Execution Context · History · LLM</text>
+<text x="1000" y="328" text-anchor="middle" class="t s">Tools · Runtime / Shell · Output</text>
+
+<path d="M360 235 H430" class="line"/><path d="M710 235 H790" class="line"/>
+
+<rect x="250" y="455" width="1000" height="245" rx="24" class="panel"/>
+<text x="750" y="495" text-anchor="middle" class="t h">Agent Execution Loop</text>
+<rect x="305" y="535" width="150" height="70" rx="14" class="blue"/><text x="380" y="565" text-anchor="middle" class="t m">Model</text><text x="380" y="588" text-anchor="middle" class="t s">Next Action</text>
+<rect x="525" y="535" width="165" height="70" rx="14" class="chip"/><text x="607" y="565" text-anchor="middle" class="t m">Tool / Knowledge</text><text x="607" y="588" text-anchor="middle" class="t s">Plugin Daemon</text>
+<rect x="760" y="535" width="165" height="70" rx="14" class="chip"/><text x="842" y="565" text-anchor="middle" class="t m">Skill / Files</text><text x="842" y="588" text-anchor="middle" class="t s">Agent Config</text>
+<rect x="995" y="535" width="200" height="70" rx="14" class="chip"/><text x="1095" y="565" text-anchor="middle" class="t m">Runtime / Shell</text><text x="1095" y="588" text-anchor="middle" class="t s">Sandbox Binding</text>
+
+<path d="M1000 398 V455" class="line"/>
+<path d="M455 570 H525" class="line"/><path d="M690 570 H760" class="line"/><path d="M925 570 H995" class="line"/>
+<path d="M1095 605 V650 H380 V605" class="line"/>
+<text x="750" y="674" text-anchor="middle" class="t s">Observation / History / Session Snapshot 回到下一轮模型决策</text>
+
+<rect x="255" y="735" width="240" height="58" rx="14" class="soft"/><text x="375" y="770" text-anchor="middle" class="t m">Plugin Daemon</text>
+<rect x="630" y="735" width="240" height="58" rx="14" class="soft"/><text x="750" y="770" text-anchor="middle" class="t m">Local Sandbox</text>
+<rect x="1005" y="735" width="240" height="58" rx="14" class="soft"/><text x="1125" y="770" text-anchor="middle" class="t m">E2B Sandbox</text>
+<path d="M607 605 V735" class="line"/><path d="M1095 605 V690 H750 V735" class="line"/><path d="M1095 605 V690 H1125 V735" class="line"/>
 </svg>
