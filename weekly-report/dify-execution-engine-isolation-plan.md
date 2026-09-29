@@ -1,149 +1,224 @@
 # Dify 执行引擎隔离方案
 
-## 1. 背景与需求
+## 一、背景与建设目标
 
-### 1.1 当前问题
+### 1.1 背景
 
-当前 Dify 1.17.1 的 Workflow / Chatflow 异步执行任务默认进入 `workflow_based_app_execution` Queue，由 Worker 消费并进入官方执行链路。普通应用与核心应用共享同一执行资源时，普通任务大量积压会占满 Worker，核心应用需要一起排队。
+当前 Dify 1.17.1 的 Workflow / Chatflow 异步执行任务统一进入 `workflow_based_app_execution` Queue，再由 Worker 消费并进入官方执行链路。普通应用和核心应用共享同一组 Worker，当普通任务集中提交或出现长任务时，核心应用也需要等待共享执行资源。
+
+### 1.2 当前问题
 
 ```mermaid
 flowchart LR
-    A[普通应用任务] --> Q[(workflow_based_app_execution)]
-    B[核心应用任务] --> Q
-    Q --> W[共享 Worker]
+    A[普通应用] --> Q[(共享执行 Queue)]
+    B[核心应用] --> Q
+    Q --> W[共享 Worker Pool]
     W --> E[Dify 官方执行引擎]
 
-    H[普通任务大量积压] --> Q
-    Q -.排队等待.-> B
+    L[普通任务大量进入] ==> Q
+    Q -.任务积压.-> W
 ```
 
-### 1.2 建设目标
-
-| 目标 | 方案 |
+| 问题 | 当前表现 |
 | --- | --- |
-| 核心任务隔离 | 核心应用进入独立 Priority Queue，由独立 Worker 消费 |
-| 普通任务保持现状 | 未配置隔离的应用继续使用官方 Default Queue 和现有 Worker |
-| 执行逻辑复用 | Worker 获取任务后继续使用 Dify 1.17.1 的 AppGenerator、GraphEngine、SSE 与任务状态逻辑 |
-| 改造范围收敛 | 二开只负责 App 执行池配置和 Queue 路由，不重写 Workflow 执行引擎 |
+| 执行资源共享 | 普通应用与核心应用竞争同一组 Worker |
+| 队列相互影响 | 普通任务积压后，核心任务也需要排队 |
+| 资源无法独立配置 | 无法单独为核心应用配置 Worker 数量、CPU 和内存 |
+| 执行优先级难保证 | 重要任务与普通任务使用同一执行通道 |
+
+### 1.3 建设目标
+
+| 目标 | 建设内容 |
+| --- | --- |
+| 执行资源隔离 | 将普通应用与核心应用分配到不同 Queue 和 Worker Pool |
+| 核心任务独立执行 | 核心应用使用独立 Priority Worker，不等待 Default Worker |
+| 保持官方执行逻辑 | 任务进入 Worker 后继续使用 Dify 1.17.1 原生 AppGenerator、GraphEngine、SSE 和 WorkflowRun |
+| 控制二开范围 | 只增加 App 执行池配置、Queue 路由和 Priority Worker，不增加独立调度中心 |
 
 ---
 
-## 2. 方案架构
+## 二、总体方案
 
-### 2.1 整体架构
+### 2.1 方案概览
 
-![Dify 执行引擎隔离架构](assets/dify-execution-isolation/execution-engine-isolation-architecture-v1.svg)
+```mermaid
+flowchart LR
+    subgraph BEFORE[当前]
+        A1[普通应用] --> Q1[(共享 Queue)]
+        A2[核心应用] --> Q1
+        Q1 --> W1[共享 Worker]
+    end
 
-任务进入 Dify API 后，根据 App 的 `execution_pool` 选择执行 Queue。Default 与 Priority Worker 使用同一份 Dify 代码，区别只在消费的 Queue 和计算资源。
+    subgraph AFTER[改造后]
+        B1[普通应用] --> R[执行池路由]
+        B2[核心应用] --> R
+        R --> DQ[(Default Queue)]
+        R --> PQ[(Priority Queue)]
+        DQ --> DW[Default Worker]
+        PQ --> PW[Priority Worker]
+    end
+```
 
-### 2.2 执行池
+方案只增加一层“执行池路由”。App 发起 Workflow / Chatflow 执行时，根据自身的 `execution_pool` 选择 Queue；后续任务内容和执行方式对 Dify 来说保持一致。
 
-| 执行池 | App 配置 | Queue | Worker | 用途 |
+### 2.2 执行池划分
+
+| 执行池 | App 配置 | Queue | Worker | 使用场景 |
 | --- | --- | --- | --- | --- |
-| Default | `default` | `workflow_based_app_execution` | 现有 Worker | 普通应用，保持官方默认路径 |
-| Priority | `priority` | `workflow_based_app_execution_priority` | Priority Worker | 核心应用，独立执行资源 |
+| Default | `default` | `workflow_based_app_execution` | 现有 Worker | 普通应用 |
+| Priority | `priority` | `workflow_based_app_execution_priority` | 独立 Priority Worker | 核心应用 |
 
-### 2.3 改造边界
+这里的 Priority 表示独立执行资源池，不使用 Celery 单队列内部的任务优先级机制。
 
-| 公司二开负责 | Dify 1.17.1 继续负责 |
+### 2.3 隔离范围
+
+| 独立资源 | 继续共享 |
 | --- | --- |
-| App 绑定 Default / Priority 执行池 | Workflow / Chatflow 定义与解析 |
-| 根据 App 选择 Celery Queue | `workflow_based_app_execution_task` 任务执行 |
-| Priority Worker 独立部署和资源配置 | AppGenerator / GraphEngine |
-| 两个执行池的运行监控 | WorkflowRun、暂停恢复、SSE、结果返回 |
+| Default / Priority Queue | Dify API / Web |
+| Default / Priority Worker | PostgreSQL |
+| Worker CPU / Memory | Redis / Celery Broker |
+| Worker replicas | Plugin Daemon / Sandbox |
+| 任务消费能力 | Dify Workflow / Chatflow 执行代码 |
+
+执行隔离的核心是 **Queue 隔离 + Worker 计算资源隔离**，不是部署两套完整 Dify。
 
 ---
 
-## 3. 执行流程
+## 三、核心架构
 
-### 3.1 请求执行时序
+### 3.1 整体架构
+
+![Dify 执行引擎隔离整体架构](assets/dify-execution-isolation/execution-engine-isolation-architecture-v1.svg)
+
+普通应用进入 Default Pool，核心应用进入 Priority Pool。两组 Worker 最终调用同一套 Dify 1.17.1 执行代码，因此二开只影响任务被哪组 Worker 消费，不改变 Workflow / Chatflow 的执行语义。
+
+### 3.2 核心模块
+
+| 模块 | 职责 | 实现方式 |
+| --- | --- | --- |
+| App Execution Policy | 记录 App 使用哪个执行池 | App 增加 `execution_pool` 字段 |
+| Execution Queue Router | 将执行池映射到目标 Queue | `default → Default Queue`，`priority → Priority Queue` |
+| Default Queue | 承接普通应用任务 | 沿用官方 `workflow_based_app_execution` |
+| Priority Queue | 承接核心应用任务 | 新增 `workflow_based_app_execution_priority` |
+| Default Worker | 执行普通任务 | 沿用现有 Worker |
+| Priority Worker | 执行核心任务 | 使用同一 Dify 制品，独立部署并只监听 Priority Queue |
+| Dify Execution Engine | 真正执行 Workflow / Chatflow | 完全复用 1.17.1 官方链路 |
+
+---
+
+## 四、执行流程
+
+### 4.1 首次执行
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
+    participant U as Client
     participant API as Dify API
     participant AG as AppGenerateService
     participant R as ExecutionQueueRouter
-    participant DB as PostgreSQL
-    participant Q as Celery / Redis
+    participant Q as Celery Queue
     participant W as Worker
-    participant E as Dify Execution Engine
+    participant E as Dify 原生执行链路
 
-    C->>API: 调用 Workflow / Chatflow
+    U->>API: 执行 Workflow / Chatflow
     API->>AG: generate(app)
-    AG->>R: resolve(app_id)
-    R->>DB: 读取 execution_pool
-    DB-->>R: default / priority
-    R-->>AG: queue_name
+    AG->>R: resolve(app.execution_pool)
 
-    alt Default
-        AG->>Q: apply_async(queue=workflow_based_app_execution)
+    alt default
+        R-->>AG: workflow_based_app_execution
+        AG->>Q: 投递 Default Queue
         Q->>W: Default Worker 消费
-    else Priority
-        AG->>Q: apply_async(queue=workflow_based_app_execution_priority)
+    else priority
+        R-->>AG: workflow_based_app_execution_priority
+        AG->>Q: 投递 Priority Queue
         Q->>W: Priority Worker 消费
     end
 
     W->>E: workflow_based_app_execution_task
     E->>E: AppGenerator → GraphEngine
-    E-->>C: SSE / Result
+    E-->>U: SSE / Result
 ```
 
-### 3.2 隔离效果
+### 4.2 暂停与恢复
+
+Human Input 等场景恢复执行时，需要继续使用原 App 的执行池，避免 Priority 任务恢复后重新进入 Default Pool。
+
+```mermaid
+sequenceDiagram
+    participant H as Human Input
+    participant S as HumanInputService
+    participant R as ExecutionQueueRouter
+    participant Q as Celery Queue
+    participant W as 对应 Worker Pool
+    participant E as Dify Resume
+
+    H->>S: 提交恢复操作
+    S->>R: 根据 workflow_run.app_id 获取 execution_pool
+    R-->>S: Default Queue / Priority Queue
+    S->>Q: resume_app_execution.apply_async(queue=...)
+    Q->>W: 对应 Worker 消费
+    W->>E: 恢复官方 Workflow 执行
+```
+
+### 4.3 隔离效果
 
 ```mermaid
 flowchart LR
-    subgraph D[Default Pool]
-        DQ[(Default Queue<br/>任务大量积压)]
-        DW[现有 Worker<br/>Busy]
-        DQ --> DW
-    end
+    A[大量普通任务] --> DQ[(Default Queue<br/>持续积压)]
+    DQ --> DW[Default Worker<br/>Busy]
 
-    subgraph P[Priority Pool]
-        PQ[(Priority Queue)]
-        PW[Priority Worker<br/>独立资源]
-        PQ --> PW
-    end
+    B[核心任务] --> PQ[(Priority Queue)]
+    PQ --> PW[Priority Worker<br/>独立 CPU / Memory]
+    PW --> E[Dify 官方执行]
 
-    A[普通应用] --> DQ
-    B[核心应用] --> PQ
-
-    DW --> E1[Dify 官方执行逻辑]
-    PW --> E2[Dify 官方执行逻辑]
+    DQ -.不占用.-> PW
 ```
+
+Default Pool 出现积压时，只影响普通应用；Priority Pool 仍由独立 Worker 消费核心任务。
 
 ---
 
-## 4. 具体实现
+## 五、具体实现
 
-### 4.1 App 执行策略
+### 5.1 App 执行池配置
 
-第一版只提供两个固定执行池，在 `App` 增加一个执行策略字段。
+第一版固定两个执行池，不增加执行池管理表。
 
-| 字段 | 类型 | 默认值 | 说明 |
+| 字段 | 类型 | 默认值 | 可选值 |
 | --- | --- | --- | --- |
-| `execution_pool` | Enum / String | `default` | 可选 `default`、`priority` |
+| `apps.execution_pool` | `varchar(32)` | `default` | `default` / `priority` |
 
-未配置的历史 App 统一按 `default` 处理，不改变原有执行行为。
+历史 App 在 Migration 后统一使用 `default`，只有明确配置为核心应用的 App 才进入 Priority Pool。
 
-### 4.2 Queue Router
+管理员配置关系：
 
-新增轻量 `ExecutionQueueRouter`，只做 App 执行池到 Queue 的映射。
+```mermaid
+flowchart LR
+    A[App] --> P{execution_pool}
+    P -->|default| D[Default Pool]
+    P -->|priority| R[Priority Pool]
+```
+
+### 5.2 Queue 路由
+
+Dify 1.17.1 当前在 `AppGenerateService` 中通过 `workflow_based_app_execution_task.delay(payload_json)` 投递任务。改造后在投递前解析 Queue，并使用 `apply_async` 显式指定。
 
 ```python
 DEFAULT_QUEUE = "workflow_based_app_execution"
 PRIORITY_QUEUE = "workflow_based_app_execution_priority"
 
-def resolve_execution_queue(app):
-    if app.execution_pool == "priority":
-        return PRIORITY_QUEUE
-    return DEFAULT_QUEUE
+class ExecutionQueueRouter:
+    @staticmethod
+    def resolve(app) -> str:
+        if app.execution_pool == "priority":
+            return PRIORITY_QUEUE
+        return DEFAULT_QUEUE
 ```
 
-Dify 1.17.1 当前在 `AppGenerateService` 中通过 `workflow_based_app_execution_task.delay(payload_json)` 入队。改造后使用显式 Queue：
+投递逻辑：
 
 ```python
-queue = ExecutionQueueRouter.resolve_execution_queue(app_model)
+queue = ExecutionQueueRouter.resolve(app_model)
 
 workflow_based_app_execution_task.apply_async(
     args=[payload_json],
@@ -151,77 +226,111 @@ workflow_based_app_execution_task.apply_async(
 )
 ```
 
-### 4.3 改造点
+Router 只做固定映射，不维护任务状态、不计算动态优先级，也不参与 Workflow 内部执行。
 
-| 位置 | 当前 1.17.1 行为 | 修改 |
+### 5.3 Worker 执行
+
+两组 Worker 使用 **同一份 Dify 1.17.1 后端制品**，区别只在监听 Queue 和分配的计算资源。
+
+| Worker | 监听 Queue | 执行代码 |
 | --- | --- | --- |
-| `models.model.App` | 无执行池字段 | 增加 `execution_pool` |
-| `services/app_generate_service.py` | `.delay(payload_json)` 进入固定 Queue | 入队前调用 Router，改为 `apply_async(queue=...)` |
-| Workflow 恢复 / Resume 入队入口 | 使用固定执行 Queue | 根据对应 App 再次选择同一执行池 |
-| `workflow_execute_task.py` | 执行 AppRunner / AppGenerator / GraphEngine | 不修改任务执行逻辑 |
-| Worker 启动配置 | 现有 Worker 消费官方 Queue 列表 | 新增 Priority Worker，只消费 Priority Queue |
+| Default Worker | 原有 Queue 列表，其中包含 `workflow_based_app_execution` | Dify 1.17.1 |
+| Priority Worker | `workflow_based_app_execution_priority` | Dify 1.17.1 |
 
-### 4.4 路由规则
-
-| 场景 | 处理 |
-| --- | --- |
-| `execution_pool=default` | 进入官方 `workflow_based_app_execution` |
-| `execution_pool=priority` | 进入 `workflow_based_app_execution_priority` |
-| 字段为空或历史数据 | 按 `default` 处理 |
-| Priority Worker 暂时不可用 | 任务保留在 Priority Queue 等待，不转入 Default Pool |
-| Workflow 暂停后恢复 | 按原 App 的 `execution_pool` 重新入队 |
-
-### 4.5 验证
-
-| 测试 | 预期 |
-| --- | --- |
-| 普通 App 执行 | 进入 Default Queue，由现有 Worker 执行 |
-| Priority App 执行 | 进入 Priority Queue，由 Priority Worker 执行 |
-| Default Queue 大量积压 | Priority App 仍可被 Priority Worker 正常消费 |
-| Priority Queue 大量积压 | 不占用 Default Worker |
-| Workflow / Chatflow 执行结果 | 与官方 1.17.1 行为一致 |
-| Streaming / SSE | 路由变化不影响事件返回 |
-| Pause / Resume | 恢复任务仍进入原 App 对应执行池 |
-
----
-
-## 5. 部署方案
-
-### 5.1 部署架构
-
-![Dify 执行引擎隔离部署架构](assets/dify-execution-isolation/execution-engine-isolation-deployment-v1.svg)
-
-### 5.2 组件调整
-
-| 组件 | 处理 | Queue |
-| --- | --- | --- |
-| API | 沿用当前部署，增加执行池路由逻辑 | 负责选择 Queue |
-| 现有 Worker | 保持当前部署和资源配置 | 继续消费原有 Queue，包含 `workflow_based_app_execution` |
-| Priority Worker | 新增独立 Deployment / 容器实例 | 只消费 `workflow_based_app_execution_priority` |
-| Redis / Celery Broker | 共享现有基础设施 | 两个 Queue 共用 Broker |
-| PostgreSQL | 共享 | 保存 App 的 `execution_pool` |
-| Plugin Daemon / Sandbox | 共享 | 无改动 |
-
-### 5.3 Worker 启动
-
-现有 Worker 不增加 Priority Queue，继续保持当前 Queue 列表。
-
-Priority Worker 使用同一份 Dify API/Worker 制品，只修改消费 Queue：
+Priority Worker：
 
 ```bash
 cp .env.test .env && uv run celery -A app.celery worker -P gevent -c 1 --loglevel INFO -Q workflow_based_app_execution_priority
 ```
 
-Priority Worker 在 DevOps 中使用独立实例配置 CPU、Memory 和副本数，实现真正的执行计算资源隔离。
+### 5.4 Dify 原生执行链路
+
+```mermaid
+flowchart LR
+    W[Default / Priority Worker]
+    W --> T[workflow_based_app_execution_task]
+    T --> R[AppRunner]
+    R --> G[WorkflowAppGenerator / AdvancedChatAppGenerator]
+    G --> GE[GraphEngine]
+    GE --> N[Workflow Nodes]
+    N --> O[SSE / Result / WorkflowRun]
+```
+
+这一段不做执行协议转换，两组 Worker 都直接进入官方 `workflow_based_app_execution_task`。
+
+需要改动的代码位置集中在：
+
+| 位置 | 修改内容 |
+| --- | --- |
+| App Model / Migration | 增加 `execution_pool` |
+| App 配置接口 | 读取和修改 App 执行池 |
+| `services/app_generate_service.py` | 首次执行入队时选择 Queue |
+| `services/human_input_service.py` | `resume_app_execution` 恢复时选择 Queue |
+| Worker 部署配置 | 新增 Priority Worker 和 Priority Queue |
+
+### 5.5 测试验证
+
+| 场景 | 验证方式 | 预期 |
+| --- | --- | --- |
+| 普通 App 执行 | 查看 Celery routing key / Worker 日志 | 只进入 Default Queue |
+| 核心 App 执行 | 查看 Priority Worker 日志 | 只进入 Priority Queue |
+| Default Queue 积压 | 连续提交大量普通任务，同时执行核心 App | 核心 App 仍由 Priority Worker 消费 |
+| Priority Queue 积压 | 连续提交核心任务 | 不占用 Default Worker |
+| Workflow / Chatflow | 对比改造前后输出 | 执行结果一致 |
+| Streaming / SSE | 执行流式 Workflow | 事件正常返回 |
+| Human Input Resume | 暂停后恢复 Priority App | 仍进入 Priority Queue |
+| Worker 重启 | 重启 Priority Worker | Queue 中待执行任务继续被消费 |
 
 ---
 
-## 6. 实施排期
+## 六、上线部署
 
-| 阶段 | 工作内容 | 产出 | 预计 |
-| --- | --- | --- | --- |
-| 1 | 确认 1.17.1 App 执行、入队、Resume 链路 | 改造点清单 | 0.5 天 |
-| 2 | 增加 `execution_pool`、ExecutionQueueRouter 和动态 Queue 入队 | 后端代码与 Migration | 1 天 |
-| 3 | 新增 Priority Worker 部署和 Queue 配置 | 独立 Worker 实例 | 0.5 天 |
-| 4 | Default / Priority 路由、积压隔离、SSE、Pause / Resume 测试 | 测试结果 | 1 天 |
-| 5 | 测试环境灰度核心 App 并验证资源隔离 | 可上线版本 | 0.5 天 |
+### 6.1 部署架构
+
+![Dify 执行引擎隔离部署架构](assets/dify-execution-isolation/execution-engine-isolation-deployment-v1.svg)
+
+### 6.2 组件调整
+
+| 组件 | 当前 | 改造后 |
+| --- | --- | --- |
+| Dify API | 官方执行任务直接进入默认 Queue | 增加 Execution Queue Router |
+| PostgreSQL | App 无执行池配置 | App 保存 `execution_pool` |
+| Redis / Celery | 官方 Queue | 在同一 Broker 中新增 Priority Queue |
+| Default Worker | 消费现有 Queue 列表 | 保持现状，不监听 Priority Queue |
+| Priority Worker | 无 | 新增独立 Deployment，只监听 Priority Queue |
+| Plugin Daemon / Sandbox | 当前共享部署 | 保持共享 |
+| Web / API 入口 | 当前部署 | 保持不变 |
+
+### 6.3 Worker 资源配置
+
+```mermaid
+flowchart TB
+    subgraph D[Default Worker Deployment]
+        D1[Pod 1]
+        D2[Pod 2]
+        DR[Default replicas]
+    end
+
+    subgraph P[Priority Worker Deployment]
+        P1[Pod 1]
+        PR[独立 replicas]
+    end
+
+    DC[Default CPU / Memory] --> D
+    PC[Priority CPU / Memory] --> P
+```
+
+Priority Worker 在 DevOps 中作为独立部署实例配置 CPU、Memory 和 replicas。Redis、PostgreSQL、Plugin Daemon 等基础设施继续复用当前 1.17.1 环境。
+
+---
+
+## 七、实施计划
+
+| 阶段 | 工作内容 | 产出 | 预计 | 状态 |
+| --- | --- | --- | --- | --- |
+| 第 1 阶段 | 梳理首次执行、Human Input Resume 等执行入队入口 | 执行链路与改造点清单 | 0.5 天 | 待开展 |
+| 第 2 阶段 | 增加 `execution_pool`、配置接口和 Execution Queue Router | 后端代码、Migration | 1 天 | 待开展 |
+| 第 3 阶段 | 首次执行与 Resume 接入动态 Queue 路由 | Default / Priority 路由链路 | 0.5 天 | 待开展 |
+| 第 4 阶段 | 新增 Priority Worker 部署及独立资源配置 | Priority Worker 实例 | 0.5 天 | 待开展 |
+| 第 5 阶段 | 完成路由、积压隔离、Workflow / Chatflow、SSE、Resume 测试 | 测试结果 | 1 天 | 待开展 |
+| 第 6 阶段 | 测试环境灰度核心 App 并完成上线验证 | 可上线版本 | 0.5 天 | 待开展 |
