@@ -145,19 +145,68 @@ flowchart LR
 
 ## 四、具体实现
 
-### 4.1 App 执行池配置
+这一部分只做两类改动：**代码侧负责“任务进哪个 Queue”**，**部署侧负责“哪个 Worker 消费这个 Queue、给多少资源”**。Workflow / Chatflow 的实际执行代码不改。
 
-第一版固定两个执行池，不增加执行池管理表。
+### 4.1 改造总览
+
+| 层次 | 要改什么 | 是否新增业务逻辑 |
+| --- | --- | --- |
+| App | 增加 `execution_pool` 字段 | 是，记录 `default / priority` |
+| API 入队 | 根据 `execution_pool` 选择 Queue | 是，增加一层固定路由 |
+| Celery Queue | 增加 `workflow_based_app_execution_priority` | 否，直接使用 Celery Queue |
+| Worker | 新增一份 Priority Worker 部署 | 否，复用同一份 Dify Worker 代码 |
+| Workflow 执行 | AppGenerator、GraphEngine、SSE、WorkflowRun | 不改 |
+| Pause / Resume | 恢复任务重新按 App 选择 Queue | 是，复用同一个路由逻辑 |
+
+整体改动关系：
+
+```mermaid
+flowchart LR
+    A[App.execution_pool]
+    A --> R[ExecutionQueueRouter]
+    R -->|default| DQ[(Default Queue)]
+    R -->|priority| PQ[(Priority Queue)]
+    DQ --> DW[现有 Worker 部署]
+    PQ --> PW[新增 Priority Worker 部署]
+    DW --> E[Dify 原生执行]
+    PW --> E
+```
+
+### 4.2 第一步：给 App 增加执行池标记
+
+在 App 上增加一个字段，用来表示这个应用应该走哪组执行资源。
 
 | 字段 | 类型 | 默认值 | 可选值 |
 | --- | --- | --- | --- |
 | `apps.execution_pool` | `varchar(32)` | `default` | `default` / `priority` |
 
-历史 App 默认使用 `default`，核心应用单独配置为 `priority`。
+示例：
 
-### 4.2 Queue 路由
+```text
+普通 App
+execution_pool = default
 
-Dify 1.17.1 当前在 `AppGenerateService` 中通过 `workflow_based_app_execution_task.delay(payload_json)` 投递任务。改造后在投递前解析 Queue，并使用 `apply_async` 指定目标 Queue。
+核心 App
+execution_pool = priority
+```
+
+历史 App 默认都是 `default`，因此现有应用不会改变执行路径。
+
+### 4.3 第二步：任务入队时选择 Queue
+
+Dify 1.17.1 当前在 `AppGenerateService` 中直接：
+
+```python
+workflow_based_app_execution_task.delay(payload_json)
+```
+
+任务因此进入官方默认 Queue：
+
+```text
+workflow_based_app_execution
+```
+
+改造后，在投递任务前增加一个很薄的 Router：
 
 ```python
 DEFAULT_QUEUE = "workflow_based_app_execution"
@@ -171,6 +220,8 @@ class ExecutionQueueRouter:
         return DEFAULT_QUEUE
 ```
 
+然后把固定投递改成：
+
 ```python
 queue = ExecutionQueueRouter.resolve(app_model)
 
@@ -180,45 +231,123 @@ workflow_based_app_execution_task.apply_async(
 )
 ```
 
-### 4.3 Worker 执行
+最终就是：
 
-两组 Worker 使用同一份 Dify 1.17.1 后端制品。
+| App 配置 | 投递 Queue |
+| --- | --- |
+| `execution_pool=default` | `workflow_based_app_execution` |
+| `execution_pool=priority` | `workflow_based_app_execution_priority` |
 
-| Worker | 监听 Queue | 执行代码 |
-| --- | --- | --- |
-| Default Worker | 原有 Queue 列表，包含 `workflow_based_app_execution` | Dify 1.17.1 |
-| Priority Worker | `workflow_based_app_execution_priority` | Dify 1.17.1 |
+Router 只负责这个映射，不做任务调度、优先级计算和执行状态管理。
 
-Priority Worker：
+### 4.4 第三步：增加 Priority Queue
+
+这里不需要在 Dify 里开发一个“Queue 模块”。
+
+Dify 本身使用 Celery，现有 Worker 启动命令已经通过 `-Q` 同时监听多个 Queue，例如：
+
+```bash
+-Q dataset,...,workflow,workflow_based_app_execution,...
+```
+
+因此新增隔离队列只需要统一使用一个新的 Queue 名称：
+
+```text
+workflow_based_app_execution_priority
+```
+
+任务投递时指定这个名称，Priority Worker 启动时监听同一个名称即可。Queue 的传递、存储和消费仍由 Celery + Redis Broker 负责。
+
+```mermaid
+flowchart LR
+    API[Dify API]
+    API -->|queue=workflow_based_app_execution| DQ[(Default Queue)]
+    API -->|queue=workflow_based_app_execution_priority| PQ[(Priority Queue)]
+```
+
+### 4.5 第四步：独立部署 Priority Worker
+
+这里**不开发新的 Worker 类，也不复制 Dify Worker 代码**。
+
+两组 Worker 都使用同一个 Dify 1.17.1 镜像，只是启动命令里的监听 Queue 不同。
+
+**现有 Default Worker：**
+
+继续使用当前启动命令，保留原有 Queue 列表，其中包含：
+
+```text
+workflow_based_app_execution
+```
+
+并且不要加入：
+
+```text
+workflow_based_app_execution_priority
+```
+
+**新增 Priority Worker：**
 
 ```bash
 cp .env.test .env && uv run celery -A app.celery worker -P gevent -c 1 --loglevel INFO -Q workflow_based_app_execution_priority
 ```
 
-### 4.4 Dify 原生执行链路
+因此代码关系是：
 
 ```mermaid
-flowchart LR
-    W[Default / Priority Worker]
-    W --> T[workflow_based_app_execution_task]
-    T --> R[AppRunner]
-    R --> G[AppGenerator]
-    G --> GE[GraphEngine]
-    GE --> N[Workflow Nodes]
-    N --> O[SSE / Result / WorkflowRun]
+flowchart TB
+    I[同一个 Dify 1.17.1 镜像]
+
+    I --> DW[Default Worker 实例]
+    I --> PW[Priority Worker 实例]
+
+    DW --> DQ[监听 Default Queue]
+    PW --> PQ[只监听 Priority Queue]
 ```
 
-需要修改的代码位置：
+真正的 CPU、Memory、replicas 不在代码里配置，而是在 DevOps / K8s 部署 Priority Worker 时单独设置。
 
-| 位置 | 修改内容 |
-| --- | --- |
-| App Model / Migration | 增加 `execution_pool` |
-| App 配置接口 | 读取和修改 App 执行池 |
-| `services/app_generate_service.py` | 首次执行时选择 Queue |
-| `services/human_input_service.py` | Resume 时选择 Queue |
-| Worker 部署配置 | 新增 Priority Worker |
+### 4.6 第五步：Pause / Resume 保持同一执行池
 
-### 4.5 测试验证
+Dify 1.17.1 的 Human Input 恢复路径会再次投递 `resume_app_execution`。
+
+如果只改首次执行，Priority App 暂停后恢复时可能重新进入默认 Queue，因此 Resume 入口也要复用同一个 Router：
+
+```python
+queue = ExecutionQueueRouter.resolve(app_model)
+
+resume_app_execution.apply_async(
+    kwargs={"payload": payload},
+    queue=queue,
+)
+```
+
+这样：
+
+```text
+Priority App 首次执行
+→ Priority Queue
+→ Pause
+
+Human Input 恢复
+→ 再读取 App.execution_pool
+→ Priority Queue
+→ Priority Worker
+```
+
+### 4.7 最终代码与部署改动
+
+| 改动位置 | 具体修改 | 类型 |
+| --- | --- | --- |
+| App Model | 增加 `execution_pool` | 代码 / Migration |
+| App 配置接口 | 支持读取、修改 `execution_pool` | 代码 |
+| `services/app_generate_service.py` | `.delay()` 改为根据 Router `apply_async(queue=...)` | 代码 |
+| `services/human_input_service.py` | Resume 时根据 Router 指定 Queue | 代码 |
+| Celery | 增加 Priority Queue 名称 | 配置 |
+| Default Worker | 保持现有部署，不监听 Priority Queue | 部署 |
+| Priority Worker | 同一镜像新增一个部署，只监听 Priority Queue | 部署 |
+| AppGenerator / GraphEngine | 不修改 | 无改动 |
+
+### 4.8 测试验证
 
 | 场景 | 验证方式 | 预期 |
 | --- | --- | --- |
