@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#EEF2FF"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5B8DEF"/>
+      <stop offset="1" stop-color="#3567D8"/>
+    </linearGradient>
+    <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8B6DF0"/>
+      <stop offset="1" stop-color="#6941C6"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#45C88A"/>
+      <stop offset="1" stop-color="#249D68"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#101828" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .t{font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;fill:#172033}
+      .title{font-size:32px;font-weight:700}
+      .sub{font-size:15px;fill:#667085}
+      .h{font-size:21px;font-weight:700}
+      .label{font-size:16px;font-weight:600}
+      .small{font-size:13px;fill:#667085}
+      .tiny{font-size:12px;fill:#667085}
+      .panel{fill:#FFFFFF;stroke:#D0D5DD;stroke-width:1.4}
+      .poolBlue{fill:#F7FAFF;stroke:#A9C4F5;stroke-width:1.6}
+      .poolViolet{fill:#FBF9FF;stroke:#C7B8F2;stroke-width:1.6}
+      .lineBlue{fill:none;stroke:#4F7FE5;stroke-width:3}
+      .lineViolet{fill:none;stroke:#7A5BD8;stroke-width:3}
+      .lineGray{fill:none;stroke:#98A2B3;stroke-width:2.2}
+    </style>
+    <marker id="arrB" markerWidth="11" markerHeight="11" refX="9" refY="3.5" orient="auto">
+      <path d="M0 0L0 7L10 3.5z" fill="#4F7FE5"/>
+    </marker>
+    <marker id="arrV" markerWidth="11" markerHeight="11" refX="9" refY="3.5" orient="auto">
+      <path d="M0 0L0 7L10 3.5z" fill="#7A5BD8"/>
+    </marker>
+    <marker id="arrG" markerWidth="11" markerHeight="11" refX="9" refY="3.5" orient="auto">
+      <path d="M0 0L0 7L10 3.5z" fill="#98A2B3"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="920" fill="url(#bg)"/>
+  <text x="800" y="50" text-anchor="middle" class="t title">Dify 执行引擎隔离整体架构</text>
+  <text x="800" y="78" text-anchor="middle" class="t sub">只改变任务进入哪个执行池；进入 Worker 后继续复用 Dify 1.17.1 原生执行链路</text>
+
+  <!-- App cards -->
+  <g filter="url(#shadow)">
+    <rect x="90" y="125" width="370" height="118" rx="22" class="panel"/>
+    <rect x="1140" y="125" width="370" height="118" rx="22" class="panel"/>
+  </g>
+
+  <rect x="120" y="151" width="66" height="66" rx="17" fill="#EDF4FF"/>
+  <path d="M136 167h34v25h-34zM136 174h34" fill="none" stroke="#3567D8" stroke-width="2.4"/>
+  <circle cx="142" cy="170.5" r="1.5" fill="#3567D8"/>
+  <circle cx="148" cy="170.5" r="1.5" fill="#3567D8"/>
+  <text x="210" y="171" class="t h">普通应用</text>
+  <text x="210" y="197" class="t small">execution_pool = default</text>
+  <text x="210" y="218" class="t tiny">使用默认执行资源</text>
+
+  <rect x="1170" y="151" width="66" height="66" rx="17" fill="#F4F0FF"/>
+  <path d="M1186 167h34v25h-34zM1186 174h34" fill="none" stroke="#6941C6" stroke-width="2.4"/>
+  <circle cx="1192" cy="170.5" r="1.5" fill="#6941C6"/>
+  <circle cx="1198" cy="170.5" r="1.5" fill="#6941C6"/>
+  <text x="1260" y="171" class="t h">核心应用</text>
+  <text x="1260" y="197" class="t small">execution_pool = priority</text>
+  <text x="1260" y="218" class="t tiny">使用独立执行资源</text>
+
+  <!-- Router -->
+  <g filter="url(#shadow)">
+    <rect x="585" y="126" width="430" height="116" rx="24" class="panel"/>
+  </g>
+  <rect x="615" y="151" width="66" height="66" rx="17" fill="#ECFDF3"/>
+  <path d="M632 166h32v8h-32zM632 181h32v8h-32zM632 196h20" fill="none" stroke="#249D68" stroke-width="2.6" stroke-linecap="round"/>
+  <text x="708" y="168" class="t h">Execution Queue Router</text>
+  <text x="708" y="195" class="t small">读取 App 的 execution_pool</text>
+  <text x="708" y="216" class="t tiny">映射到 Default / Priority Queue</text>
+
+  <path d="M460 184H575" class="lineBlue" marker-end="url(#arrB)"/>
+  <path d="M1140 184H1025" class="lineViolet" marker-end="url(#arrV)"/>
+
+  <!-- Pool panels -->
+  <g filter="url(#shadow)">
+    <rect x="120" y="330" width="570" height="360" rx="28" class="poolBlue"/>
+    <rect x="910" y="330" width="570" height="360" rx="28" class="poolViolet"/>
+  </g>
+
+  <text x="155" y="370" class="t h">Default Pool</text>
+  <text x="155" y="394" class="t small">普通应用执行资源</text>
+  <text x="945" y="370" class="t h">Priority Pool</text>
+  <text x="945" y="394" class="t small">核心应用独立执行资源</text>
+
+  <!-- Queue cylinders -->
+  <g filter="url(#shadow)">
+    <ellipse cx="405" cy="455" rx="175" ry="28" fill="#DCE9FF" stroke="#7AA2EE" stroke-width="1.5"/>
+    <rect x="230" y="455" width="350" height="54" fill="#EAF2FF" stroke="#7AA2EE" stroke-width="1.5"/>
+    <ellipse cx="405" cy="509" rx="175" ry="28" fill="#CFE0FF" stroke="#7AA2EE" stroke-width="1.5"/>
+
+    <ellipse cx="1195" cy="455" rx="175" ry="28" fill="#E9E1FF" stroke="#9C84EB" stroke-width="1.5"/>
+    <rect x="1020" y="455" width="350" height="54" fill="#F1EDFF" stroke="#9C84EB" stroke-width="1.5"/>
+    <ellipse cx="1195" cy="509" rx="175" ry="28" fill="#DFD4FF" stroke="#9C84EB" stroke-width="1.5"/>
+  </g>
+  <text x="405" y="465" text-anchor="middle" class="t label">Default Queue</text>
+  <text x="405" y="495" text-anchor="middle" class="t tiny">workflow_based_app_execution</text>
+  <text x="1195" y="465" text-anchor="middle" class="t label">Priority Queue</text>
+  <text x="1195" y="495" text-anchor="middle" class="t tiny">workflow_based_app_execution_priority</text>
+
+  <!-- Worker cubes -->
+  <g filter="url(#shadow)">
+    <path d="M245 585l58-30h204l58 30-58 30H303z" fill="#DCE9FF" stroke="#739CE9" stroke-width="1.4"/>
+    <path d="M245 585v55l58 30v-55z" fill="#C7DAFE" stroke="#739CE9" stroke-width="1.4"/>
+    <path d="M303 615h204v55H303z" fill="#F7FAFF" stroke="#739CE9" stroke-width="1.4"/>
+
+    <path d="M1035 585l58-30h204l58 30-58 30h-204z" fill="#EADFFF" stroke="#8F73E1" stroke-width="1.4"/>
+    <path d="M1035 585v55l58 30v-55z" fill="#D7C7FF" stroke="#8F73E1" stroke-width="1.4"/>
+    <path d="M1093 615h204v55h-204z" fill="#FBF9FF" stroke="#8F73E1" stroke-width="1.4"/>
+  </g>
+  <rect x="330" y="628" width="150" height="12" rx="5" fill="#DCE9FF"/>
+  <circle cx="466" cy="634" r="3.5" fill="#3567D8"/>
+  <rect x="1120" y="628" width="150" height="12" rx="5" fill="#E9E1FF"/>
+  <circle cx="1256" cy="634" r="3.5" fill="#6941C6"/>
+  <text x="405" y="657" text-anchor="middle" class="t label">Default Worker</text>
+  <text x="1195" y="657" text-anchor="middle" class="t label">Priority Worker</text>
+
+  <path d="M405 537V548" class="lineBlue" marker-end="url(#arrB)"/>
+  <path d="M1195 537V548" class="lineViolet" marker-end="url(#arrV)"/>
+
+  <!-- Router split -->
+  <path d="M720 242V286H405V320" class="lineBlue" marker-end="url(#arrB)"/>
+  <path d="M880 242V286H1195V320" class="lineViolet" marker-end="url(#arrV)"/>
+
+  <!-- Dify native runtime -->
+  <g filter="url(#shadow)">
+    <rect x="330" y="755" width="940" height="112" rx="26" class="panel"/>
+  </g>
+  <rect x="365" y="782" width="64" height="58" rx="16" fill="#ECFDF3"/>
+  <path d="M380 811h34M397 794v34" stroke="#249D68" stroke-width="2.8" stroke-linecap="round"/>
+  <text x="460" y="798" class="t h">Dify 1.17.1 原生执行链路</text>
+  <text x="460" y="826" class="t small">workflow task → AppGenerator → GraphEngine → Workflow Nodes</text>
+  <text x="460" y="848" class="t tiny">WorkflowRun、SSE、Pause / Resume 等继续沿用官方逻辑</text>
+
+  <path d="M405 690C455 730 520 742 610 752" class="lineGray" marker-end="url(#arrG)"/>
+  <path d="M1195 690C1145 730 1080 742 990 752" class="lineGray" marker-end="url(#arrG)"/>
+</svg>
