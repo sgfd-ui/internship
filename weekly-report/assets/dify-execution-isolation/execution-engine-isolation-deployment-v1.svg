@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="820" viewBox="0 0 1560 820">
+  <defs>
+    <linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b8def"/><stop offset="1" stop-color="#3567d8"/></linearGradient>
+    <linearGradient id="p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b6df0"/><stop offset="1" stop-color="#6941c6"/></linearGradient>
+    <filter id="s"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#172033" flood-opacity=".12"/></filter>
+    <style>.t{font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;fill:#172033}.title{font-size:30px;font-weight:760}.sub{font-size:14px;fill:#667085}.h{font-size:20px;font-weight:700}.l{font-size:15px;font-weight:650}.sm{font-size:13px;fill:#667085}.panel{fill:#fff;stroke:#d0d5dd;stroke-width:1.4}.line{fill:none;stroke:#98a2b3;stroke-width:2}.bl{fill:none;stroke:#4f7fe5;stroke-width:3}.pl{fill:none;stroke:#7a5bd8;stroke-width:3}</style>
+    <marker id="ab" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#4f7fe5"/></marker>
+    <marker id="ap" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#7a5bd8"/></marker>
+  </defs>
+  <rect width="1560" height="820" fill="#f8fafc"/>
+  <text x="780" y="50" text-anchor="middle" class="t title">部署形态：保留现有 Worker，新建 Priority Worker</text>
+  <text x="780" y="78" text-anchor="middle" class="t sub">共享 API / Redis / PostgreSQL / Plugin，仅 Priority Worker 独立申请计算资源</text>
+
+  <g filter="url(#s)">
+    <rect x="95" y="125" width="1370" height="145" rx="24" class="panel"/>
+  </g>
+  <text x="130" y="160" class="t h">共享 Dify 运行层</text>
+  <g transform="translate(150,185)"><rect width="205" height="56" rx="16" fill="#eef4ff"/><circle cx="31" cy="28" r="15" fill="url(#b)"/><path d="M23 28h16M31 20v16" stroke="#fff" stroke-width="2.5"/><text x="56" y="34" class="t l">API / Web</text></g>
+  <g transform="translate(405,185)"><rect width="205" height="56" rx="16" fill="#effcf7"/><ellipse cx="31" cy="23" rx="14" ry="6" fill="none" stroke="#249d68" stroke-width="2"/><path d="M17 23v13c0 4 6 7 14 7s14-3 14-7V23" fill="none" stroke="#249d68" stroke-width="2"/><text x="58" y="34" class="t l">PostgreSQL</text></g>
+  <g transform="translate(660,185)"><rect width="205" height="56" rx="16" fill="#fff7ed"/><rect x="18" y="16" width="26" height="26" rx="5" fill="#f79009"/><path d="M24 29h14" stroke="#fff" stroke-width="2.5"/><text x="58" y="34" class="t l">Redis / Celery</text></g>
+  <g transform="translate(915,185)"><rect width="205" height="56" rx="16" fill="#f4f0ff"/><path d="M31 15l14 8v16l-14 8-14-8V23z" fill="url(#p)"/><text x="58" y="34" class="t l">Plugin Daemon</text></g>
+  <g transform="translate(1170,185)"><rect width="205" height="56" rx="16" fill="#f2f4f7"/><path d="M18 18h28v22H18zM18 24h28" fill="none" stroke="#667085" stroke-width="2"/><text x="58" y="34" class="t l">Sandbox</text></g>
+
+  <!-- queues -->
+  <g filter="url(#s)">
+    <ellipse cx="410" cy="385" rx="170" ry="30" fill="#dce9ff" stroke="#739ce9" stroke-width="1.4"/>
+    <rect x="240" y="385" width="340" height="65" fill="#eaf2ff" stroke="#739ce9" stroke-width="1.4"/>
+    <ellipse cx="410" cy="450" rx="170" ry="30" fill="#cfe0ff" stroke="#739ce9" stroke-width="1.4"/>
+    <ellipse cx="1150" cy="385" rx="170" ry="30" fill="#eadfff" stroke="#8f73e1" stroke-width="1.4"/>
+    <rect x="980" y="385" width="340" height="65" fill="#f1edff" stroke="#8f73e1" stroke-width="1.4"/>
+    <ellipse cx="1150" cy="450" rx="170" ry="30" fill="#dfd4ff" stroke="#8f73e1" stroke-width="1.4"/>
+  </g>
+  <text x="410" y="396" text-anchor="middle" class="t l">workflow_based_app_execution</text>
+  <text x="410" y="430" text-anchor="middle" class="t sm">官方默认 Queue</text>
+  <text x="1150" y="396" text-anchor="middle" class="t l">workflow_based_app_execution_priority</text>
+  <text x="1150" y="430" text-anchor="middle" class="t sm">新增隔离 Queue</text>
+
+  <path d="M680 270C620 310 540 330 465 350" class="bl" marker-end="url(#ab)"/>
+  <path d="M880 270C940 310 1020 330 1095 350" class="pl" marker-end="url(#ap)"/>
+
+  <!-- deployments -->
+  <g filter="url(#s)">
+    <rect x="165" y="535" width="490" height="205" rx="24" fill="#fff" stroke="#b7c9ef" stroke-width="1.6"/>
+    <rect x="905" y="535" width="490" height="205" rx="24" fill="#fff" stroke="#c8b7f3" stroke-width="1.6"/>
+  </g>
+  <rect x="195" y="565" width="105" height="105" rx="18" fill="#edf4ff"/>
+  <path d="M213 595l35-18 35 18-35 18z" fill="#c9dafe" stroke="#3567d8"/><path d="M213 595v39l35 18v-39z" fill="#b3caf8" stroke="#3567d8"/><path d="M248 613l35-18v39l-35 18z" fill="#e7efff" stroke="#3567d8"/>
+  <text x="325" y="585" class="t h">现有 Worker Deployment</text>
+  <text x="325" y="616" class="t sm">继续消费原有 Queue 列表</text>
+  <text x="325" y="643" class="t l">包含 Default Execution Queue</text>
+  <text x="325" y="675" class="t sm">现有副本数 / CPU / Memory 可保持不变</text>
+  <text x="325" y="704" class="t sm">不消费 Priority Queue</text>
+
+  <rect x="935" y="565" width="105" height="105" rx="18" fill="#f4f0ff"/>
+  <path d="M953 595l35-18 35 18-35 18z" fill="#dfd4ff" stroke="#6941c6"/><path d="M953 595v39l35 18v-39z" fill="#cdbbff" stroke="#6941c6"/><path d="M988 613l35-18v39l-35 18z" fill="#f2edff" stroke="#6941c6"/>
+  <text x="1065" y="585" class="t h">Priority Worker Deployment</text>
+  <text x="1065" y="616" class="t sm">新增独立 Deployment / Pod</text>
+  <text x="1065" y="643" class="t l">只消费 Priority Execution Queue</text>
+  <text x="1065" y="675" class="t sm">独立 CPU / Memory / replicas</text>
+  <text x="1065" y="704" class="t sm">与普通任务不竞争 Worker 计算资源</text>
+
+  <path d="M410 480V525" class="bl" marker-end="url(#ab)"/>
+  <path d="M1150 480V525" class="pl" marker-end="url(#ap)"/>
+</svg>
