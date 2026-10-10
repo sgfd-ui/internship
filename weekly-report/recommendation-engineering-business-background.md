@@ -716,7 +716,85 @@ flowchart TD
 
 ![召回、特征和排序数据服务分层图](./assets/recommendation-engineering/recall-feature-data-architecture.svg)
 
-### 7.1 场景召回和特征配置实例
+### 7.1 召回服务、数据服务与数据源的关系
+
+在星图配置里，**召回服务（Recall Service）不直接等于一张 Redis 表**。它通常指定调用哪个数据服务、使用哪个数据版本、候选如何处理；数据服务再描述真实的数据源、业务 Data ID、Key 规则和返回类型。
+
+以提供的店铺热销商品召回为例：
+
+~~~yaml
+recallServices:
+  storeHotSaleRecall:
+    processor: redisProcessor
+    personalization: false
+    recallId: h1
+    dataService:
+      name: hotSale
+      version: 1
+    needLevel: 2
+
+dataServices:
+  hotSale:
+    dataSource: storeRecallData
+    dataId: hot_sale
+    version: 1
+    key: "{<context.appId>_<context.storeId>}_<dataId>_<version>"
+    value: java.util.ArrayList
+~~~
+
+其中：
+
+- **storeHotSaleRecall**：本次策略引用的召回组件名称。
+- **processor: redisProcessor**：使用 Redis 查询处理器；并不意味着所有召回都基于 Redis。
+- **personalization: false**：这个召回示例不按用户个性化查询。
+- **recallId: h1**：召回来源标识，后续合并、排序和效果分析可以用它标记候选来源。
+- **hotSale**：数据服务名称；通过 dataSource 找到对应在线数据存储。
+- **dataId: hot_sale、version: 1**：决定具体的业务数据及版本。
+- **key**：由应用、店铺、数据 ID 和版本拼成实际存储键。
+- **needLevel: 2**：该召回组件的运行等级要求，与分层限流/降级配置相关，不是“召回质量分数”。
+
+例如原文给出的查询 Key 为：
+
+~~~text
+{SL201_1655692394963}_hot_sale_1
+~~~
+
+这一串由应用、店铺、数据名、版本构成，Redis 里的值是该店铺热销召回候选列表。实际 Key 的命名空间、Hash Slot 与部署分片由存储配置决定，不能仅凭示例推断所有 Redis 集群规则。
+
+### 7.2 多路召回如何批量查询
+
+同一请求可能选中十几个召回组件。如果每个组件都独立串行访问 Redis，会造成额外网络开销。提供的星图查询方案采用**按 DataSource 分组、组内按 Slot 分组、再用 Jedis Pipeline 批量发送**的方式：
+
+~~~mermaid
+flowchart TD
+    A["本次策略中的多路 Recall"] --> B["按 DataSource 分组"]
+    B --> C["同一数据源内部按 Key / Redis Slot 分组"]
+    C --> D["Jedis Pool / Pipeline 批量发送命令"]
+    D --> E["取回各召回结果"]
+    E --> F["合并、去重及权重计算"]
+    F --> G["过滤、补全和排序"]
+~~~
+
+**Pipeline 解决的是减少同一数据源内多条读取命令的往返成本**，并不是把不同召回算法都变成同一条 Redis 命令。ES 召回、向量召回等要走各自的查询实现。
+
+对于出现在多个召回通道里的同一商品，星图还需要保留召回来源信息、按合并规则加权，才能交给后续过滤与排序组件。
+
+### 7.3 召回数据与特征数据的区别
+
+- **Recall Data**：面向“找候选”，例如“这个店铺最近热销的前 100 个商品 ID”。
+- **Feature Data**：面向“描述用户/商品”，例如用户最近浏览记录、品类偏好或商品属性。
+
+图中两类数据都可能通过 Tahm 同步，底层可采用索引型数据、KV 数据或向量数据。索引型通常通过 ES 类服务检索，KV 型通常通过 Redis 按 Key 读取；**向量数据只在相关业务配置需要时使用，不是所有召回或排序的必经步骤**。
+
+特征服务提供查询接口，并可被 Recall、Filter、Rank 复用；RankService 会额外根据模型声明的 needFeatures 获取排序所需特征。
+
+### 7.4 召回结果与质量问题
+
+工程侧主要检查**数据能否读取、接口延迟、返回量和同步延迟**；算法侧主要检查**数据覆盖率、不同召回源的重合度、候选质量和策略效果**。
+
+历史记录里提到的“多个召回源高度重复”属于召回多样性问题；“Redis 查不到 Key”则可能是上游未生产、同步异常、版本/Key 配置错误或过期等问题。**两类问题表现都可能是候选不足，但排查方向不同。**
+
+### 7.5 场景召回和特征配置实例
 
 #### 场景配置
 
