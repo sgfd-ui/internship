@@ -2399,9 +2399,9 @@ flowchart TD
 
 ---
 
-## 18. 资料索引与范围说明
+## 20. 资料索引与范围说明
 
-### 18.1 本次整理覆盖的资料
+### 20.1 本次整理覆盖的资料
 
 | 资料 | 核心内容 |
 | --- | --- |
@@ -2421,8 +2421,15 @@ flowchart TD
 | 星图分层架构与应用截图 | 应用、接入、管控、引擎、数据处理及业务入口，见第3章 |
 | 星图在线能力与概念图 | 召回、精排、重排、AB实验，见第5、6、7、8章 |
 | 重新绘制的模块图 | 第3章总体架构、第5章执行流程、第7章召回/特征/模型数据服务 |
+| 组合商品推荐优化方案 | 第18章：1004专用方案、在线生产组合、优质组合灌入、自定义过滤和粗排 |
+| 双十一搜索/推荐压测计划 | 第19章：270 QPS、450 QPS两版在线目标及10月23日离线更新TPS混合压测 |
 
-### 18.2 关联文档
+### 20.2 关联文档
+
+- [组合商品算法优化方案](https://shopline.yuque.com/rbxwgy/onb4p4/axr6cculdwfivc55)
+- [组合商品成本优化方案](https://shopline.yuque.com/rbxwgy/onb4p4/tk6po7oqguwywsvz)
+- [历史双十一流量与压力背景](https://shopline.yuque.com/rbxwgy/hffs66/wtvhvyzzm4xu1l1q)
+- [历史离线更新压测文档](https://shopline.yuque.com/staff-gznel5/nqmag1/sz7o3vh91rk068uw)
 
 - [RAP 店铺绑定支持层级方案（语雀）](https://shopline.yuque.com/rbxwgy/onb4p4/np6dg1gztyg5g7zn)
 
