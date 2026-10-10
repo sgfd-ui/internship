@@ -507,21 +507,24 @@ flowchart LR
 
 ## 5. 星图在线引擎：组件及执行流程
 
-本章把第 3 章的在线容器展开。星图根据一次请求的上下文与实验配置，组织特征服务、召回引擎、过滤、补全、精排和重排，最后得到要展示的商品。
+**星图的方案（Solution）代码负责把一次推荐请求从参数校验执行到最终结果包装。** 这是配置驱动的流水线：每个阶段有固定的输入输出约定，再按策略选用不同处理器或服务。
 
 ![星图在线执行流程](./assets/recommendation-engineering/star-atlas-online-flow.svg)
 
-这张执行流程图依据提供的真实技术流程整理。**它是可配置的推荐链路，不代表每种业务、每个降级等级都会运行全部组件。**
+本章依据《星图代码梳理》的 13 个 Service 和 `RecomContext` 字段说明执行逻辑。这里介绍的是**基础推荐方案**，不是所有场景、专用方案或降级流量都必须执行全部组件。
 
-### 5.1 入口准备、标识映射与实验选择
+### 5.1 请求准备、ID 映射与实验分流
 
-在线请求开始后，首先执行：
+**① Prepare：`prepareService`**。校验请求参数合法性，包括店铺、当前场景、背景商品和 TopK 等是否符合本次业务要求。它解决“本次请求能不能执行”，不负责推荐得分。
 
-- **Prepare**：收集和校验本次调用的店铺、页面、关联商品、用户及 traceId 等上下文。
-- **ID Mapping**：按照调用方与执行组件约定进行相关标识映射，准备后续使用的用户/商品 ID。
-- **ABTest**：根据当前请求所属的场景和实验配置完成分流，确定要使用的方案与策略。
+**② ID Mapping：`IdMappingService`**。依据请求的 `iframeId` 完成用户标识映射，将本次执行所用的 UID 写入 `RecomContext.uid`。后续用户特征、个性化召回、实验分流都可能用这个标识。
 
-实验客户端示例的核心形态为：
+**③ ABTest：`abTestService`**。整合三处实验配置：**AppConfig 中当前场景的实验、推荐策略上配置的实验、全局实验**，再向实验服务请求分流。结果写入：
+
+- `context.abTestResult`：本次请求实际命中的实验结果。
+- `context.abTestMap`：本次请求对应的实验配置信息。
+
+历史调用示意：
 
 ~~~java
 abTestClient.experiment(
@@ -533,56 +536,93 @@ abTestClient.experiment(
 );
 ~~~
 
-原材料中列出的实验 Code 包括 priorityRecallRerankExp、sortationPriorityRecallRerankExp、deepFmModelExp、badEffectSpuFilterExp。文档另写实验维度 iframeid、trace_id；而代码片段使用用户 ID 与 traceId 作为参数输入，**不能直接把配置参数名与具体参数值视为同一件事**。实验体系与店铺/FK 分层绑定的详细解释在第 6 章。
+具体店铺、FK、场景实验如何匹配及其分层绑定，见第 6 章。
 
-### 5.2 特征服务与召回
+### 5.2 获取特征与多路召回
 
-**Feature Service** 类似一个在线 DataService：从特征存储读取用户、商品或场景相关数据，返回给召回、过滤等组件；排序服务也会根据 needFeatures 读取需要的模型输入。
+**④ Feature：`featureService`**。从 `app-configs` 读取当前场景声明的 `needFeatures`，通过 RPC **批量查询特征服务**，并写入 `context.featureResult`。例如用户浏览历史、实时行为、喜欢的品类，可用于之后的召回或过滤。
 
-**Recall** 按配置执行若干召回服务，分别向 Redis、ES 或其他数据源查找候选。不同通道可能共用同一个数据源，也可能返回同一个商品。
+**⑤ Recall：`recallService`**。实际执行通道不是直接使用策略中的全部召回，而是：
 
-**Merge** 汇总各通道的结果。对于同时出现在多个召回源的商品，可按策略配置融合权重或分数，避免把多路结果直接当成多个不同商品。
+1. 从 `recommend-strategies` 取当前策略的 `recallList`。
+2. 从 `app-configs` 取当前业务、Widget、页面和策略允许的召回名称列表。
+3. **两者取交集**，得到本次真正允许执行的通道。
+4. 并发调用对应的 `RecallProcessor`，例如 `redisProcessor`、`esProcessor`。
+5. 需要特征条件的通道，根据其 `featureNames` 从 `context.featureResult` 读取具体值，再查询 Redis 或 ES。
 
-### 5.3 过滤与补全
+结果按召回通道存入 **`context.recallItems`**。此时同一商品可能出现在多个通道中，还没有完成合并。
 
-**Filter** 主要有两条过滤路线：
+举例：全局 `default` 策略声明 A、B、C 三条召回，但当前商品详情页只允许 A、B，最终**只执行 A 和 B**，不会因为 C 出现在策略配置里就自动执行 C。
 
-1. **特征结果过滤**：读取指定的特征集合；命中需要过滤的 ID 时，删除相关候选。例如需要过滤已曝光商品的配置。
-2. **商品引擎过滤**：包括商品库存、状态、风控等合法性约束，以及算法标签过滤。后者可能需要命中特定实验才生效。
+### 5.3 候选合并、粗排与过滤
 
-**Complement** 处理候选数量不足：如果过滤后的商品数小于本次请求的 TopK，则从店铺其他可售/合法商品中补足。提供的历史方案中，兜底商品主要按 update_time 倒序选择，是否有新配置以实际服务为准。
+**⑥ Merge：`mergeService`**。以 `context.recallItems` 为输入，从策略的 `mergeList` 定位 `mergeConfigs` 中的处理器，然后完成：
 
-例如请求 TopK=6、过滤之后只剩 4 件，则补全服务可能再选出 2 件，**前提是存在符合条件的商品**；商品不足时不能保证一定返回满 6 件。
+- 对同一商品在不同召回通道中的数据建立倒排汇总，写入 **`context.invertedRecallItems`**。
+- 聚合各通道的分数和权重，做初步粗排。
+- 将粗排排序结果写入 **`context.mergeResult`**。
 
-### 5.4 排序、重排、收尾与结果
+这个阶段既包含**合并**，也包含**粗排分数计算**。商品 A 命中两条通道，会记录两份召回来源但只形成一个商品候选；具体计算实例见第 7 章。
 
-**Rank** 将候选商品及所需请求特征发送到 RankService，由 LR、DeepFM、ESMM 等排序模型返回相关评分，再确定优先级。历史资料还包括 ams3 模型服务。
+**⑦ Filter：`filterService`**。读取 `context.mergeResult`，从策略 `filterNames` 中选择过滤器，再依据 `filter-services` 中的 `processor` 执行：
 
-**Rerank** 在模型排序之后按策略继续调整展示序列，例如召回优先级、汤普森采样探索位置或卡片重排。
+- 特征过滤：例如过滤已曝光商品 ID。
+- 商品合法性与标签过滤：库存、状态、风控、算法标签等。
 
-**Operation** 是原执行框架里的独立步骤，当前资料未给出明确操作集合，因此在总流程中保留这个组件名，不擅自把它等同于某个固定算法。
+过滤结果写入 **`context.filterResult`**。
 
-**Summary** 根据最终截断的商品 ID 查询商品详情等展示信息，而不是简单地生成文字摘要。
+**合法性过滤是保障可展示商品有效性的关键阶段，不能简单因降级而省略。** 原历史设计还要求：安全过滤失败时，相关候选应置空，而非直接透出未经验证的商品。
 
-**Result** 按业务接口协议返回最终列表。接口层还需要处理空结果、超时和降级，具体机制在稳定性章节展开。
+### 5.4 补全、精排与重排
 
-### 5.5 整个调用过程
+**⑧ Complement：`complementService`**。读取 `context.filterResult`，按照配置模式决定是否补全：
+
+- **模式 2**：只有过滤结果**为空**时才触发补全。
+- **模式 1 或未配置**：当过滤后数量 **小于请求的 TopK** 时触发。
+- 其他情况不触发。
+
+若需补全，则通过策略的 `complementName` 找到 `data-service` 查询配置，计算缺少数量，原实现从 **ES 商品索引**取回合法商品。结果写入 **`context.completeResult`**。
+
+例如 TopK=6、过滤后 4 件，模式 1 会尝试补 2 件；模式 2 不会补。能否补够仍取决于店铺合法商品数量。
+
+**⑨ Rank：`rankService`**。以 `context.completeResult` 为输入，从策略读取 `rankServiceName`，再从 `rank-services` 找到模型 URL、请求模板、返回类型、超时等配置。调用模型服务后：
+
+- 模型结果写入 **`context.rankResult`**。
+- 本次使用的排序服务配置写入 **`context.usedRankServiceConfig`**。
+
+**⑩ Rerank：`reRankService`**。读取 `context.rankResult`，按策略 `rerankList` 查找 `rerank-services` 的处理器，顺序执行配置的重排操作，写入 **`context.reRankResult`**。重排是调整最终展示顺序，不是重新训练精排模型。
+
+### 5.5 人工干预、商品详情与结果包装
+
+**⑪ Operation：`operationService`**。设计上预留“强制添加/删除商品”的能力，但这份代码梳理写明**目前没有实际处理**；现有步骤只是将 `context.reRankResult` 传入 **`context.operationResult`**。不能把预留能力描述成已经生效的功能。
+
+**⑫ Summary：`summaryService`**。读取 `context.operationResult`，从策略取 `summaryName`，再用 `data-service` 获取商品详情查询配置。原实现从 **ES** 查询最终商品的详情，保存到 **`context.summaryResult`**。
+
+这里 Summary 不是生成一段文字摘要，而是把商品 ID 补成页面可展示的商品详情。历史稳定性设计明确指出，这个必要阶段不能直接跳过。
+
+**⑬ ResultWrapping：`resultWrappingService`**。处理最终响应。若请求设置了 `isMagic`，按照协议在响应中附带部分中间结果，便于排查和调试；普通请求主要返回最终商品数据。
+
+### 5.6 用 RecomContext 把 13 个阶段串起来
 
 ~~~mermaid
 flowchart TD
-    A["Prepare / ID Mapping"] --> B["ABTest：实验与方案"]
-    B --> C["Feature Service"]
-    C --> D["Recall：多路 Redis / ES 查询"]
-    D --> E["Merge：合并与加权"]
-    E --> F["Filter：特征/商品合法性/算法标签"]
-    F --> G["Complement：不足 TopK 时补全"]
-    G --> H["Rank：模型精排"]
-    H --> I["Rerank：调整展示顺序"]
-    I --> J["Operation / Summary：收尾与商品详情"]
-    J --> K["Result：返回商品列表"]
+    A["Prepare：请求校验"] --> B["ID Mapping → uid"]
+    B --> C["ABTest → abTestResult / abTestMap"]
+    C --> D["Feature → featureResult"]
+    D --> E["Recall → recallItems"]
+    E --> F["Merge → invertedRecallItems / mergeResult"]
+    F --> G["Filter → filterResult"]
+    G --> H["Complement → completeResult"]
+    H --> I["Rank → rankResult / usedRankServiceConfig"]
+    I --> J["Rerank → reRankResult"]
+    J --> K["Operation → operationResult"]
+    K --> L["Summary → summaryResult"]
+    L --> M["ResultWrapping → 返回结果"]
 ~~~
 
-图中的顺序来自提供的星图“2.1 执行流程”截图；**是否调用精排、具体过滤规则、组件级别，以及降级时跳过哪些组件，都由场景、实验和策略配置共同决定**。
+**`RecomContext` 就是一次推荐请求内部的工作台**：各 Service 从上一步的字段取数据，按本阶段配置处理后写入下一字段。因此整条链路可以通过方案编排，而每个处理器相对独立。
+
+这里列出的 `Service` 名称和上下文字段来自所提供的星图 Java 版本方案；是否与后续 Go 重构完全相同，应以具体版本代码为准。分层降级或专用方案可能改变实际执行路径，第 11 章单独介绍。
 
 ---
 
