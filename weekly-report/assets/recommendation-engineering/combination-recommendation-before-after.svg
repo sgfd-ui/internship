@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="950" viewBox="0 0 1600 950" role="img" aria-label="组合商品推荐现有和优化后执行流程对比">
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8Z" fill="#7E91A5"/></marker></defs><rect width="1600" height="950" fill="#F9FBFF"/>
+<text x="52" y="69" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="34" fill="#1D3451" font-weight="750" text-anchor="start">组合商品推荐：现有流程与优化方案</text>
+<text x="52" y="106" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#607994" font-weight="500" text-anchor="start">重点是将组合生成和合法性过滤放入推荐执行链路，减少组合详情 ES 依赖；普通商品搜索不在本次移除范围</text>
+<rect x="50" y="140" width="630" height="740" rx="20" fill="#F0F5FB" stroke="#CEE0F0" stroke-width="1.6"/>
+<rect x="718" y="140" width="832" height="740" rx="20" fill="#EEF9F4" stroke="#BEDFCF" stroke-width="1.6"/>
+<rect x="73" y="160" width="580" height="55" rx="12" fill="#DFEAF7" stroke="#C9D9EE" stroke-width="1.6"/>
+<text x="363" y="196" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="23" fill="#476A94" font-weight="700" text-anchor="middle">原组合推荐流程</text>
+<rect x="742" y="160" width="783" height="55" rx="12" fill="#D6F0E2" stroke="#B9DFC9" stroke-width="1.6"/>
+<text x="1133" y="196" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="23" fill="#237458" font-weight="700" text-anchor="middle">优化后：1004 组合方案</text>
+<rect x="214" y="244" width="296" height="69" rx="12" fill="#FFFFFF" stroke="#D1DCE9" stroke-width="1.6"/>
+<text x="362" y="272" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">商品</text>
+<text x="362" y="297" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">当前背景商品</text>
+<rect x="214" y="340" width="296" height="69" rx="12" fill="#FFFFFF" stroke="#D1DCE9" stroke-width="1.6"/>
+<text x="362" y="368" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">组合 ID 召回</text>
+<text x="362" y="393" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">历史关联组合</text>
+<path d="M362 313 L362 332" fill="none" stroke="#8095AC" stroke-width="2.3"  marker-end="url(#arrow)"/>
+<rect x="214" y="436" width="296" height="69" rx="12" fill="#FFFFFF" stroke="#D1DCE9" stroke-width="1.6"/>
+<text x="362" y="464" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">在线合法性过滤</text>
+<text x="362" y="489" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">库存 / 状态 / 风控</text>
+<path d="M362 409 L362 428" fill="none" stroke="#8095AC" stroke-width="2.3"  marker-end="url(#arrow)"/>
+<rect x="214" y="532" width="296" height="69" rx="12" fill="#FFF0E6" stroke="#D1DCE9" stroke-width="1.6"/>
+<text x="362" y="560" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">组合详情生成</text>
+<text x="362" y="585" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">依赖组合 ES 和商品 ES</text>
+<path d="M362 505 L362 524" fill="none" stroke="#8095AC" stroke-width="2.3"  marker-end="url(#arrow)"/>
+<rect x="214" y="628" width="296" height="69" rx="12" fill="#FFFFFF" stroke="#D1DCE9" stroke-width="1.6"/>
+<text x="362" y="656" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">组合排序</text>
+<text x="362" y="681" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">组合候选排序</text>
+<path d="M362 601 L362 620" fill="none" stroke="#8095AC" stroke-width="2.3"  marker-end="url(#arrow)"/>
+<rect x="214" y="724" width="296" height="69" rx="12" fill="#FFFFFF" stroke="#D1DCE9" stroke-width="1.6"/>
+<text x="362" y="752" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">返回组合详情</text>
+<text x="362" y="777" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">返回商品组信息</text>
+<path d="M362 697 L362 716" fill="none" stroke="#8095AC" stroke-width="2.3"  marker-end="url(#arrow)"/>
+<rect x="530" y="541" width="120" height="76" rx="13" fill="#FFE5DB" stroke="#F0B6A2" stroke-width="1.6"/>
+<text x="590" y="570" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="17" fill="#915642" font-weight="650" text-anchor="middle">星图 ES</text>
+<text x="590" y="596" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="17" fill="#915642" font-weight="650" text-anchor="middle">商品 ES</text>
+<path d="M530 575 L510 575" fill="none" stroke="#C8836B" stroke-width="2.3" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<text x="365" y="854" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="17" fill="#925E52" font-weight="500" text-anchor="middle">组合详情依赖额外 ES 查询</text>
+<rect x="820" y="239" width="618" height="66" rx="12" fill="#FFFFFF" stroke="#D1DCE9" stroke-width="1.6"/>
+<text x="1129" y="267" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">店铺 + 背景商品 + 用户</text>
+<text x="1129" y="292" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">一次组合商品推荐请求</text>
+<rect x="753" y="344" width="305" height="75" rx="12" fill="#FFFFFF" stroke="#ABD8C0" stroke-width="1.6"/>
+<text x="905.5" y="372" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">商品召回 → 在线组合生产</text>
+<text x="905.5" y="397" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">maxCombinationSize / maxGroupSize</text>
+<rect x="1093" y="344" width="394" height="75" rx="12" fill="#FFFFFF" stroke="#ABD8C0" stroke-width="1.6"/>
+<text x="1290" y="372" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">优质组合召回</text>
+<text x="1290" y="397" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">预先挖掘并灌入的组合 ID</text>
+<path d="M1129 305 L1129 330" fill="none" stroke="#8095AC" stroke-width="2.3"  marker-end="url(#arrow)"/>
+<path d="M973 419 L973 466" fill="none" stroke="#8095AC" stroke-width="2.3"  marker-end="url(#arrow)"/>
+<path d="M1290 419 L1290 466" fill="none" stroke="#8095AC" stroke-width="2.3"  marker-end="url(#arrow)"/>
+<rect x="883" y="474" width="474" height="72" rx="12" fill="#E7F5FF" stroke="#BEDAEC" stroke-width="1.6"/>
+<text x="1120" y="502" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">候选组合集合</text>
+<text x="1120" y="527" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">两路组合合并，关联商品合法性检查</text>
+<rect x="883" y="581" width="474" height="67" rx="12" fill="#E7F5FF" stroke="#BEDAEC" stroke-width="1.6"/>
+<text x="1120" y="609" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">组合粗排 / 重排</text>
+<text x="1120" y="634" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">按来源权重和组合得分进行排序</text>
+<rect x="883" y="681" width="474" height="66" rx="12" fill="#FFFFFF" stroke="#ABD8C0" stroke-width="1.6"/>
+<text x="1120" y="709" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">返回组合列表</text>
+<text x="1120" y="734" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">按业务接口决定是否获取组合详情</text>
+<path d="M1120 546 L1120 570" fill="none" stroke="#8095AC" stroke-width="2.3"  marker-end="url(#arrow)"/>
+<path d="M1120 648 L1120 669" fill="none" stroke="#8095AC" stroke-width="2.3"  marker-end="url(#arrow)"/>
+<rect x="1250" y="775" width="265" height="73" rx="12" fill="#FFFFFF" stroke="#ABD8C0" stroke-width="1.6"/>
+<text x="1382.5" y="803" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">优质组合挖掘 / 灌入</text>
+<text x="1382.5" y="828" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">离线/周期数据更新</text>
+<rect x="758" y="775" width="251" height="73" rx="12" fill="#FFFFFF" stroke="#ABD8C0" stroke-width="1.6"/>
+<text x="883.5" y="803" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#244064" font-weight="650" text-anchor="middle">行为埋点 / 日志</text>
+<text x="883.5" y="828" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#617C98" font-weight="450" text-anchor="middle">推荐效果反馈</text>
+<path d="M1010 750 L878 765" fill="none" stroke="#65A08C" stroke-width="2.3" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<path d="M1009 810 L1238 810" fill="none" stroke="#65A08C" stroke-width="2.3" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<path d="M1400 775 L1400 432" fill="none" stroke="#65A08C" stroke-width="2.3" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<text x="1135" y="862" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="15" fill="#3C866E" font-weight="450" text-anchor="middle">蓝色：在线生产组合 · 绿色虚线：反馈与优质组合供给</text>
+<text x="60" y="924" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="15" fill="#71849A" font-weight="500" text-anchor="start">本图归纳历史优化方案，不表示 1004 实验已经在所有站点或店铺上线。</text>
+</svg>
