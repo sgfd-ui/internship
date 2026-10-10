@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1520" height="1150" viewBox="0 0 1520 1150" role="img" aria-label="星图在线推荐执行流程：prepare idmapping abtest feature recall merge filter complement rank rerank operation summary result">
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8Z" fill="#8298AD"/></marker></defs><rect width="1520" height="1150" fill="#FAFCFF"/>
+<text x="55" y="63" font-size="32" fill="#172A43" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="750">星图在线执行链路</text>
+<text x="55" y="97" font-size="17" fill="#61798F" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">一次推荐请求的逻辑步骤（具体是否启用、配置及顺序以执行方案为准）</text>
+<rect x="345" y="124" width="710" height="963" rx="17" fill="#EAF3FF" stroke="#C7DAF1" stroke-width="1.3"/>
+<text x="702" y="158" font-size="19" fill="#2A68A3" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">推荐请求主路径</text>
+<rect x="367" y="176" width="664" height="53" rx="9" fill="#FFFFFF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="188" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="208" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">01</text>
+<text x="438" y="201" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">Prepare</text>
+<text x="438" y="219" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">校验本次请求的合法性</text>
+<path d="M702 229 L702 242" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="245" width="664" height="53" rx="9" fill="#FFFFFF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="257" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="277" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">02</text>
+<text x="438" y="270" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">ID Mapping</text>
+<text x="438" y="288" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">根据 iframeId 写入 context.uid</text>
+<path d="M702 298 L702 311" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="314" width="664" height="53" rx="9" fill="#FFFFFF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="326" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="346" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">03</text>
+<text x="438" y="339" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">ABTest</text>
+<text x="438" y="357" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">abTestResult / abTestMap</text>
+<path d="M702 367 L702 380" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="383" width="664" height="53" rx="9" fill="#FFFFFF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="395" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="415" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">04</text>
+<text x="438" y="408" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">Feature Service</text>
+<text x="438" y="426" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">批量获取 → context.featureResult</text>
+<path d="M702 436 L702 449" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="452" width="664" height="53" rx="9" fill="#D4E9FF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="464" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="484" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">05</text>
+<text x="438" y="477" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">Recall</text>
+<text x="438" y="495" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">策略与场景交集 → recallItems</text>
+<path d="M702 505 L702 518" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="521" width="664" height="53" rx="9" fill="#FFFFFF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="533" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="553" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">06</text>
+<text x="438" y="546" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">Merge</text>
+<text x="438" y="564" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">倒排关系 + 融合粗排 → mergeResult</text>
+<path d="M702 574 L702 587" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="590" width="664" height="53" rx="9" fill="#D4E9FF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="602" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="622" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">07</text>
+<text x="438" y="615" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">Filter</text>
+<text x="438" y="633" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">合法性 / 特征过滤 → filterResult</text>
+<path d="M702 643 L702 656" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="659" width="664" height="53" rx="9" fill="#FFFFFF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="671" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="691" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">08</text>
+<text x="438" y="684" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">Complement</text>
+<text x="438" y="702" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">按补全模式判断 → completeResult</text>
+<path d="M702 712 L702 725" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="728" width="664" height="53" rx="9" fill="#D4E9FF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="740" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="760" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">09</text>
+<text x="438" y="753" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">Rank</text>
+<text x="438" y="771" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">rankResult / usedRankServiceConfig</text>
+<path d="M702 781 L702 794" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="797" width="664" height="53" rx="9" fill="#D4E9FF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="809" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="829" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">10</text>
+<text x="438" y="822" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">Rerank</text>
+<text x="438" y="840" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">多重排 Processor → reRankResult</text>
+<path d="M702 850 L702 863" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="866" width="664" height="53" rx="9" fill="#FFFFFF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="878" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="898" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">11</text>
+<text x="438" y="891" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">Operation</text>
+<text x="438" y="909" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">预留强制加删；此版仅透传</text>
+<path d="M702 919 L702 932" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="935" width="664" height="53" rx="9" fill="#FFFFFF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="947" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="967" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">12</text>
+<text x="438" y="960" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">Summary</text>
+<text x="438" y="978" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">查询 ES 详情 → summaryResult</text>
+<path d="M702 988 L702 1001" stroke="#8298AD" stroke-width="2" fill="none"  marker-end="url(#a)"/>
+<rect x="367" y="1004" width="664" height="53" rx="9" fill="#FFFFFF" stroke="#B4CDEA" stroke-width="1.3"/>
+<rect x="383" y="1016" width="35" height="29" rx="7" fill="#3078C1" stroke="#3078C1" stroke-width="1.3"/>
+<text x="400" y="1036" font-size="14" fill="#FFFFFF" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="middle" font-weight="700">13</text>
+<text x="438" y="1029" font-size="17" fill="#24446C" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">ResultWrapping</text>
+<text x="438" y="1047" font-size="13" fill="#55799D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="450">封装响应 / 可选 isMagic 中间结果</text>
+<rect x="56" y="203" width="253" height="163" rx="14" fill="#EAF7F3" stroke="#BFDFD3" stroke-width="1.3"/>
+<text x="76" y="235" font-size="20" fill="#227866" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">输入上下文</text>
+<text x="76" y="268" font-size="15" fill="#476E68" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">店铺 / 页面 / 用户标识</text>
+<text x="76" y="299" font-size="15" fill="#476E68" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">当前商品 / 请求数量</text>
+<text x="76" y="329" font-size="15" fill="#476E68" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">traceId / 可选设备信息</text>
+<path d="M309 276 L345 276" stroke="#8298AD" stroke-width="2" fill="none" stroke-dasharray="6 5" marker-end="url(#a)"/>
+<rect x="56" y="454" width="253" height="169" rx="14" fill="#F3EFFA" stroke="#D9CDEB" stroke-width="1.3"/>
+<text x="76" y="486" font-size="20" fill="#7657A9" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">数据存储</text>
+<text x="76" y="521" font-size="15" fill="#756C85" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">Redis：用户/店铺召回</text>
+<text x="76" y="551" font-size="15" fill="#756C85" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">ES：索引与条件查询</text>
+<text x="76" y="581" font-size="15" fill="#756C85" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">特征 Redis / 向量服务</text>
+<path d="M309 526 L345 526" stroke="#8298AD" stroke-width="2" fill="none" stroke-dasharray="6 5" marker-end="url(#a)"/>
+<rect x="1091" y="203" width="370" height="163" rx="14" fill="#FFF5E8" stroke="#E6D2B4" stroke-width="1.3"/>
+<text x="1113" y="236" font-size="20" fill="#A87429" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">实验与配置</text>
+<text x="1113" y="271" font-size="16" fill="#897354" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">RAP → Nacos / Redis</text>
+<text x="1113" y="301" font-size="15" fill="#897354" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">场景、实验、方案与策略</text>
+<text x="1113" y="332" font-size="15" fill="#897354" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">生效范围、组件配置及参数</text>
+<path d="M1091 282 L1055 282" stroke="#8298AD" stroke-width="2" fill="none" stroke-dasharray="6 5" marker-end="url(#a)"/>
+<rect x="1091" y="658" width="370" height="154" rx="14" fill="#FFF2E7" stroke="#E6CEB4" stroke-width="1.3"/>
+<text x="1113" y="690" font-size="20" fill="#9D6E3D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">模型服务</text>
+<text x="1113" y="724" font-size="17" fill="#725A46" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">RankService</text>
+<text x="1113" y="755" font-size="16" fill="#725A46" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">LR / DeepFM / ESMM 等</text>
+<text x="1113" y="785" font-size="15" fill="#725A46" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">需要的特征与预测分数</text>
+<path d="M1091 743 L1055 743" stroke="#8298AD" stroke-width="2" fill="none" stroke-dasharray="6 5" marker-end="url(#a)"/>
+<rect x="1091" y="875" width="370" height="145" rx="14" fill="#E9F7F2" stroke="#C0E3D3" stroke-width="1.3"/>
+<text x="1113" y="909" font-size="20" fill="#26886D" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="700">业务数据与结果</text>
+<text x="1113" y="944" font-size="16" fill="#57796B" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">商品详情查询 / Summary</text>
+<text x="1113" y="977" font-size="16" fill="#57796B" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">曝光点击埋点 / 效果统计</text>
+<path d="M1091 941 L1055 941" stroke="#8298AD" stroke-width="2" fill="none" stroke-dasharray="6 5" marker-end="url(#a)"/>
+<text x="59" y="1096" font-size="16" fill="#657B92" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" text-anchor="start" font-weight="500">依据星图方案代码整理；部分组件可降级，但必要合法性过滤和商品详情查询不能简单跳过。</text>
+</svg>
