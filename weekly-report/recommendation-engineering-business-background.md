@@ -384,7 +384,7 @@ flowchart TD
 
 下面这张图参考星图技术方案中的**分层架构**重新绘制。**这一章只回答有哪些模块、各模块之间是什么关系**；推荐请求怎么走、每个组件怎么实现，在后面章节分别说明。
 
-![SHOPLINE 推荐系统总体技术架构](./assets/recommendation-engineering/recommendation-system-overview-v2.svg)
+![SHOPLINE 推荐系统总体技术架构](./assets/recommendation-engineering/recommendation-system-overview-v3.svg)
 
 ### 3.1 模块与组件
 
@@ -407,6 +407,8 @@ flowchart TD
 **在线执行链路**：业务页面/后端 → 接入层 → 星图根据场景和实验选择方案 → 调用召回、特征、模型等能力 → 返回商品。
 
 **数据准备链路**：Hive/MySQL/Kafka 原始数据 → Spark/Flink 等离线/实时计算 → 召回与特征产出至 TiDB → CDC/Kafka → Tahm → Redis/ES；**训练后的模型产物单独存放 OSS，再由模型同步、RankService 加载使用**。因此模型不是普通召回数据，也不要求经过 Tahm。
+
+总图因此分为**应用、接入、在线引擎、在线数据引擎、数据同步、中间持久存储、数据计算加工、原始业务数据**八层；右侧的 RAP/Nacos 配置控制与监控体系为横向支撑能力。
 
 **配置与反馈链路**：算法通过 RAP 管理实验和策略，发布至 Nacos/Redis 等在线配置；曝光、点击、转化以及运行指标反馈给算法、产品和工程，用于后续优化。
 
