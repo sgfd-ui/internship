@@ -2024,6 +2024,216 @@ flowchart LR
 
 ---
 
+## 18. 经典场景四：组合商品推荐与去 ES 依赖优化
+
+### 18.1 业务背景与目标
+
+**组合商品推荐**给访客推荐可以一起购买的商品组，例如“衬衫 + 牛仔裤”，而不是只给出单个商品。旧链路通过**组合 ID 召回 → 在线过滤 → 生成组合详情 → 组合排序 → 返回组合详情**完成推荐。其中生成组合详情依赖星图组合详情 ES 和商品 ES。
+
+本次历史优化希望**节约成本、减少组合详情 ES 依赖并提高稳定性**。注意，“去除 ES”针对组合商品业务中的组合详情链路，不等于删除整个推荐系统的所有 ES 检索和召回能力。
+
+- [算法方案](https://shopline.yuque.com/rbxwgy/onb4p4/axr6cculdwfivc55)
+- [成本优化](https://shopline.yuque.com/rbxwgy/onb4p4/tk6po7oqguwywsvz)
+
+### 18.2 优化前后：从“查询组合详情”到“在线生产组合”
+
+![组合商品推荐优化前后对比](./assets/recommendation-engineering/combination-recommendation-before-after.svg)
+
+**原流程：** 背景商品 → 组合 ID 召回 → 在线合法性过滤 → 生成组合详情（调用组合详情 ES、商品 ES）→ 组合排序 → 返回详情。
+
+**优化流程：** 背景商品/用户/店铺 → 分成两路。一路先召回商品，再在线生成组合；另一路直接召回已经挖掘出的优质组合。两路汇总到候选组合集合后进行组合排序，最后返回组合列表。用户行为埋点为后续优质组合挖掘和灌入提供数据反馈。
+
+具体采用**新增 1004 方案**而不是全局修改普通推荐：
+
+~~~text
+原通用流程：
+召回 → 合并 → 过滤 → 补全 → 排序 → 重排
+
+组合专用 1004 方案：
+召回 → 合并 → 过滤 → 补全 → 生产组合 → 排序 → 重排
+~~~
+
+因此，**1004 是专用推荐方案编号，不是 A/B 实验 ID**。组合生产属于可配置的额外步骤。
+
+### 18.3 在线生产组合：商品候选与组合候选的区别
+
+假设当前背景商品是衬衫 A，召回得到裤子 B、鞋子 C。普通召回返回的是 B、C 两个商品；组合生产可按算法规则形成候选 (A,B)、(A,C)。具体组合规则依赖算法实现，本例只解释结构。
+
+在线生产组合的相关召回配置：
+
+~~~yaml
+comClickedTogetherRecall1:
+  processor: redisProcessor
+  personalization: false
+  recallId: c2
+  dataService:
+    name: comClickedTogether
+    version: 1
+  scoreWeight: 1
+  size: 100
+  needLevel: 2
+  maxCombinationSize: 10
+  maxGroupSize: 2
+~~~
+
+**maxCombinationSize：最多生产多少个组合。maxGroupSize：每个组合最多含多少件商品。** 上例表示组合数上限为 10、单组商品数上限为 2，并不表示把 10 件商品放进同一组。
+
+普通商品候选与组合候选结构不同：
+
+~~~json
+[
+  {"id": "product_id1", "score": 123456},
+  {"id": "product_id2", "score": 654321}
+]
+~~~
+
+~~~json
+[
+  {"products": ["product_id1", "product_id2"], "score": 123456}
+]
+~~~
+
+第一种得分属于单件商品；第二种得分属于一个组合。若优质组合另有组合 ID，还要维护组合 ID 和成员商品的映射。
+
+### 18.4 优质组合召回：组合 ID 如何进入商品过滤链路
+
+优化方案还新增专用的组合 Redis 处理器：
+
+~~~yaml
+comClickedTogetherRecall:
+  processor: comRedisProcessor
+  personalization: false
+  recallId: c2
+  dataService:
+    name: comClickedTogether
+    version: 1
+  scoreWeight: 1
+  size: 100
+  needLevel: 2
+~~~
+
+它与上一节的 redisProcessor 路径不同，**不能简单视为同一个处理器的另一名称**。专用处理器的核心流程是：
+
+~~~mermaid
+flowchart TD
+    A["召回组合 ID 及成员商品"] --> B["把成员展开到商品召回结果中"]
+    B --> C["保存商品与组合 ID 对应关系"]
+    C --> D["执行商品合法性、标签等过滤"]
+    D --> E["把过滤后的成员回填组合"]
+    E --> F["得到过滤后的组合候选"]
+~~~
+
+例如组合 X 包含 A、B，而 B 在过滤阶段被排除，回填时就必须处理成员缺失。**究竟废弃整个组合，还是保留可用成员**，取决于具体组合过滤规则；原材料只明确说明“过滤后的商品回塞到组合 ID 中”，没有提供完整判定条件。
+
+### 18.5 多召回来源组合的粗排评分
+
+若某个 group 同时被多个召回源召回，原方案采用召回源权重和内部得分的**加权累加**：
+
+\[
+S(g)=\sum_{r \in R(g)} w_r s_r(g)
+\]
+
+其中，\(R(g)\) 是命中组合 \(g\) 的召回源集合，\(w_r\) 是 RAP 配置的召回源权重，\(s_r(g)\) 是组合在该召回源中的得分。
+
+例如组合 X 在 A 通道内部得分 10、权重 2，在 B 通道得分 5、权重 3，则合并得分是 **2×10 + 3×5 = 35**。这是加权规则的教学例子，并非实际生产分数。
+
+- [RAP 召回源权重配置](https://shopline.yuque.com/rbxwgy/onb4p4/twi4e5rvg3za97g1)
+
+### 18.6 RAP 与服务组件的改动
+
+为了支持组合专用流程，RAP 创建组合实验时需**选择 1004 方案**，并允许配置最大组合数、组合最大商品数；原需求要求组合生产插件为该实验的必选组件。
+
+新增组合过滤服务：
+
+~~~yaml
+filterServices:
+  combinationDetailFilter:
+    processor: combinationDetailFilterProcessor
+    emptyIfError: true
+~~~
+
+这里的 emptyIfError 是原始配置中的错误处理选项。是否返回空组合、如何记录错误，需要以插件行为为准。
+
+上线配置中还登记了三路召回：
+
+~~~yaml
+recallServices:
+  comQualifiedRecall:
+    processor: redisProcessor
+    recallId: c17
+    dataService: {name: comQualified, version: 1}
+    personalization: false
+    needLevel: 2
+    scoreWeight: 1
+    size: 100
+  coCocartItemsRecall:
+    processor: redisProcessor
+    recallId: s35
+    dataService: {name: coCocartItems, version: 1}
+    personalization: false
+    needLevel: 2
+    scoreWeight: 1
+    size: 100
+  similarItemComRecall:
+    processor: redisProcessor
+    recallId: s36
+    dataService: {name: similarItemCom, version: 1}
+    personalization: false
+    needLevel: 2
+    scoreWeight: 1
+    size: 100
+~~~
+
+对应 data-services-go 里的数据服务均引用 **itemRecallData** 数据源；Data ID 分别为 **com_qualified、co_cocart_items、similar_item_com**，版本为 1。它们的 Redis Key 按应用、店铺、背景商品 ID、Data ID、版本拼接，比仅按店铺查询热销商品更细。
+
+RAP 还需要在 recommend_config 中登记三路 recall 组件和 combinationDetailFilter 过滤组件。原 SQL 使用了站点 **SC20** 和 Test 环境；不能未经对应说明就把这两个值等同于 EC20 当前生产配置。
+
+原发布清单另包含 ES 索引 ec2_combination_detail_104 的重建、刷新间隔 60s、15 分片和 1 副本等设置。这是历史上线/过渡操作，**不是证明优化后仍然必须走组合详情 ES 的依据**。
+
+### 18.7 测试接口与验收重点
+
+历史测试请求的主要字段关系：
+
+~~~json
+{
+  "traceId": "TEST_TRACE_ID",
+  "storeId": "TEST_STORE_ID",
+  "abId": "TEST_EXPERIMENT_ID",
+  "sceneId": "0",
+  "param": {
+    "bizId": "sales_combination_rec",
+    "context": {
+      "appId": "SL201",
+      "widget": "combinationRec",
+      "strategy": "comSimilarItem",
+      "pageType": "productDetail",
+      "userInfo": {"iframeId": "TEST_VISITOR_ID"},
+      "pageInfo": {
+        "products": [{"spuSeq": "TEST_SPU_SEQ"}],
+        "maxCombinationSize": 8,
+        "blockedProducts": ["TEST_BLOCKED_SPU"]
+      },
+      "needItemDetail": false
+    },
+    "topK": 1
+  }
+}
+~~~
+
+这是用于解释结构的**简化脱敏样例**，不是可直接运行的完整线上请求。实际协议还包含市场、定位、设备、个性化开关等字段。
+
+- **bizId、widget、strategy** 确定本次组合推荐业务和策略。
+- **pageInfo.products** 是背景商品，**blockedProducts** 是本次禁止推荐的商品。
+- **maxCombinationSize = 8** 是本次最多生成的组合数；**topK = 1** 是请求最终结果数量，两者不能混用。
+- **needItemDetail = false** 表示请求不要求额外补全商品详情。
+- **abId** 是实验相关标识，不是方案 ID 1004。
+
+验收应重点看：商品召回能否生产有效组合，优质组合能否通过过滤并回填，合并评分是否正确，组合上限与屏蔽商品是否生效，以及优化后是否实际减少组合详情 ES 请求。
+
+原计划“1 月开发、预计 2 月底上线”属于历史排期，未附验收结果，不能当作当前上线状态。
+
+---
+
 ## 18. 资料索引与范围说明
 
 ### 18.1 本次整理覆盖的资料
