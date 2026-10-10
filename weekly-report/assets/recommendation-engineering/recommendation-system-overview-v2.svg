@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="1190" viewBox="0 0 1680 1190" role="img" aria-label="SHOPLINE推荐系统总体技术架构，包含业务入口、接入层、星图在线引擎、配置控制、基础引擎、数据生产和监控">
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8Z" fill="#7F94AD"/></marker><filter id="shadow" x="-10%" y="-20%" width="130%" height="150%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#607896" flood-opacity=".09"/></filter></defs>
+<rect width="1680" height="1190" fill="#FAFCFF"/>
+<text x="48" y="67" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="34" fill="#12263F" font-weight="750" text-anchor="start">SHOPLINE 推荐系统 · 总体技术架构</text>
+<text x="50" y="104" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#667B91" font-weight="500" text-anchor="start">从业务调用入口到在线推荐、算法数据、配置管理和效果反馈</text>
+<rect x="1355" y="44" width="270" height="48" rx="24" fill="#ECF5FF" stroke="#C8E0F6" stroke-width="1.4"/>
+<text x="1490" y="74" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="20" fill="#1E6DB0" font-weight="700" text-anchor="middle">星图 Star Atlas</text>
+<rect x="32" y="158" width="120" height="29" rx="14" fill="#1C8D83" stroke="none" stroke-width="0"/>
+<text x="92" y="178" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#FFFFFF" font-weight="700" text-anchor="middle">01  业务入口</text>
+<rect x="175" y="136" width="1460" height="132" rx="18" fill="#EAF7F1" stroke="#B8DEC9" stroke-width="1.4"/>
+<rect x="200" y="156" width="335" height="76" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="211" y="169" width="5" height="50" rx="2" fill="#35A58B" stroke="#35A58B" stroke-width="0"/>
+<text x="230" y="187" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">商品推荐插件</text>
+<text x="230" y="211" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">商详 / 列表 / 搜索 / 购物车</text>
+<rect x="557" y="156" width="335" height="76" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="568" y="169" width="5" height="50" rx="2" fill="#35A58B" stroke="#35A58B" stroke-width="0"/>
+<text x="587" y="187" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">智能落地页插件</text>
+<text x="587" y="211" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">智能商品组件发起推荐</text>
+<rect x="914" y="156" width="335" height="76" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="925" y="169" width="5" height="50" rx="2" fill="#35A58B" stroke="#35A58B" stroke-width="0"/>
+<text x="944" y="187" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">卡片推荐</text>
+<text x="944" y="211" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">商家后端发起</text>
+<rect x="1271" y="156" width="338" height="76" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="1282" y="169" width="5" height="50" rx="2" fill="#35A58B" stroke="#35A58B" stroke-width="0"/>
+<text x="1301" y="187" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">应用推荐</text>
+<text x="1301" y="211" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">应用市场发起</text>
+<text x="205" y="255" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#5E8278" font-weight="500" text-anchor="start">扩展入口：图搜 · AI 导购（Demo） · 营销组合商品等</text>
+<rect x="32" y="309" width="120" height="29" rx="14" fill="#5474BC" stroke="none" stroke-width="0"/>
+<text x="92" y="329" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#FFFFFF" font-weight="700" text-anchor="middle">02  接入层</text>
+<rect x="175" y="291" width="1460" height="93" rx="18" fill="#EFF4FF" stroke="#CFDAF2" stroke-width="1.4"/>
+<rect x="200" y="309" width="408" height="57" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="211" y="322" width="5" height="31" rx="2" fill="#728ACB" stroke="#728ACB" stroke-width="0"/>
+<text x="230" y="340" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">Web 接入</text>
+<rect x="630" y="309" width="409" height="57" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="641" y="322" width="5" height="31" rx="2" fill="#728ACB" stroke="#728ACB" stroke-width="0"/>
+<text x="660" y="340" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">HTTP / Nginx · Dubbo RPC</text>
+<rect x="1062" y="309" width="547" height="57" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="1073" y="322" width="5" height="31" rx="2" fill="#728ACB" stroke="#728ACB" stroke-width="0"/>
+<text x="1092" y="340" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">统一路由 · 负载均衡 · 限流降级</text>
+<rect x="32" y="438" width="120" height="29" rx="14" fill="#246FC0" stroke="none" stroke-width="0"/>
+<text x="92" y="458" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#FFFFFF" font-weight="700" text-anchor="middle">03  在线计算</text>
+<rect x="175" y="412" width="1020" height="340" rx="18" fill="#EAF3FF" stroke="#B9D2F3" stroke-width="1.4"/>
+<rect x="197" y="428" width="977" height="59" rx="12" fill="#E0ECFD" stroke="#CEE0F7" stroke-width="1.4"/>
+<text x="220" y="465" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="23" fill="#1F477A" font-weight="750" text-anchor="start">星图在线推荐服务  /  场景容器</text>
+<text x="1160" y="465" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="15" fill="#5C7EA8" font-weight="450" text-anchor="end">在线请求主路径</text>
+<rect x="200" y="507" width="300" height="72" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="211" y="520" width="5" height="46" rx="2" fill="#277AC2" stroke="#277AC2" stroke-width="0"/>
+<text x="230" y="538" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">请求与上下文</text>
+<text x="230" y="562" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">Prepare / ID Mapping</text>
+<rect x="521" y="507" width="300" height="72" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="532" y="520" width="5" height="46" rx="2" fill="#277AC2" stroke="#277AC2" stroke-width="0"/>
+<text x="551" y="538" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">分流与方案选择</text>
+<text x="551" y="562" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">A/B Experiment / Solution</text>
+<rect x="842" y="507" width="330" height="72" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="853" y="520" width="5" height="46" rx="2" fill="#277AC2" stroke="#277AC2" stroke-width="0"/>
+<text x="872" y="538" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">执行编排</text>
+<text x="872" y="562" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">场景 / 实验 / 策略 / 方案</text>
+<text x="205" y="610" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="17" fill="#426792" font-weight="650" text-anchor="start">在线执行组件</text>
+<rect x="202" y="636" width="156" height="59" rx="10" fill="#FFFFFF" stroke="#ABC8EA" stroke-width="1.4"/>
+<text x="280" y="672" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="17" fill="#305779" font-weight="650" text-anchor="middle">特征服务</text>
+<rect x="370" y="636" width="176" height="59" rx="10" fill="#FFFFFF" stroke="#ABC8EA" stroke-width="1.4"/>
+<text x="458" y="672" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="17" fill="#305779" font-weight="650" text-anchor="middle">召回 / 合并</text>
+<rect x="558" y="636" width="179" height="59" rx="10" fill="#FFFFFF" stroke="#ABC8EA" stroke-width="1.4"/>
+<text x="647.5" y="672" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="17" fill="#305779" font-weight="650" text-anchor="middle">过滤 / 补全</text>
+<rect x="749" y="636" width="165" height="59" rx="10" fill="#FFFFFF" stroke="#ABC8EA" stroke-width="1.4"/>
+<text x="831.5" y="672" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="17" fill="#305779" font-weight="650" text-anchor="middle">模型精排</text>
+<rect x="926" y="636" width="192" height="59" rx="10" fill="#FFFFFF" stroke="#ABC8EA" stroke-width="1.4"/>
+<text x="1022" y="672" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="17" fill="#305779" font-weight="650" text-anchor="middle">重排 / 结果</text>
+<text x="205" y="728" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#6683A6" font-weight="500" text-anchor="start">实际执行次序、可选组件和降级行为由推荐方案配置控制</text>
+<rect x="1231" y="407" width="120" height="29" rx="14" fill="#C88928" stroke="none" stroke-width="0"/>
+<text x="1291" y="427" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#FFFFFF" font-weight="700" text-anchor="middle">04  配置控制</text>
+<rect x="1220" y="412" width="415" height="340" rx="18" fill="#FFF5E8" stroke="#ECD4A8" stroke-width="1.4"/>
+<text x="1251" y="452" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="21" fill="#98621F" font-weight="700" text-anchor="start">算法 / 业务配置管理</text>
+<rect x="1248" y="476" width="358" height="72" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="1259" y="489" width="5" height="46" rx="2" fill="#D69E4B" stroke="#D69E4B" stroke-width="0"/>
+<text x="1278" y="507" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">RAP / FK 管理</text>
+<text x="1278" y="531" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">场景 / 实验 / 店铺 / 方案</text>
+<rect x="1248" y="561" width="358" height="72" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="1259" y="574" width="5" height="46" rx="2" fill="#D69E4B" stroke="#D69E4B" stroke-width="0"/>
+<text x="1278" y="592" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">Nacos 配置中心</text>
+<text x="1278" y="616" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">组件配置、流量、降级规则</text>
+<rect x="1248" y="646" width="358" height="72" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="1259" y="659" width="5" height="46" rx="2" fill="#D69E4B" stroke="#D69E4B" stroke-width="0"/>
+<text x="1278" y="677" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">Redis 策略与配置缓存</text>
+<text x="1278" y="701" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">定制策略及在线查询</text>
+<rect x="32" y="801" width="120" height="29" rx="14" fill="#2E947E" stroke="none" stroke-width="0"/>
+<text x="92" y="821" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#FFFFFF" font-weight="700" text-anchor="middle">05  在线引擎</text>
+<rect x="175" y="777" width="1460" height="139" rx="18" fill="#E8F5F1" stroke="#BEDFD3" stroke-width="1.4"/>
+<rect x="197" y="799" width="269" height="88" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="208" y="812" width="5" height="62" rx="2" fill="#39A88B" stroke="#39A88B" stroke-width="0"/>
+<text x="227" y="830" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">召回引擎</text>
+<text x="227" y="854" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">ES / Redis / KV</text>
+<rect x="485" y="799" width="269" height="88" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="496" y="812" width="5" height="62" rx="2" fill="#39A88B" stroke="#39A88B" stroke-width="0"/>
+<text x="515" y="830" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">特征服务</text>
+<text x="515" y="854" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">特征 Redis / 索引 / 向量</text>
+<rect x="773" y="799" width="269" height="88" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="784" y="812" width="5" height="62" rx="2" fill="#39A88B" stroke="#39A88B" stroke-width="0"/>
+<text x="803" y="830" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">排序服务 RankService</text>
+<text x="803" y="854" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">模型推理 / 特征</text>
+<rect x="1061" y="799" width="269" height="88" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="1072" y="812" width="5" height="62" rx="2" fill="#39A88B" stroke="#39A88B" stroke-width="0"/>
+<text x="1091" y="830" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">向量检索</text>
+<text x="1091" y="854" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">向量引擎 / Qdrant</text>
+<rect x="1349" y="799" width="261" height="88" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="1360" y="812" width="5" height="62" rx="2" fill="#39A88B" stroke="#39A88B" stroke-width="0"/>
+<text x="1379" y="830" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">商品业务服务</text>
+<text x="1379" y="854" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">商品详情 / 合法性</text>
+<rect x="32" y="956" width="120" height="29" rx="14" fill="#8766AF" stroke="none" stroke-width="0"/>
+<text x="92" y="976" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#FFFFFF" font-weight="700" text-anchor="middle">06  离线 / 数据</text>
+<rect x="175" y="936" width="1460" height="129" rx="18" fill="#F2EDFA" stroke="#D8CBEA" stroke-width="1.4"/>
+<rect x="197" y="960" width="337" height="78" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="208" y="973" width="5" height="52" rx="2" fill="#A084D2" stroke="#A084D2" stroke-width="0"/>
+<text x="227" y="991" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">数据生产</text>
+<text x="227" y="1015" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">Hive / TiDB / 实时计算</text>
+<rect x="553" y="960" width="337" height="78" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="564" y="973" width="5" height="52" rx="2" fill="#A084D2" stroke="#A084D2" stroke-width="0"/>
+<text x="583" y="991" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">消息 / CDC</text>
+<text x="583" y="1015" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">Kafka / Pulsar / DRC</text>
+<rect x="909" y="960" width="338" height="78" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="920" y="973" width="5" height="52" rx="2" fill="#A084D2" stroke="#A084D2" stroke-width="0"/>
+<text x="939" y="991" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">Tahm 数据同步</text>
+<text x="939" y="1015" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">Transfer / Writer / UDF</text>
+<rect x="1266" y="960" width="345" height="78" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="1277" y="973" width="5" height="52" rx="2" fill="#A084D2" stroke="#A084D2" stroke-width="0"/>
+<text x="1296" y="991" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">在线数据存储</text>
+<text x="1296" y="1015" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#69798A" font-weight="400" text-anchor="start">Redis / ES / HBase 等</text>
+<rect x="32" y="1108" width="120" height="29" rx="14" fill="#C77084" stroke="none" stroke-width="0"/>
+<text x="92" y="1128" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#FFFFFF" font-weight="700" text-anchor="middle">07  反馈与保障</text>
+<rect x="175" y="1082" width="1460" height="78" rx="18" fill="#FFF2F4" stroke="#F2D5DA" stroke-width="1.4"/>
+<rect x="198" y="1094" width="685" height="54" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="209" y="1107" width="5" height="28" rx="2" fill="#D68CA0" stroke="#D68CA0" stroke-width="0"/>
+<text x="228" y="1125" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">推荐效果与 BI</text>
+<rect x="907" y="1094" width="703" height="54" rx="11" fill="#FFFFFF" stroke="#D8E3EF" stroke-width="1.2"/>
+<rect x="918" y="1107" width="5" height="28" rx="2" fill="#D68CA0" stroke="#D68CA0" stroke-width="0"/>
+<text x="937" y="1125" font-family="Arial,'PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#27394E" font-weight="650" text-anchor="start">运行监控 / 缓存 / 限流降级</text>
+<path d="M900 268 L900 290" fill="none" stroke="#7F94AD" stroke-width="2" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<path d="M900 384 L900 411" fill="none" stroke="#7F94AD" stroke-width="2" stroke-dasharray="none" marker-end="url(#arrow)"/>
+<path d="M1220 624 L1195 624" fill="none" stroke="#CDA76B" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<path d="M690 753 L690 777" fill="none" stroke="#7F94AD" stroke-width="2" stroke-dasharray="none" marker-end="url(#arrow)"/>
+
+<path d="M1145 936 L1145 916" fill="none" stroke="#7F94AD" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<path d="M1200 1082 L1200 1066" fill="none" stroke="#CE8796" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<g transform="translate(498 178)" fill="none" stroke="#2D997F" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><path d="M3 7h18l-1.3 14H4.3L3 7Z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/></g>
+<g transform="translate(855 178)" fill="none" stroke="#2D997F" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><rect x="4" y="3" width="16" height="19" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></g>
+<g transform="translate(1212 178)" fill="none" stroke="#2D997F" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></g>
+<g transform="translate(1570 178)" fill="none" stroke="#2D997F" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><path d="M12 2l2.8 7.2L22 12l-7.2 2.8L12 22l-2.8-7.2L2 12l7.2-2.8L12 2Z"/></g>
+<g transform="translate(423 819)" fill="none" stroke="#249F81" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><circle cx="10" cy="10" r="7"/><path d="m15.5 15.5 6 6"/></g>
+<g transform="translate(709 819)" fill="none" stroke="#249F81" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 4 18 4 18 0V5M3 12c0 4 18 4 18 0"/></g>
+<g transform="translate(999 819)" fill="none" stroke="#249F81" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></g>
+<g transform="translate(1288 819)" fill="none" stroke="#249F81" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><circle cx="4" cy="5" r="2"/><circle cx="20" cy="5" r="2"/><circle cx="12" cy="20" r="2"/><path d="M6 6l12 0M5 7l6 11M19 7l-6 11"/></g>
+<g transform="translate(1570 819)" fill="none" stroke="#249F81" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><path d="M12 2 21 6v6c0 6-4 9-9 11-5-2-9-5-9-11V6l9-4Z"/><path d="m8 12 3 3 5-6"/></g>
+</svg>
