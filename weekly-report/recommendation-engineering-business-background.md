@@ -911,6 +911,54 @@ update_time 范围限制不能替代正确的全量/增量同步协议；仍要�
 pageType 是请求参数，不等于整数场景 ID；站点内实际页面编号仍需遵循 EC10/EC20 映射。此为方案设计，不代表已部署上线。
 
 
+
+### 21.2 召回与排序配置示例
+
+热销商品推荐原配置如下：
+
+~~~yaml
+storeHotSale:
+  recallList:
+    - name: storeHotSaleRecall
+      size: 100
+      weight: 100
+    - name: storeHotCtrRecall
+      size: 100
+      weight: 5
+    - name: storeHotRecScoreRecall
+      size: 100
+      weight: 4
+    - name: storeHotRtClickRecall
+      size: 100
+      weight: 1
+    - name: storeHotRtCtrRecall
+      size: 100
+      weight: 2
+  rankServiceName: lrCTRModelService
+  rerankList:
+    - compAndHotRerank
+  secondaryRecalls:
+~~~
+
+含义：多路热销/点击召回获得候选，再由 lrCTRModelService 排序、compAndHotRerank 重排。size、weight 为配置参数，不能直接理解为最终分数。secondaryRecalls 原文未填写，不能断言二级召回实际是否生效。
+
+自定义推荐示例：
+
+~~~yaml
+customer:
+  recallList:
+    - name: customerRecall
+      size: 100
+      weight: 1
+  rankServiceName:
+  filterName:
+  complementName:
+  summaryName: "summary"
+~~~
+
+原示例的 rankServiceName、filterName、complementName 留空，实际执行需看默认值与服务实现。补全逻辑当时按店铺商品的 update_time 排序，方案要求暂时保持原有逻辑。
+
+
 ## 22. 原始资料与术语索引
 
 ### 22.1 本次整理覆盖的资料
