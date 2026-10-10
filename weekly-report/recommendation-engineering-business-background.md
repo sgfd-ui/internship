@@ -384,7 +384,7 @@ flowchart TD
 
 下面这张图参考星图技术方案中的**分层架构**重新绘制。**这一章只回答有哪些模块、各模块之间是什么关系**；推荐请求怎么走、每个组件怎么实现，在后面章节分别说明。
 
-![SHOPLINE 推荐系统总体技术架构](./assets/recommendation-engineering/business-architecture.svg)
+![SHOPLINE 推荐系统总体技术架构](./assets/recommendation-engineering/recommendation-system-overview-v2.svg)
 
 ### 3.1 模块与组件
 
