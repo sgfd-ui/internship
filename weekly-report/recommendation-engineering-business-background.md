@@ -395,7 +395,9 @@ flowchart TD
 | **星图在线服务** | 请求准备、场景识别、实验选择、方案/策略编排，以及召回、合并、过滤、补全、排序、重排、摘要 | 按当前场景执行一次推荐任务，返回最终商品或卡片 |
 | **配置与管控** | RAP、Nacos、定制策略 Redis、店铺/FK 绑定、实验/方案管理 | 决定不同请求用哪套实验、策略和组件；支持算法快速调参和发布 |
 | **在线依赖引擎** | ES、Redis/KV、特征服务、RankService/模型、向量引擎、商品业务服务 | 向星图提供候选商品、特征、商品信息以及模型评分 |
-| **数据生产与同步** | Hive、TiDB、MySQL、实时计算、CDC、Kafka、Tahm（Transfer/Writer/UDF）等 | 将算法和业务数据加工、传输，最终写入在线可查询的存储 |
+| **原始数据与加工** | Hive、MySQL、Kafka；Spark/Flink、离线和实时算法计算、模型训练 | 加工用户、店铺、商品特征以及多路召回和模型 |
+| **中间持久存储** | TiDB（召回/特征）、OSS（训练模型） | 统一承接批量和增量产物，持久化保存并支持后续同步 |
+| **数据同步** | TiDB CDC、Kafka、Tahm（Transfer / Writer / UDF） | 同步召回、特征到在线 Redis、ES；模型使用独立同步/推理服务 |
 | **效果与稳定性** | 埋点、推荐成效、BI、接口/组件监控、限流和缓存降级 | 分别判断推荐效果，以及在线服务是否稳定 |
 
 这里的“在线依赖引擎”不是每次请求都要同时调用的固定名单。**召回服务可以使用 ES、Redis；特征服务读取特征存储；精排调用模型服务；不同方案会选用不同组件**。
@@ -404,7 +406,7 @@ flowchart TD
 
 **在线执行链路**：业务页面/后端 → 接入层 → 星图根据场景和实验选择方案 → 调用召回、特征、模型等能力 → 返回商品。
 
-**数据准备链路**：算法生产召回、特征及模型数据 → 通过 TiDB/CDC、Kafka 和 Tahm 等同步机制 → 在线 Redis、ES 或模型服务可读取。既有离线批处理，也可能存在实时计算。
+**数据准备链路**：Hive/MySQL/Kafka 原始数据 → Spark/Flink 等离线/实时计算 → 召回与特征产出至 TiDB → CDC/Kafka → Tahm → Redis/ES；**训练后的模型产物单独存放 OSS，再由模型同步、RankService 加载使用**。因此模型不是普通召回数据，也不要求经过 Tahm。
 
 **配置与反馈链路**：算法通过 RAP 管理实验和策略，发布至 Nacos/Redis 等在线配置；曝光、点击、转化以及运行指标反馈给算法、产品和工程，用于后续优化。
 
@@ -650,6 +652,7 @@ Nacos 保存在线推荐运行需要的配置，核心包括：
 
 | 配置 | 作用 |
 | --- | --- |
+| app-configs | 按业务 ID / Widget / 页面 / 策略配置可用召回、场景特征和实验 |
 | scene-configs | 场景及场景配置 |
 | ab-configs | 实验、应用和策略配置 |
 | solution-plugin-configs | 推荐方案配置 |
@@ -686,7 +689,80 @@ Nacos 保存在线推荐运行需要的配置，核心包括：
 
 配置之间的关系可以概括成：**场景命中实验 → 选择方案/策略 → 装配召回和排序等组件 → 执行**。其中“策略”既可以指完整推荐流程的编排，也可能在具体模块里指一条局部规则，理解时要结合对应配置层级。
 
-### 6.2 配置发布与生效流程
+### 6.2 场景、策略、组件与数据源的配置关系
+
+在星图中，**AppConfig 决定当前场景能使用什么；RecommendStrategy 决定策略要组合什么；组件配置决定怎么处理；DataService/DataSource 决定去哪里读取。**
+
+以商品推荐插件的商品详情页为例。
+
+**第一层：`app-configs` 指定场景允许哪些召回、需要哪些特征**
+
+~~~yaml
+appConfigs:
+  product_rec:
+    widgets:
+      aiRecommend:
+        pages:
+          productDetail:
+            strategies:
+              default:
+                - storeHotCtrRecall
+                - storeHotSaleRecall
+            needFeatures:
+              - similarUser
+              - userRealtimeHistory
+              - userLikeCate
+            abTests:
+              - priorityRecallRerankExp
+~~~
+
+`product_rec` 是业务 ID；`aiRecommend` 是 Widget；`productDetail` 是页面；`default` 是策略。场景可同时声明特征和实验。
+
+**第二层：`recommend-strategies` 定义推荐流水线要调用哪些组件**
+
+~~~yaml
+recommendStrategies:
+  default:
+    recallList:
+      - name: storeHotCtrRecall
+        size: 100
+        weight: 2
+      - name: storeHotSaleRecall
+        size: 100
+        weight: 5
+      - name: storeHotRecScoreRecall
+        size: 100
+        weight: 5
+    rankServiceName: lrCTRModelService
+    filterNames: ["badEffectSpu", "filter"]
+    complementName: "complement"
+    summaryName: "summary"
+    rerankList: ["priorityRecallRerank", "compAndHotRerank"]
+    mergeList: ["sameLocHotSaleRecallMerge"]
+~~~
+
+除了这些字段，策略还可声明 `secondaryRecalls`（重排使用的二级召回）、`priorityRecalls`（优先级召回）和 `abTests`。
+
+注意：**最终执行召回列表，是 AppConfig 当前场景允许的召回，与策略 `recallList` 的交集**：
+
+~~~mermaid
+flowchart TD
+    A["AppConfig：页面 default 允许 A、B"] --> C["求交集：A、B"]
+    B["RecommendStrategy：配置 A、B、C"] --> C
+    C --> D["recall-services：找到 A、B 对应 Processor"]
+    D --> E["data-services：查询 Key 或 ES 条件"]
+    E --> F["data-sources：连接 Redis / ES"]
+~~~
+
+例如全局策略配置了 C，但场景没有允许 C，本次请求就不会执行 C。策略上的 `size`、`weight` 等参数只对实际选中的召回生效。
+
+**第三层：组件配置决定执行细节**。例如 `recall-services` 通过 `processor` 选 Redis/ES 处理器；`merge-config`、`filter-services`、`rerank-services` 都可分别选择处理器；`rank-services` 指向某个模型服务。
+
+**第四层：数据配置负责定位底层存储**。`data-services` 负责 Redis Key 模板、ES 索引、过滤条件、字段、排序及返回类型；`data-sources` 负责 Redis/ES 类型与连接节点。具体 Key 与粗排数据结构在第 7 章展开。
+
+这就是**业务 → Widget → 页面 → 实验/策略 → 组件 → 数据服务 → 数据源**的层级结构，并不是每个业务都要重新部署一套代码。
+
+### 6.3 配置发布与生效流程
 
 ~~~mermaid
 flowchart LR
@@ -703,7 +779,7 @@ RAP 主要解决**人如何管理和发布策略**，Nacos/Redis 主要解决**�
 
 举例：商品详情页实验 B 使用 storeHotSaleRecall 与 lrCTRModelService，并额外启用 compAndHotRerank。RAP 改变的通常是**选中哪些已有组件与参数**，不代表每次调整实验都必须重新部署整套在线服务。
 
-### 6.3 实验分流、分层绑定与兼容
+### 6.4 实验分流、分层绑定与兼容
 
 #### 原有实验选择
 
