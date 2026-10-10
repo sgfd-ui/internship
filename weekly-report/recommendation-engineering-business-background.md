@@ -959,6 +959,20 @@ customer:
 原示例的 rankServiceName、filterName、complementName 留空，实际执行需看默认值与服务实现。补全逻辑当时按店铺商品的 update_time 排序，方案要求暂时保持原有逻辑。
 
 
+
+### 21.3 测试重点
+
+- 验证新增 404 页面和 Thank You 页的请求参数、场景识别与推荐返回。
+- 验证 AI、相似用户、相似商品和热销四种策略的候选集合、排序及展示是否符合预期。
+- 验证规则化推荐 filter / sort / select(spu_id) 的过滤、排序、商品选择行为。
+- 验证自定义召回及空配置情况下的默认处理和补全兼容性。
+
+参考资料：
+- [推荐 4.0 需求清单（一）](https://shopline.yuque.com/docs/share/c485b673-846a-444f-ad91-6f8d9701ec86?#sj5ZT)
+- [推荐 4.0 需求清单（二）](https://shopline.yuque.com/renziyi-x3mos/byozop/ox0hse)
+- [新增页面类型资料](https://shopline.yuque.com/rbxwgy/dvqpxs/xemt6s)
+
+
 ## 22. 原始资料与术语索引
 
 ### 22.1 本次整理覆盖的资料
