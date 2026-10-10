@@ -511,7 +511,7 @@ flowchart LR
 
 **星图的方案（Solution）代码负责把一次推荐请求从参数校验执行到最终结果包装。** 这是配置驱动的流水线：每个阶段有固定的输入输出约定，再按策略选用不同处理器或服务。
 
-![星图在线执行流程](./assets/recommendation-engineering/star-atlas-online-flow.svg)
+![星图在线执行流程](./assets/recommendation-engineering/star-atlas-online-flow-v2.svg)
 
 本章依据《星图代码梳理》的 13 个 Service 和 `RecomContext` 字段说明执行逻辑。这里介绍的是**基础推荐方案**，不是所有场景、专用方案或降级流量都必须执行全部组件。
 
@@ -1198,6 +1198,8 @@ flowchart TD
 
 **召回数据**：预先计算好的候选集合，例如店铺热销商品列表、用户相似商品列表，供 RecallService 读取。
 
+在这份功能架构设计中，**召回数据和特征数据主要写入 TiDB 作为中间持久化数据，训练好的模型文件写入 OSS**。数据同步层以 TiDB CDC + Kafka + Tahm 将召回/特征同步到 Redis、ES 等在线引擎；模型走独立的部署和加载路径。
+
 **特征数据**：用户历史、商品属性、实时行为等，供 FeatureService、Filter 和 RankService 使用。
 
 算法侧可以从 Hive 等数仓计算后批量写入 TiDB，也可以把实时计算结果写入 TiDB。随后通过 CDC 发送 Kafka，再由 Tahm 等同步组件写入在线 Redis/ES。对于其他离线接入任务，也可能按数据源配置走不同的入口，**并非所有来源必须经过 TiDB**。
@@ -1255,7 +1257,7 @@ storeHotSaleRecall 读取候选
 
 历史资料提到推荐 ToAll 时曾从 Beta 召回/特征数据切换至全量数据、独立 Kafka Topic 与 Redis 集群。这是版本迁移背景，不能直接理解为当前环境仍在切换。
 
-### 9.2 TiDB、CDC 订阅和全链路一致性
+### 9.4 TiDB、CDC 订阅和全链路一致性
 
 #### 推荐数据链路
 
