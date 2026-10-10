@@ -256,6 +256,98 @@ Nacos 保存在线推荐运行需要的配置，核心包括：
 
 定制策略的具体内容会同步到 Redis，供在线推荐服务快速读取；Nacos 同时保留是否存在定制策略等控制信息。
 
+
+### 5.1 配置分层：场景、策略、组件
+
+从星图的配置体系看，“配置能力强”不是单指 Nacos 保存参数，而是**推荐执行链路的每一步都可以按场景和实验选用不同组件**：
+
+| 配置类型 | 核心问题 | 相关配置或组件 |
+| --- | --- | --- |
+| 场景配置 | 当前页面应选择哪套方案 | scene-configs、flow-controls、场景/实验绑定 |
+| 策略配置 | 一套方案如何组合召回、合并、过滤、补全、排序与重排 | recommend-strategies、base-strategies、店铺/FK 定制策略 |
+| 召回配置 | 候选商品来自哪一路、各取多少、以什么方式融合 | recall-services、data-sources、recallList（含 size、weight） |
+| 精排配置 | 选哪个模型、需要哪些特征、请求如何构造、执行等级和超时 | rank-services-go、rankServices、needFeatures |
+| 重排配置 | 按什么规则调整模型排序后的展示顺序 | rerank-services、rerankList |
+| 通用运行配置 | 限流、兜底、缓存、实验和发布 | sentinel.rule、cache-configs、ab-configs 等 |
+
+配置之间的关系可以概括成：**场景命中实验 → 选择方案/策略 → 装配召回和排序等组件 → 执行**。其中“策略”既可以指完整推荐流程的编排，也可能在具体模块里指一条局部规则，理解时要结合对应配置层级。
+
+### 5.2 精排服务模型配置（测试环境示例）
+
+提供的星图测试配置包含四个精排服务：
+
+| rankServices 名称 | modelId | 服务用途（按名称理解） | version | timeout | needLevel | needFeatures |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| lrCTRModelService | lr | LR 点击率模型 | 1 | 300 | 2 | userRealtimeHistory、ipAddress |
+| deepFmModelService | deepfm | DeepFM 深度模型 | 1 | 300 | 未显式配置 | userRealtimeHistory、ipAddress |
+| hotScoreRankService | ams3 | 热度/得分相关模型服务 | 1 | 300 | 未显式配置 | userRealtimeHistory、ipAddress |
+| cardRankService | card | 卡片排序服务 | 1 | 300 | 3 | 原片段未显式配置 |
+
+模型请求会根据模板组装输入，调用对应模型服务，再解析为统一的 RankResult。测试样例的路由分别是：
+
+- lrCTRModelService：ai-star-atlas-djl-test.inshopline.com/api
+- deepFmModelService：ai-star-atlas-djl-test.inshopline.com/deepfm/api
+- hotScoreRankService：ai-star-atlas-djl-test.inshopline.com/hot/api
+- cardRankService：api-ads-fs-test.inshopline.com/card-rank/rank
+
+**这些是历史测试环境地址，不是生产调用地址或建议硬编码的接口。** 示例中的 timeout 均为 300，单位要按服务实现确认，不能仅凭 YAML 猜测。未填写 needLevel 的模型不能凭空补一个固定等级。
+
+### 5.3 精排请求的字段与数据流
+
+请求模板的主要结构可以概括为：
+
+~~~json
+{
+  "data": {
+    "contexts": {
+      "userId": "用户标识",
+      "storeId": "店铺标识",
+      "appId": "应用标识",
+      "pageType": "页面类型",
+      "productsId": ["相关商品ID"],
+      "traceId": "链路追踪ID",
+      "ip": "可选地域/IP信息",
+      "isMobile": "可选设备信息",
+      "ipAddress": "可选IP特征",
+      "userRealtimeHistory": [
+        {"id": "历史商品ID", "score": 0.8}
+      ]
+    },
+    "items": [
+      {
+        "id": "候选商品ID",
+        "score": 0.1,
+        "maxScore": 0.4,
+        "recallIds": [1, 2]
+      }
+    ]
+  }
+}
+~~~
+
+上述 JSON **仅用于解释字段结构**，数值和 ID 为示意值，并非真实线上请求，也不是可以原样发送的完整模板。实际配置中的 request 是带条件判断、字段拼接与集合循环的模板字符串：
+
+| 字段 | 来自哪里 / 用来做什么 |
+| --- | --- |
+| contexts.userId、storeId、appId、pageType | 请求上下文，标识用户、店铺、应用与页面 |
+| contexts.productsId | 当前关联的商品或请求商品集合 |
+| contexts.traceId | 串起星图和模型服务的一次请求 |
+| contexts.ip、isMobile、ipAddress | 可选的地域、设备和 IP 特征 |
+| contexts.userRealtimeHistory | 由用户实时历史特征构造的 item/score 列表 |
+| items[].id | 召回/预处理阶段得到的候选商品 |
+| items[].score、maxScore | 上游候选的相关分数 |
+| items[].recallIds | 候选命中的召回通道标识，可用于模型和效果分析 |
+
+卡片排序请求的候选 ID 有单独的 cardId 格式处理，且原例没有要求与商品排序模型完全相同的特征列表。统一的 response 类型为 com.joyy.shopline.star.atlas.commons.entity.result.RankResult。
+
+### 5.4 needFeatures、needLevel 和降级的区别
+
+- **needFeatures**：声明调用该排序组件前需要准备的特征键（如 userRealtimeHistory、ipAddress）；这与第 14 章召回/场景所需特征是同一个配置理念，实际会通过特征服务读取。
+- **needLevel**：控制该排序服务在什么流量等级下可运行，属于在线分层执行和降级管理的一部分；**不是模型质量等级**。
+- **timeout**：控制模型服务请求超时，属于服务调用的运行时约束，不能用它衡量离线训练耗时。
+
+例如截图中 LR 的 needLevel 为 2、卡片模型为 3；第 17.5 节的应急预案通过把指定排序服务 needLevel 从 3 改为 4，使正常 level3 流量跳过该服务。**这些配置来自不同阶段/环境，不应合并成一份当前线上配置。**
+
 ---
 
 ## 6. 离线数据链路
