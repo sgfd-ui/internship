@@ -23,7 +23,7 @@
 
 ### 2.2 本次迁移架构
 
-![Dify 1.17.1 升级实施路径](assets/dify-baseline-upgrade/dify-1.17.1-migration-scope-v15.svg)
+![Dify 1.17.1 升级实施路径](assets/dify-baseline-upgrade/dify-1.17.1-migration-scope-v16.svg)
 
 ---
 
