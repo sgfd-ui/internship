@@ -8,7 +8,7 @@
 | --- | --- |
 | 基线升级 | 平台基础版本由 Dify 1.14.2 升级到 Dify 1.17.1 |
 | 现有能力迁移 | 将 SkyOA、工作空间、S3/KMS、文件与私钥等现有公司能力适配到 1.17.1 |
-| 新能力升级 | 在阶段一形成的 1.17.1 版本上增加确定要启用的新功能及对应运行组件 |
+| 新功能取舍 | 保留 1.17.1 官方新能力代码；本次暂无明确新功能需求，不主动开启新 Agent 等可选能力，后续按需配置与部署 |
 | 执行引擎隔离 | 不迁原公司托管调度；以 1.17.1 官方 Workflow / Chatflow 异步执行为基础，增加应用执行池、Queue Router 和独立 Priority Worker |
 | 数据库与资源更新 | 使用最新 `ai_studio` 备份先做本地演练，再在线上原库完成 1.17.1 Schema 升级；Redis / S3 清理升级测试数据后恢复原有连接与存储配置 |
 
@@ -341,56 +341,58 @@ PostgreSQL 已在原测试库 `ai_studio` 完成 1.17.1 升级，线上数据变
 
 ---
 
-## 四、阶段二：1.17.1 新能力启用与配置
+## 四、阶段二：1.17.1 新功能取舍与配置
 
-阶段二基于已经迁移的 Dify 1.17.1 代码和现有 PostgreSQL、Redis、S3 / KMS、Plugin Daemon 等底层组件，**按实际要使用的功能补齐配置与运行组件**。不是所有新版能力都需要新服务；区分前端功能开关、API / Worker 配置、Agent Runtime 配置和必须新增的独立运行角色。
+本次升级以**完成 1.17.1 基线替换、保留原有业务能力**为目标，**暂不主动启用没有明确业务需求的新版功能**。官方已有的功能代码随基线保留；后续确定需求后，再补充配置和对应组件。
 
-### 4.1 新能力为什么需要配置
+### 4.1 本次暂不启用新功能的原因
 
-| 功能 | 启用原因与架构变化 | 配置或依赖 | 启用条件 |
-| --- | --- | --- | --- |
-| **新 Agent App（Agent V2）** | 新版 Agent App 的执行由 Agent Backend 提供运行能力，不能仅启动旧版 API / Worker 就认为新版 Agent 可用 | Web 的 `NEXT_PUBLIC_ENABLE_AGENT_V2`；API / Worker 的 `AGENT_BACKEND_BASE_URL`、`AGENT_BACKEND_API_TOKEN`；Agent Backend 的 Redis、Plugin Daemon、内部 API、Runtime 与鉴权配置 | **使用新 Agent App 时启用** |
-| **Workflow 中的 Agent 节点** | 节点可以依赖模型、Tool / Skill 及其执行策略；应与独立的 Agent App 区分，不能把“出现 Agent 节点”直接等同于“必须部署全部 Agent 服务” | 配置节点使用的模型、工具/插件与执行策略；若所选实现走 Agent V2 Runtime，再补齐对应 Agent Backend 配置 | **使用该节点时按实际执行模式配置** |
-| Agent Skills / Home Snapshot / Shell | Agent 需要访问技能、保存 Home 状态或执行 Shell 时，依赖具体的 Runtime 后端和工作区；这不是仅打开 Web 开关即可完成的能力 | `DIFY_AGENT_RUNTIME_BACKEND`；选 Local Runtime 时配置 Local Sandbox 地址、鉴权、工作区持久化、文件访问地址和出网代理 | **需要这些 Agent Runtime 能力时启用** |
-| Workflow / Chatflow 实时协作 | 编辑器实时协作需要独立的 WebSocket 长连接，不是普通 API 请求 | `api_websocket` 的启动方式与代理路由、`NEXT_PUBLIC_SOCKET_URL`、Socket.IO / Redis Sentinel 连接；沿用阶段一已适配的客户端地址规则 | **使用实时协作时启用** |
-| Unified / Knowledge Tracing | 新版内部追踪与对外 OpenTelemetry 导出是两类配置，不应混为一个开关 | 内部统一追踪按 `OPS_TRACE_UNIFIED_ENABLED` 配置；需要外送 Trace 时配置 `ENABLE_OTEL`、`OTLP_TRACE_ENDPOINT`、导出协议和采样率 | **需要对应追踪能力时启用** |
-| Knowledge / 检索增强 | Excel 图片、ODT、混合检索等需要对应解析、模型或向量存储 Provider 支持 | 检查 Plugin Daemon、文档解析器、Embedding / Vision 模型与 Vector Store；TiDB 混合检索仅在采用该后端时配置 | **按使用的数据源和检索后端启用** |
-| Workflow 生成、LLM Environment、节点定位与运行导出 | 主要是 1.17.1 已提供的 API / Web / Worker 功能，不应额外搭一套执行服务 | 复用官方功能，按实际调用配置模型、模型凭据和必要的 LLM 环境变量 | **使用对应功能时配置** |
-| WebApp / 多模态 / Tool 增强 | 主要依赖现有页面、模型、插件与文件链路 | 复用 Web / API、Plugin Daemon 和阶段一 S3 / KMS；多模态模型能力、工具参数按具体 Provider 配置 | **使用对应模型或工具时配置** |
-| Human Input（富表单、Loop / Iteration） | 依赖官方 Workflow 暂停、表单和恢复执行链路 | 使用官方 Workflow Runtime 与任务恢复配置；不重建公司原有 Human Input 调度层 | **在 Workflow 使用 Human Input 时启用** |
-| 外部 KMS、会话治理、difyctl | 属于既有服务配置复用或命令行运维能力，不需要为它们常驻部署新 Agent 组件 | KMS 沿用阶段一配置；会话治理复用既有定时任务；`difyctl` 按需运行 | **按运维与治理需求使用** |
+| 原因 | 具体说明 |
+| --- | --- |
+| **当前没有明确需求** | 本次工作是基线升级与现有功能迁移，尚无使用新 Agent、实时协作、Tracing 等新能力的明确业务需求，不把这些功能纳入本次上线范围。 |
+| **新版 Agent 可以独立开启** | 1.17.1 的新 Agent App 通过独立 \`agent_backend\` 提供运行能力，与现有 Workflow / Chatflow 官方执行链路分开；不开启 Agent V2 不影响既有应用和第五章的执行池隔离。 |
+| **启用会增加部署和配置工作** | 以新 Agent 为例，需要增加 Agent Backend；使用 Local Runtime 时还需 Local Sandbox、出网代理，并配置 API / Web / Worker 的服务地址、认证及相关依赖。实时协作、外部 Tracing 也有各自的部署或配置工作。 |
 
-这里的 **Agent App、Workflow Agent 节点、Agent Local Runtime 是三个不同层次**。是否部署 `agent_backend`、`local_sandbox`、`agent_ssrf_proxy`，以实际开启的 Agent 执行方式为准；不能把三者当作统一的必选套餐。
+**结论：本次仅升级官方基线和现有能力，不新增上述可选功能的专用运行组件。** 这不等于删除 1.17.1 的新功能代码，也不对已随基线提供的普通 Workflow / WebApp 等能力做额外关闭处理。
 
-### 4.2 具体配置与组件部署
+### 4.2 新功能与本次处理范围
 
-#### 新 Agent App：API / Web 与 Agent Backend
-
-| 配置位置 | 关键配置 | 作用 |
+| 新版能力 | 启用涉及的组件或依赖 | 本次处理 |
 | --- | --- | --- |
-| Web | `NEXT_PUBLIC_ENABLE_AGENT_V2` | 控制新版 Agent V2 页面/入口功能开关；仅有开关不等于后端可执行 |
-| API / General Worker | `AGENT_BACKEND_BASE_URL`、`AGENT_BACKEND_API_TOKEN` | 调用 Agent Backend；后者必须与 Agent Backend 的 `DIFY_AGENT_API_TOKEN` 一致 |
-| Agent Backend | `DIFY_AGENT_REDIS_URL`、`DIFY_AGENT_PLUGIN_DAEMON_URL`、`DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | 接入现有 Redis 与 Plugin Daemon |
-| Agent Backend | `DIFY_AGENT_INNER_API_URL`、`DIFY_AGENT_INNER_API_KEY` | 与 Dify API 内部通信；内部 Key 应按官方要求与 API / Worker 的 `INNER_API_KEY_FOR_PLUGIN` 对齐 |
-| Agent Backend | `DIFY_AGENT_RUNTIME_BACKEND`、`DIFY_AGENT_SERVER_SECRET_KEY`、`DIFY_AGENT_API_TOKEN` | 选择 Agent Runtime，配置服务认证和令牌加密密钥；生产环境不能沿用示例密钥 |
-| Local Runtime（按需） | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT`、`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`、`DIFY_AGENT_SANDBOX_FILES_BASE_URL` | Agent Backend 访问 Shell Workspace、控制 Sandbox 和交换文件 |
+| **新 Agent App / Agent Skills / Agent Home** | \`agent_backend\`，模型与 Tool / Plugin 配置；Local Runtime 按需依赖 \`local_sandbox\` 和 \`agent_ssrf_proxy\` | **暂不启用**，保留官方代码，后续按需部署 |
+| Workflow 中的 Agent 节点 | 取决于节点实际采用的模型、工具与执行模式；不等同于一定使用新 Agent App 的独立 Backend | 保留 1.17.1 原生能力；不额外接入 Agent V2 Runtime |
+| Workflow 实时协作 | \`api_websocket\`、WebSocket 地址、Socket.IO / Redis 和网关转发 | **暂不单独启用**，不新增 WebSocket Deployment |
+| Unified / Knowledge Tracing | 内部 Trace 配置；如需外送则接入 OTel / Trace 后端 | 暂不新增追踪接入，保留当前可观测能力 |
+| 知识库与检索增强 | 对应解析器、模型、Plugin / Vector Store Provider | 沿用当前知识库能力，不额外启用新 Provider |
+| 新 Workflow / WebApp、Human Input、多模态与 Tool 增强 | 多数复用 1.17.1 API、Web、Worker、Plugin Daemon；具体能力按模型或流程配置 | 随官方基线保留，不单独建设运行服务或扩展使用范围 |
+| 外部 KMS、会话治理、\`difyctl\` | 已有 S3 / KMS 与定时任务，或按需使用命令行工具 | 保留现有配置；无新的长期运行组件 |
 
-上述变量名按 **Dify 1.17.1 官方 `docker/.env.example`、`api/.env.example` 与 `docker/docker-compose.yaml`** 整理。具体地址、鉴权和秘钥通过现有 DevOps 配置注入，不将本地 Compose 的默认地址或开发密钥直接用于公司环境。
+### 4.3 新功能启用时的配置说明
 
-#### 新运行组件及启用条件
+以下是**后续决定启用对应功能时**需要增加或调整的主要配置。本次不为未开启的功能部署新服务，原 PostgreSQL、Redis、S3 / KMS 与 Plugin Daemon 继续复用。
 
-| 组件 | 为什么需要 | 何时部署 | 部署方式 |
-| --- | --- | --- | --- |
-| `agent_backend` | 新 Agent App 的独立控制与运行服务 | **启用新 Agent App** | 新增 `dify-agent-backend`，连接统一 API、Redis、Plugin Daemon |
-| `local_sandbox` | 为 Agent Local Runtime 提供 Shell Workspace 和持久化 Home / 工作目录 | `DIFY_AGENT_RUNTIME_BACKEND=local` 且使用对应能力 | 新增 `dify-agent-local-sandbox`，配置持久化存储、内部 Endpoint 和认证；不替换现有 `dify-sandbox` |
-| `agent_ssrf_proxy` | 控制 Agent Local Sandbox 的出网访问和 API / 文件访问边界 | **使用 Local Sandbox 网络隔离方案** | 配套新增代理组件，并设置 Sandbox 网络、代理地址和允许访问范围 |
-| `api_websocket` | 承载 Workflow 实时协作的 WebSocket 连接 | **启用实时协作** | 复用 Dify API 镜像，配置 WebSocket Worker、Socket.IO 路由与 `NEXT_PUBLIC_SOCKET_URL` |
-| Trace 后端 | 接收或检索新版追踪数据 | 使用外部 Trace 服务时 | 复用公司现有 Trace 系统，配置 OTel 导出端点；不新增 Dify 核心执行服务 |
-| Plugin / Vector Store | 为新解析、检索模型和知识库能力提供实际 Provider | 选用对应模型/数据源时 | 沿用 Plugin Daemon 与现有存储，补齐 Provider 配置，不复制基础服务 |
+#### 4.3.1 新 Agent（可选）
 
-WebSocket 可参考官方的 `API_WEBSOCKET_WORKER_CLASS`、`API_WEBSOCKET_WORKER_AMOUNT` 和 `NGINX_SOCKET_IO_UPSTREAM` 配置。Agent Local Sandbox 的网络及文件可达性需与现有网关策略一致，不能直接照搬 Docker Compose 的服务名。
+| 配置位置 | 关键配置 | 用途 |
+| --- | --- | --- |
+| Web | \`NEXT_PUBLIC_ENABLE_AGENT_V2\` | 新 Agent V2 前端入口开关；**本次明确设为 \`false\`**，避免官方示例默认开启入口。该项应在 Web 构建时生效 |
+| API / Worker | \`AGENT_BACKEND_BASE_URL\`、\`AGENT_BACKEND_API_TOKEN\` | 启用新 Agent 后连接 Agent Backend；API Token 与后端 \`DIFY_AGENT_API_TOKEN\` 保持一致 |
+| Agent Backend | \`DIFY_AGENT_REDIS_URL\`、\`DIFY_AGENT_PLUGIN_DAEMON_URL\`、\`DIFY_AGENT_PLUGIN_DAEMON_API_KEY\` | 连接已有 Redis 和 Plugin Daemon |
+| Agent Backend | \`DIFY_AGENT_INNER_API_URL\`、\`DIFY_AGENT_INNER_API_KEY\`、\`DIFY_AGENT_SERVER_SECRET_KEY\` | 内部 API 访问、服务认证及令牌加密；内部 API Key 与 API / Worker 的 \`INNER_API_KEY_FOR_PLUGIN\` 对齐 |
+| Agent Runtime | \`DIFY_AGENT_RUNTIME_BACKEND\` | 选择 Agent 运行后端，只有启用新 Agent 时才按实际部署配置 |
+| Local Runtime（按需） | \`DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT\`、\`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN\`、\`DIFY_AGENT_SANDBOX_FILES_BASE_URL\` | 选择 Local Runtime 时连接 Shell Workspace、鉴权和文件服务，并配置对应出网代理 |
 
-**落地顺序：** 先确定要开放的 Agent / Collaboration / Tracing 功能，再配置入口和相关 Provider；只有真正依赖独立 Runtime 的能力才增加相应 Deployment。所有新增运行角色继续使用已升级的原数据库和现有 Redis、S3 / KMS；第五章的 Default / Priority Worker 隔离方案保持不变。
+组件对应关系：开启**新 Agent App**才部署 \`agent_backend\`；选用 **Local Runtime** 时再部署 \`local_sandbox\`，以及与其出网策略配套的 \`agent_ssrf_proxy\`。三者不是所有 1.17.1 应用的通用必选组件。
+
+#### 4.3.2 其他新功能（按需）
+
+| 功能 | 需要增加或调整的配置 | 关联组件 |
+| --- | --- | --- |
+| Workflow 实时协作 | \`NEXT_PUBLIC_SOCKET_URL\`、\`API_WEBSOCKET_WORKER_CLASS\`、\`API_WEBSOCKET_WORKER_AMOUNT\`、\`NGINX_SOCKET_IO_UPSTREAM\`，以及 Socket.IO / Redis 连接与网关路由 | 复用 API 镜像新增 \`api_websocket\` 运行角色 |
+| Unified / Knowledge Tracing | 内部追踪按当前代码的 \`OPS_TRACE_UNIFIED_ENABLED\` 配置；对外导出使用 \`ENABLE_OTEL\`、\`OTLP_TRACE_ENDPOINT\` 及导出协议、采样率 | 现有 API / Worker，按需连接公司 Trace 后端 |
+| Knowledge / 检索增强 | 对应 Plugin、Embedding / Vision 模型、Vector Store Provider；使用 KnowledgeFS 时配置 \`KNOWLEDGE_FS_ENABLED\` 及服务参数 | 现有 Plugin Daemon、Worker、向量数据库及按需启用的服务 |
+
+以上配置项参考 Dify 1.17.1 官方 \`docker/.env.example\`、\`api/.env.example\` 和 \`docker/docker-compose.yaml\`。地址与密钥在公司 DevOps 配置中按环境填写；**只有选定功能后才新增对应运行角色与配置**。
 
 ---
 
