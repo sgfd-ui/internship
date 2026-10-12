@@ -41,9 +41,9 @@ flowchart LR
 
 ### 2.1 整体架构
 
-![Dify 执行引擎隔离整体架构](assets/dify-execution-isolation/execution-engine-isolation-architecture-v2.svg)
+![Dify 执行引擎隔离整体架构](assets/dify-execution-isolation/execution-engine-isolation-architecture-v3.svg)
 
-App 发起 Workflow / Chatflow 执行时，根据 `execution_pool` 选择 Default 或 Priority Queue。两组 Worker 使用同一份 Dify 1.17.1 后端代码，区别只在监听 Queue 和分配的计算资源。
+App 发起 Workflow / Chatflow 执行时，Dify API 根据 `execution_pool` 分流到普通或核心 Queue；两组 Worker 使用同一份 Dify 1.17.1 官方执行引擎。流式事件和阻塞结果经原生通道返回 API，再向客户端输出；两组 Worker 只在监听 Queue 和计算资源上区分。
 
 ### 2.2 核心模块
 
@@ -363,9 +363,9 @@ Human Input 恢复
 
 ## 五、上线部署
 
-### 5.1 部署架构
+### 5.1 部署关系
 
-![Dify 执行引擎隔离部署架构](assets/dify-execution-isolation/execution-engine-isolation-deployment-v2.svg)
+Dify API 负责按执行池分流并向客户端返回结果；Default Worker 和 Priority Worker 独立监听对应 Queue，复用现有 PostgreSQL、Redis、Plugin Daemon 和 Sandbox。
 
 ### 5.2 组件调整
 
