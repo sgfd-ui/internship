@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1640" height="780" viewBox="0 0 1640 780" role="img" aria-label="Dify 数据迁移：先本地验证，再线上原库升级，最后只收束 PostgreSQL 和 Redis">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#F4F8FE"/></linearGradient>
+<linearGradient id="blue" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F4F9FF"/><stop offset="1" stop-color="#E7F0FF"/></linearGradient>
+<linearGradient id="violet" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FBF9FF"/><stop offset="1" stop-color="#EFE9FF"/></linearGradient>
+<linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F3FFF8"/><stop offset="1" stop-color="#DFF7EA"/></linearGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFFCF3"/><stop offset="1" stop-color="#FFF1CF"/></linearGradient>
+<filter id="sh" x="-30%" y="-30%" width="170%" height="170%"><feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#233B63" flood-opacity=".13"/></filter>
+<marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#5C7191" stroke-width="2.3" stroke-linejoin="round"/></marker>
+<style>text{font-family:Inter,'PingFang SC','Microsoft YaHei',Arial,sans-serif;fill:#1D3150}.title{font-size:32px;font-weight:760}.desc{font-size:15px;fill:#62738C}.h{font-size:21px;font-weight:750}.txt{font-size:16px;font-weight:670}.mini{font-size:14px;fill:#697991}.small{font-size:12.5px;fill:#677991}.arrow{stroke:#697D9A;stroke-width:2.8;fill:none;marker-end:url(#arrow)}.blueico{color:#397EDF}.violetico{color:#8061DA}.greenico{color:#258E63}.goldico{color:#C48623}</style>
+<symbol id="db" viewBox="0 0 48 48"><ellipse cx="24" cy="10" rx="17" ry="7" fill="none" stroke="currentColor" stroke-width="3"/><path d="M7 10v12c0 4 8 7 17 7s17-3 17-7V10M7 22v12c0 4 8 7 17 7s17-3 17-7V22" fill="none" stroke="currentColor" stroke-width="3"/></symbol>
+<symbol id="restore" viewBox="0 0 48 48"><path d="M12 15h21M12 15l7-7M12 15l7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M13 31a15 15 0 102-15" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M22 26h10M27 21v10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="check" viewBox="0 0 48 48"><rect x="8" y="7" width="32" height="33" rx="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M15 24l6 7 14-16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+<symbol id="server" viewBox="0 0 48 48"><rect x="5" y="6" width="38" height="14" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><rect x="5" y="28" width="38" height="14" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="14" cy="13" r="2" fill="currentColor"/><circle cx="14" cy="35" r="2" fill="currentColor"/><path d="M24 13h11M24 35h11" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+<symbol id="redis" viewBox="0 0 48 48"><path d="M6 14l18-8 18 8-18 8zM6 24l18 8 18-8M6 34l18 8 18-8" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></symbol>
+</defs><rect width="1640" height="780" fill="url(#bg)"/>
+<text x="60" y="58" class="title">Dify 1.17.1 · 数据迁移与最终收束</text><text x="60" y="88" class="desc">旧的“开发库导入 → 二次搬迁”不再采用；以最新备份本地演练后，原 ai_studio 就地升级</text>
+<g filter="url(#sh)"><rect x="70" y="145" width="455" height="177" rx="22" fill="url(#blue)" stroke="#A5C8F3" stroke-width="1.8"/><path d="M88 322L102 332H497L513 322Z" fill="#A5C8F3" opacity=".28"/></g><use href="#restore" x="96" y="168" width="48" height="48"/><text x="154" y="199" class="h">01  本地验证</text>
+<text x="100" y="235" class="txt">最新 ai_studio 备份 → 本地独立库</text><text x="100" y="269" class="mini">清理旧调度 → 官方 + 公司兼容 Migration</text><text x="100" y="299" class="mini">数据对账 / 重复迁移检查 / 恢复验证</text>
+<path d="M540 234H587" class="arrow"/>
+<g filter="url(#sh)"><rect x="600" y="145" width="455" height="177" rx="22" fill="url(#violet)" stroke="#C5B5EF" stroke-width="1.8"/><path d="M618 322L632 332H1027L1043 322Z" fill="#C5B5EF" opacity=".28"/></g><use href="#db" x="626" y="168" width="48" height="48"/><text x="684" y="199" class="h">02  线上原库升级</text>
+<text x="630" y="235" class="txt">停止新旧写入服务 → 备份并验证恢复</text><text x="630" y="269" class="mini">ai_studio 就地清理旧调度 + Schema 升级</text><text x="630" y="299" class="mini">核对数据 → 启动 Dify 1.17.1 服务</text>
+<path d="M1070 234H1117" class="arrow"/>
+<g filter="url(#sh)"><rect x="1130" y="145" width="440" height="177" rx="22" fill="url(#green)" stroke="#A0DAB8" stroke-width="1.8"/><path d="M1148 322L1162 332H1542L1558 322Z" fill="#A0DAB8" opacity=".28"/></g><use href="#check" x="1156" y="168" width="48" height="48"/><text x="1214" y="199" class="h">03  只收束数据资源</text>
+<text x="1160" y="235" class="txt">PostgreSQL：使用升级后的 ai_studio</text><text x="1160" y="269" class="mini">Redis：统一连接、Prefix、队列 / 频道</text><text x="1160" y="299" class="mini">不执行 DevOps 应用回迁或制品替换</text>
+<g filter="url(#sh)"><rect x="70" y="390" width="1500" height="285" rx="26" fill="#FFFFFF" stroke="#DEE6F1" stroke-width="1.6"/></g>
+<text x="110" y="437" class="h">最终运行关系</text><text x="110" y="464" class="mini">部署沿用现有 1.17.1 升级线；收束的对象只有数据连接与资源</text>
+<g filter="url(#sh)"><rect x="125" y="510" width="350" height="116" rx="18" fill="url(#blue)" stroke="#A5C8F3"/></g>
+<use href="#server" x="158" y="545" width="47" height="47"/><text x="232" y="552" class="h">现有 1.17.1 组件</text><text x="232" y="581" class="mini">API / Web / Worker / Beat</text>
+<path d="M490 567H577" class="arrow"/>
+<g filter="url(#sh)"><rect x="600" y="510" width="370" height="116" rx="18" fill="url(#green)" stroke="#A0DAB8"/></g>
+<use href="#db" x="630" y="545" width="48" height="48"/><text x="704" y="552" class="h">PostgreSQL</text><text x="704" y="581" class="mini">ai_studio（原库升级）</text>
+<path d="M490 567H540V484H1040V567H1073" class="arrow"/>
+<g filter="url(#sh)"><rect x="1095" y="510" width="400" height="116" rx="18" fill="url(#gold)" stroke="#E6C584"/></g>
+<use href="#redis" x="1125" y="545" width="48" height="48"/><text x="1198" y="552" class="h">Redis / Celery</text><text x="1198" y="581" class="mini">沿用现有服务、明确命名空间</text>
+<text x="820" y="727" class="desc" text-anchor="middle">本地演练已完成历史备份验证；线上 ai_studio 实际升级仍需执行，不能用本地数据库直接覆盖远程库</text>
+</svg>
