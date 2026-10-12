@@ -2,7 +2,7 @@
 
 ## 一、升级目标
 
-当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分三个阶段完成现有能力迁移、新版本能力升级和执行引擎隔离。底层沿用现有 PostgreSQL、Redis、S3 等组件；数据库按“最新备份本地验证 → 线上原 `ai_studio` 就地升级”执行，Redis 和 S3 仅清理升级测试数据并恢复原配置。
+当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分三个阶段完成现有能力迁移、新功能取舍与配置预留、执行引擎隔离。底层沿用现有 PostgreSQL、Redis、S3 等组件；数据库按“最新备份本地验证 → 线上原 `ai_studio` 就地升级”执行，Redis 和 S3 仅清理升级测试数据并恢复原配置。
 
 | 目标 | 内容 |
 | --- | --- |
@@ -350,7 +350,7 @@ PostgreSQL 已在原测试库 `ai_studio` 完成 1.17.1 升级，线上数据变
 | 原因 | 具体说明 |
 | --- | --- |
 | **当前没有明确需求** | 本次工作是基线升级与现有功能迁移，尚无使用新 Agent、实时协作、Tracing 等新能力的明确业务需求，不把这些功能纳入本次上线范围。 |
-| **新版 Agent 可以独立开启** | 1.17.1 的新 Agent App 通过独立 \`agent_backend\` 提供运行能力，与现有 Workflow / Chatflow 官方执行链路分开；不开启 Agent V2 不影响既有应用和第五章的执行池隔离。 |
+| **新版 Agent 可以独立开启** | 1.17.1 的新 Agent App 通过独立 `agent_backend` 提供运行能力，与现有 Workflow / Chatflow 官方执行链路分开；不开启 Agent V2 不影响既有应用和第五章的执行池隔离。 |
 | **启用会增加部署和配置工作** | 以新 Agent 为例，需要增加 Agent Backend；使用 Local Runtime 时还需 Local Sandbox、出网代理，并配置 API / Web / Worker 的服务地址、认证及相关依赖。实时协作、外部 Tracing 也有各自的部署或配置工作。 |
 
 **结论：本次仅升级官方基线和现有能力，不新增上述可选功能的专用运行组件。** 这不等于删除 1.17.1 的新功能代码，也不对已随基线提供的普通 Workflow / WebApp 等能力做额外关闭处理。
@@ -359,13 +359,13 @@ PostgreSQL 已在原测试库 `ai_studio` 完成 1.17.1 升级，线上数据变
 
 | 新版能力 | 启用涉及的组件或依赖 | 本次处理 |
 | --- | --- | --- |
-| **新 Agent App / Agent Skills / Agent Home** | \`agent_backend\`，模型与 Tool / Plugin 配置；Local Runtime 按需依赖 \`local_sandbox\` 和 \`agent_ssrf_proxy\` | **暂不启用**，保留官方代码，后续按需部署 |
+| **新 Agent App / Agent Skills / Agent Home** | `agent_backend`，模型与 Tool / Plugin 配置；Local Runtime 按需依赖 `local_sandbox` 和 `agent_ssrf_proxy` | **暂不启用**，保留官方代码，后续按需部署 |
 | Workflow 中的 Agent 节点 | 取决于节点实际采用的模型、工具与执行模式；不等同于一定使用新 Agent App 的独立 Backend | 保留 1.17.1 原生能力；不额外接入 Agent V2 Runtime |
-| Workflow 实时协作 | \`api_websocket\`、WebSocket 地址、Socket.IO / Redis 和网关转发 | **暂不单独启用**，不新增 WebSocket Deployment |
+| Workflow 实时协作 | `api_websocket`、WebSocket 地址、Socket.IO / Redis 和网关转发 | **暂不单独启用**，不新增 WebSocket Deployment |
 | Unified / Knowledge Tracing | 内部 Trace 配置；如需外送则接入 OTel / Trace 后端 | 暂不新增追踪接入，保留当前可观测能力 |
 | 知识库与检索增强 | 对应解析器、模型、Plugin / Vector Store Provider | 沿用当前知识库能力，不额外启用新 Provider |
 | 新 Workflow / WebApp、Human Input、多模态与 Tool 增强 | 多数复用 1.17.1 API、Web、Worker、Plugin Daemon；具体能力按模型或流程配置 | 随官方基线保留，不单独建设运行服务或扩展使用范围 |
-| 外部 KMS、会话治理、\`difyctl\` | 已有 S3 / KMS 与定时任务，或按需使用命令行工具 | 保留现有配置；无新的长期运行组件 |
+| 外部 KMS、会话治理、`difyctl` | 已有 S3 / KMS 与定时任务，或按需使用命令行工具 | 保留现有配置；无新的长期运行组件 |
 
 ### 4.3 新功能启用时的配置说明
 
@@ -375,24 +375,24 @@ PostgreSQL 已在原测试库 `ai_studio` 完成 1.17.1 升级，线上数据变
 
 | 配置位置 | 关键配置 | 用途 |
 | --- | --- | --- |
-| Web | \`NEXT_PUBLIC_ENABLE_AGENT_V2\` | 新 Agent V2 前端入口开关；**本次明确设为 \`false\`**，避免官方示例默认开启入口。该项应在 Web 构建时生效 |
-| API / Worker | \`AGENT_BACKEND_BASE_URL\`、\`AGENT_BACKEND_API_TOKEN\` | 启用新 Agent 后连接 Agent Backend；API Token 与后端 \`DIFY_AGENT_API_TOKEN\` 保持一致 |
-| Agent Backend | \`DIFY_AGENT_REDIS_URL\`、\`DIFY_AGENT_PLUGIN_DAEMON_URL\`、\`DIFY_AGENT_PLUGIN_DAEMON_API_KEY\` | 连接已有 Redis 和 Plugin Daemon |
-| Agent Backend | \`DIFY_AGENT_INNER_API_URL\`、\`DIFY_AGENT_INNER_API_KEY\`、\`DIFY_AGENT_SERVER_SECRET_KEY\` | 内部 API 访问、服务认证及令牌加密；内部 API Key 与 API / Worker 的 \`INNER_API_KEY_FOR_PLUGIN\` 对齐 |
-| Agent Runtime | \`DIFY_AGENT_RUNTIME_BACKEND\` | 选择 Agent 运行后端，只有启用新 Agent 时才按实际部署配置 |
-| Local Runtime（按需） | \`DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT\`、\`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN\`、\`DIFY_AGENT_SANDBOX_FILES_BASE_URL\` | 选择 Local Runtime 时连接 Shell Workspace、鉴权和文件服务，并配置对应出网代理 |
+| Web | `NEXT_PUBLIC_ENABLE_AGENT_V2` | 新 Agent V2 前端入口开关；**本次 Web 构建配置设为 `false`**，不展示新版 Agent 入口；官方示例值为 `true`，需显式覆盖 |
+| API / Worker | `AGENT_BACKEND_BASE_URL`、`AGENT_BACKEND_API_TOKEN` | 启用新 Agent 后连接 Agent Backend；API Token 与后端 `DIFY_AGENT_API_TOKEN` 保持一致 |
+| Agent Backend | `DIFY_AGENT_REDIS_URL`、`DIFY_AGENT_PLUGIN_DAEMON_URL`、`DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | 连接已有 Redis 和 Plugin Daemon |
+| Agent Backend | `DIFY_AGENT_INNER_API_URL`、`DIFY_AGENT_INNER_API_KEY`、`DIFY_AGENT_SERVER_SECRET_KEY` | 内部 API 访问、服务认证及令牌加密；内部 API Key 与 API / Worker 的 `INNER_API_KEY_FOR_PLUGIN` 对齐 |
+| Agent Runtime | `DIFY_AGENT_RUNTIME_BACKEND` | 选择 Agent 运行后端，只有启用新 Agent 时才按实际部署配置 |
+| Local Runtime（按需） | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT`、`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`、`DIFY_AGENT_SANDBOX_FILES_BASE_URL` | 选择 Local Runtime 时连接 Shell Workspace、鉴权和文件服务，并配置对应出网代理 |
 
-组件对应关系：开启**新 Agent App**才部署 \`agent_backend\`；选用 **Local Runtime** 时再部署 \`local_sandbox\`，以及与其出网策略配套的 \`agent_ssrf_proxy\`。三者不是所有 1.17.1 应用的通用必选组件。
+组件对应关系：开启**新 Agent App**才部署 `agent_backend`；选用 **Local Runtime** 时再部署 `local_sandbox`，以及与其出网策略配套的 `agent_ssrf_proxy`。三者不是所有 1.17.1 应用的通用必选组件。
 
 #### 4.3.2 其他新功能（按需）
 
 | 功能 | 需要增加或调整的配置 | 关联组件 |
 | --- | --- | --- |
-| Workflow 实时协作 | \`NEXT_PUBLIC_SOCKET_URL\`、\`API_WEBSOCKET_WORKER_CLASS\`、\`API_WEBSOCKET_WORKER_AMOUNT\`、\`NGINX_SOCKET_IO_UPSTREAM\`，以及 Socket.IO / Redis 连接与网关路由 | 复用 API 镜像新增 \`api_websocket\` 运行角色 |
-| Unified / Knowledge Tracing | 内部追踪按当前代码的 \`OPS_TRACE_UNIFIED_ENABLED\` 配置；对外导出使用 \`ENABLE_OTEL\`、\`OTLP_TRACE_ENDPOINT\` 及导出协议、采样率 | 现有 API / Worker，按需连接公司 Trace 后端 |
-| Knowledge / 检索增强 | 对应 Plugin、Embedding / Vision 模型、Vector Store Provider；使用 KnowledgeFS 时配置 \`KNOWLEDGE_FS_ENABLED\` 及服务参数 | 现有 Plugin Daemon、Worker、向量数据库及按需启用的服务 |
+| Workflow 实时协作 | `NEXT_PUBLIC_SOCKET_URL`、`API_WEBSOCKET_WORKER_CLASS`、`API_WEBSOCKET_WORKER_AMOUNT`、`NGINX_SOCKET_IO_UPSTREAM`，以及 Socket.IO / Redis 连接与网关路由 | 复用 API 镜像新增 `api_websocket` 运行角色 |
+| Unified / Knowledge Tracing | 内部追踪按当前代码的 `OPS_TRACE_UNIFIED_ENABLED` 配置；对外导出使用 `ENABLE_OTEL`、`OTLP_TRACE_ENDPOINT` 及导出协议、采样率 | 现有 API / Worker，按需连接公司 Trace 后端 |
+| Knowledge / 检索增强 | 对应 Plugin、Embedding / Vision 模型、Vector Store Provider；使用 KnowledgeFS 时配置 `KNOWLEDGE_FS_ENABLED` 及服务参数 | 现有 Plugin Daemon、Worker、向量数据库及按需启用的服务 |
 
-以上配置项参考 Dify 1.17.1 官方 \`docker/.env.example\`、\`api/.env.example\` 和 \`docker/docker-compose.yaml\`。地址与密钥在公司 DevOps 配置中按环境填写；**只有选定功能后才新增对应运行角色与配置**。
+以上配置项参考 Dify 1.17.1 官方 `docker/.env.example`、`api/.env.example` 和 `docker/docker-compose.yaml`。地址与密钥在公司 DevOps 配置中按环境填写；**只有选定功能后才新增对应运行角色与配置**。
 
 ---
 
