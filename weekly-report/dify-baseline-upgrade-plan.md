@@ -507,18 +507,7 @@ ai_studio_1171_dev
 
 ### 5.1 方案架构
 
-![Dify 执行引擎隔离架构](assets/dify-execution-isolation/execution-engine-isolation-architecture-v2.svg)
-
-```text
-Workflow / Chatflow App
-         │ apps.execution_pool
-         ▼
-   ExecutionQueueRouter
-         ├─ default  → workflow_based_app_execution          → Default Worker ─┐
-         └─ priority → workflow_based_app_execution_priority → Priority Worker ─┤
-                                                                            ▼
-                                                               Dify 1.17.1 官方执行引擎
-```
+![Dify 执行引擎隔离架构](assets/dify-baseline-upgrade/dify-execution-isolation-architecture-v4.svg)
 
 隔离范围是 **Queue 和 Worker 计算资源**，不是部署两套 Dify。API、PostgreSQL、Redis Broker、Plugin Daemon、Sandbox 和官方 Runtime 继续共享。
 
@@ -562,7 +551,7 @@ class ExecutionQueueRouter:
 
 ### 5.4 Worker 与部署
 
-![执行隔离部署架构](assets/dify-execution-isolation/execution-engine-isolation-deployment-v2.svg)
+![执行隔离部署架构](assets/dify-baseline-upgrade/dify-execution-isolation-deployment-v4.svg)
 
 | 组件 | 改造 |
 | --- | --- |
@@ -593,20 +582,6 @@ Default / Priority Worker 分别配置 CPU、Memory 和 replicas；新增 Worker
 | 任务中心、公司 Streaming / Blocking / Result 协议 | 不迁；使用官方 WorkflowRun、Message、SSE 和任务控制能力 |
 | Console Debug / Human Input / Schedule 的托管接入 | 不迁旧接管层；继续使用官方功能，仅为 Human Input Resume 增加队列路由 |
 | 调度监控、审计及历史数据 | 不恢复旧调度专用页面；历史表和记录保留在旧库及备份，不作为新版运行依赖 |
-
-### 5.6 实施安排
-
-| 顺序 | 工作内容 | 产出 | 预计 |
-| --- | --- | --- | --- |
-| 1 | 梳理 Workflow / Chatflow 异步投递及 Human Input Resume 入口 | 入队改动位置 | 0.5 天 |
-| 2 | 增加 `execution_pool`、Migration、配置接口及 Queue Router | App 执行池配置与固定路由 | 1 天 |
-| 3 | 首次执行、Resume 按 App 选择 Queue | 两条入队链路 | 0.5 天 |
-| 4 | 新增 Priority Worker Deployment、启动命令与独立资源 | Priority 执行池 | 0.5 天 |
-| 5 | 整合部署及发布配置 | 双 Worker 部署清单 | 0.5 天 |
-
-此表只列**实施工作**，不包含测试内容。详细实现参考[执行引擎隔离方案](dify-execution-engine-isolation-plan.md)。
-
----
 
 ## 六、最终收束
 
@@ -654,25 +629,3 @@ Default / Priority Worker 分别配置 CPU、Memory 和 replicas；新增 Worker
 
 
 ---
-
-## 七、实施时间表
-
-阶段一已经进入收尾，代码迁移、独立 1.17.1 环境、基础组件部署、中间件隔离和业务能力迁移基本完成，当前剩余工作集中在线上完整功能验证。后续阶段不提前固定具体日期，以上一阶段完成结果作为进入条件。
-
-状态说明：**✅ 已完成　🟡 进行中　⬜ 待开展**
-
-| 时间 / 进入条件 | 阶段 | 工作内容 | 状态 |
-| --- | --- | --- | --- |
-| 09.21 - 09.23 | 阶段一：基线与部署 | 建立独立 1.17.1 分支、流水线和 `test-upgrade-1.17.1` 部署；完成 API / Web / Worker / Beat / Plugin Daemon / Sandbox 基础运行 | ✅ |
-| 09.23 - 09.25 | 阶段一：基础设施 | 完成 PostgreSQL、Redis Cache、Celery、Pub/Sub、Event Bus、Socket.IO Sentinel 隔离，以及平台构建与启动适配 | ✅ |
-| 09.24 - 09.28 | 阶段一：业务能力迁移 | 完成 SkyOA、S3/KMS、文件与私钥、默认 Workspace、Workspace 管理、邀请、管理员初始化、SSE 与通用兼容修改 | ✅ |
-| 09.27 - 09.28 | 阶段一：数据迁移准备 | 完成 `ai_studio_1171_dev` 的快照导入流程、字段映射、目标库备份、数据转换和校验方案 | ✅ |
-| 09.28 起 | 阶段一：线上完整验证 | 在升级部署上完整验证登录、账号与 Workspace、邀请、管理员初始化、S3/KMS、文件、私钥、Workflow / SSE、Socket.IO 等实际链路 | 🟡 |
-| 阶段一线上验证完成后 | 阶段二：新功能升级 | 确定并接入实际需要的 Workflow / Human Input / Agent / WebApp / Tracing / Knowledge / 多模态等 1.17.1 新能力 | ⬜ |
-| 阶段二功能范围确定后 | 阶段二：组件与部署 | 根据已选功能增加 Agent Backend、Local Sandbox、Agent SSRF Proxy、API WebSocket 等必要运行组件和流水线 | ⬜ |
-| 阶段二完成后 | 阶段三：执行池路由 | 增加 `apps.execution_pool`、配置接口、ExecutionQueueRouter 和 Default / Priority Queue | ⬜ |
-| 执行池路由完成后 | 阶段三：Priority Worker | 首次执行与 Human Input Resume 按池入队，新增独立 Priority Worker Deployment 和计算资源 | ⬜ |
-| 三个阶段完成后 | 最终收束 | 固定最终组件和配置，执行正式数据迁移，收束 release / 流水线和原 DevOps 组件，并下线平行升级环境 | ⬜ |
-
-阶段一当前完成条件只剩：**线上完整功能链路验证通过**。完成后，后续开发统一基于已经形成的 1.17.1 环境继续推进。
-
