@@ -410,15 +410,27 @@ WebSocket 可参考官方的 \`API_WEBSOCKET_WORKER_CLASS\`、\`API_WEBSOCKET_WO
 
 ## 五、阶段三：执行引擎隔离
 
-本阶段采用重新设计的[执行引擎隔离方案](dify-execution-engine-isolation-plan.md)，不再迁移旧公司统一准入、Job / Lease、Managed Scheduler、Managed Worker、任务中心及调度专用监控。直接复用 Dify 1.17.1 官方执行机制，仅为 **Workflow / Chatflow 异步执行**增加应用级执行池、Celery Queue 路由和独立 Priority Worker。
+本阶段参考已重写的[执行引擎隔离方案](dify-execution-engine-isolation-plan.md)，在 Dify 1.17.1 官方执行链路上实现应用级执行资源隔离。
 
-### 5.1 方案架构
+### 5.1 背景与设计原因
+
+Dify 1.17.1 的 Workflow / Chatflow 异步执行任务默认进入 `workflow_based_app_execution` Queue，由共享 Worker 消费。**普通应用与核心应用使用同一执行通道**：普通应用批量提交任务或运行较长的工作流时，会占用队列与 Worker 资源，核心应用也需要等待。
+
+| 当前问题 | 影响 | 本次解决方式 |
+| --- | --- | --- |
+| 普通应用与核心应用共用 Queue、Worker | 普通任务积压会影响核心任务的执行时机 | 按 App 执行池路由到 Default / Priority Queue |
+| 核心应用无法独立配置计算资源 | 不能单独为关键任务分配 Worker 数量、CPU 和内存 | 单独部署 Priority Worker，独立配置资源和副本 |
+| 旧公司托管调度深度接管执行链路 | 迁移 Job / Lease / Scheduler / Managed Worker 需要重新适配新版 Runtime，改动与维护成本较高 | 不迁移旧调度体系；仅增加 App 配置、Queue Router 和独立 Worker |
+
+**设计选择**：保留 Dify 1.17.1 原生 AppGenerator、GraphEngine、WorkflowRun、SSE 和任务执行机制，只调整任务进入哪个 Queue、由哪组 Worker 消费。Human Input 恢复任务也按原 App 的执行池路由，避免核心工作流恢复时回到默认池。隔离范围仅限 **Workflow / Chatflow 的异步执行及恢复任务**，不是对 PostgreSQL、Redis、Plugin Daemon 等共享组件做完全资源隔离。
+
+### 5.2 方案架构
 
 ![Dify 执行引擎隔离架构](assets/dify-baseline-upgrade/dify-execution-isolation-architecture-v4.svg)
 
 隔离范围是 **Queue 和 Worker 计算资源**，不是部署两套 Dify。API、PostgreSQL、Redis Broker、Plugin Daemon、Sandbox 和官方 Runtime 继续共享。
 
-### 5.2 执行池与隔离范围
+### 5.3 执行池与隔离范围
 
 | 项目 | Default Pool | Priority Pool |
 | --- | --- | --- |
@@ -431,7 +443,7 @@ WebSocket 可参考官方的 \`API_WEBSOCKET_WORKER_CLASS\`、\`API_WEBSOCKET_WO
 
 本阶段只隔离经 Celery 异步投递的 Workflow / Chatflow 任务及其恢复任务。官方同步 Blocking 路径、Chat / Completion / Agent 的直接 Generator 路径保持原样，不纳入本阶段隔离。
 
-### 5.3 代码改造
+### 5.4 代码改造
 
 | 改动位置 | 具体处理 |
 | --- | --- |
@@ -456,7 +468,7 @@ class ExecutionQueueRouter:
 
 首次执行使用 `workflow_based_app_execution_task.apply_async(args=[payload_json], queue=queue)`；Human Input 恢复调用官方 `resume_app_execution.apply_async(..., queue=queue)`。两处共用 Router，任务内部执行链路不改。
 
-### 5.4 Worker 与部署
+### 5.5 Worker 与部署
 
 ![执行隔离部署架构](assets/dify-baseline-upgrade/dify-execution-isolation-deployment-v4.svg)
 
@@ -479,7 +491,7 @@ uv run celery -A app.celery worker \
 
 Default / Priority Worker 分别配置 CPU、Memory 和 replicas；新增 Worker 只消费 Priority Queue，不监听其他普通业务队列。
 
-### 5.5 原公司调度能力处理
+### 5.6 原公司调度能力处理
 
 | 旧能力 | 处理 |
 | --- | --- |
