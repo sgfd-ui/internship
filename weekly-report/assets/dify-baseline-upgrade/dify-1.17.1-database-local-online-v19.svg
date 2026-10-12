@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="720" viewBox="0 0 1500 720" role="img" aria-label="Dify 数据库升级：本地验证后线上原库升级">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#F4F8FE"/></linearGradient>
+<linearGradient id="blue" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F4F9FF"/><stop offset="1" stop-color="#E3EFFF"/></linearGradient>
+<linearGradient id="purple" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FBF9FF"/><stop offset="1" stop-color="#EDE6FF"/></linearGradient>
+<linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F4FFF8"/><stop offset="1" stop-color="#DEF7E9"/></linearGradient>
+<filter id="sh" x="-30%" y="-30%" width="170%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#203B62" flood-opacity=".13"/></filter>
+<marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#647995" stroke-width="2.3" stroke-linejoin="round"/></marker>
+<style>
+text{font-family:Inter,'PingFang SC','Microsoft YaHei',sans-serif;fill:#193251}
+.title{font-size:31px;font-weight:750}.sub{font-size:15px;fill:#697A92}.section{font-size:23px;font-weight:760}.name{font-size:17px;font-weight:700}.label{font-size:14px;fill:#65758D}.micro{font-size:13px;fill:#6B7D96}.line{stroke:#6D819F;stroke-width:3;fill:none;marker-end:url(#arrow)}
+</style>
+<symbol id="db" viewBox="0 0 48 48"><ellipse cx="24" cy="11" rx="16" ry="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M8 11v12c0 4 7 7 16 7s16-3 16-7V11M8 23v12c0 4 7 7 16 7s16-3 16-7V23" fill="none" stroke="currentColor" stroke-width="3"/></symbol>
+<symbol id="backup" viewBox="0 0 48 48"><path d="M12 17h24M12 17l9-9M12 17l9 9" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M12 31a14 14 0 102-14" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="check" viewBox="0 0 48 48"><rect x="7" y="7" width="34" height="34" rx="8" fill="none" stroke="currentColor" stroke-width="3"/><path d="M15 24l7 8 13-16" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="tool" viewBox="0 0 48 48"><path d="M9 14l10 10-7 7-5-5zM21 19l15-15 7 7-15 15" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M15 33l-7 7" stroke="currentColor" stroke-width="3" fill="none"/></symbol>
+</defs>
+<rect width="1500" height="720" fill="url(#bg)"/>
+<text x="56" y="54" class="title">Dify 1.17.1 · 数据库升级路径</text>
+<text x="56" y="82" class="sub">两个步骤：最新备份在本地验证 → 线上原 ai_studio 数据库就地升级</text>
+
+<g filter="url(#sh)">
+<rect x="58" y="148" width="590" height="250" rx="24" fill="url(#blue)" stroke="#9FC6F8" stroke-width="2"/>
+<path d="M79 398l20 11h528l15-11z" fill="#A6C7F3" opacity=".6"/>
+</g>
+<rect x="90" y="182" width="76" height="76" rx="20" fill="#DFECFF"/>
+<use href="#backup" x="105" y="196" width="48" height="48" style="color:#2876D1"/>
+<text x="186" y="200" class="section">01  本地验证</text>
+<text x="186" y="234" class="label">最新线上备份 → 本地独立库恢复</text>
+<g filter="url(#sh)"><rect x="94" y="278" width="515" height="86" rx="16" fill="white" stroke="#BED8F8"/></g>
+<use href="#db" x="109" y="297" width="44" height="44" style="color:#2A7ED4"/>
+<text x="172" y="311" class="name">清理旧调度 / 兼容 Migration</text>
+<text x="172" y="339" class="label">数据对账 · 重复升级 · 备份恢复复验</text>
+
+<path d="M666 270h157" class="line"/>
+<g filter="url(#sh)">
+<rect x="843" y="148" width="590" height="250" rx="24" fill="url(#purple)" stroke="#C3B3F4" stroke-width="2"/>
+<path d="M864 398l20 11h528l15-11z" fill="#C6B8F2" opacity=".6"/>
+</g>
+<rect x="876" y="182" width="76" height="76" rx="20" fill="#E8DEFC"/>
+<use href="#db" x="891" y="196" width="48" height="48" style="color:#7A5CD1"/>
+<text x="971" y="200" class="section">02  线上原库升级</text>
+<text x="971" y="234" class="label">目标：原测试库 ai_studio（就地升级）</text>
+<g filter="url(#sh)"><rect x="879" y="278" width="515" height="86" rx="16" fill="white" stroke="#D5C8F5"/></g>
+<use href="#tool" x="894" y="297" width="44" height="44" style="color:#7956CD"/>
+<text x="957" y="311" class="name">停写入 → 全库备份 → 原库 Migration</text>
+<text x="957" y="339" class="label">先核对数据，再启动 1.17.1 应用</text>
+
+<g filter="url(#sh)"><rect x="58" y="459" width="1375" height="184" rx="23" fill="url(#green)" stroke="#9BD9B5" stroke-width="2"/></g>
+<use href="#check" x="104" y="507" width="60" height="60" style="color:#239562"/>
+<text x="194" y="505" class="section">升级完成：保留原业务数据与官方执行能力</text>
+<text x="194" y="541" class="name">删除范围：仅已核准的旧公司调度表、列、索引和序列</text>
+<text x="194" y="576" class="label">保留账号 / Workspace / App / Workflow / 文件及私钥引用；不清 Redis、不移动 S3</text>
+<text x="194" y="607" class="label">线上尚未执行：以最新备份复验通过为前提，失败时使用升级前备份恢复原库</text>
+<text x="750" y="690" class="sub" text-anchor="middle">不再迁入 ai_studio_1171_dev，也不设置独立的“最终收束”阶段</text>
+</svg>
