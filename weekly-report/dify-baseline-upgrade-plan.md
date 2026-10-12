@@ -2,14 +2,14 @@
 
 ## 一、升级目标
 
-当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分三个阶段完成现有能力迁移、新版本能力升级和执行调度能力处理，最终将成熟的 1.17.1 版本收束到原有 DevOps 组件。
+当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分三个阶段完成现有能力迁移、新版本能力升级和执行引擎隔离，最终将成熟的 1.17.1 版本收束到原有 DevOps 组件。
 
 | 目标 | 内容 |
 | --- | --- |
 | 基线升级 | 平台基础版本由 Dify 1.14.2 升级到 Dify 1.17.1 |
 | 现有能力迁移 | 将 SkyOA、工作空间、S3/KMS、文件与私钥等现有公司能力适配到 1.17.1 |
 | 新能力升级 | 在阶段一形成的 1.17.1 版本上增加确定要启用的新功能及对应运行组件 |
-| 调度能力处理 | 对现有执行调度、任务中心和专用 Worker 确定迁移、重写或取消方案 |
+| 执行引擎隔离 | 不迁原公司托管调度；以 1.17.1 官方 Workflow / Chatflow 异步执行为基础，增加应用执行池、Queue Router 和独立 Priority Worker |
 | 数据迁移 | 阶段一完成后先将数据迁到独立 1.17.1 数据空间，三阶段完成后再执行最终正式数据迁移 |
 | 最终收束 | 用最终 1.17.1 制品替换原有组件部署，并下线临时升级环境 |
 
@@ -23,7 +23,7 @@
 
 ### 2.2 本次迁移架构
 
-![Dify 1.17.1 升级实施路径](assets/dify-baseline-upgrade/dify-1.17.1-migration-scope-v14.svg)
+![Dify 1.17.1 升级实施路径](assets/dify-baseline-upgrade/dify-1.17.1-migration-scope-v15.svg)
 
 ---
 
@@ -401,7 +401,7 @@ with target.begin() as conn:
 | 模型及工具凭据 | 保留加密内容和 Tenant 密钥引用，按新版模型类型和引用结构转换 |
 | 安装记录 | 保留原安装状态，不重新执行管理员初始化 |
 | 新版新增表 | 无旧数据来源的表保留阶段一现有结构和必要初始化值 |
-| 公司调度数据 | 按明确表和字段排除，阶段三评审后再决定是否迁移 |
+| 旧公司调度数据 | 不导入新执行隔离链路，旧 Job / Lease / Scheduler 等历史数据保留在旧库及备份 |
 
 不迁移以下内容：
 
@@ -501,42 +501,110 @@ ai_studio_1171_dev
 
 ---
 
-## 五、阶段三：执行调度能力评审
+## 五、阶段三：执行引擎隔离
 
-原有公司调度管理围绕统一准入、优先级、Job、Scheduler、双 Worker、任务中心、Console 调试、Human Input、Schedule、监控审计等能力进行了较多扩展，整体设计偏重，其中部分能力并不是当前业务必须保留。与此同时，1.17.1 的应用执行、Runtime、Worker、任务状态、Human Input 和 Trigger / Schedule 链路已经发生较大变化，旧实现不能直接平移。
+本阶段采用重新设计的[执行引擎隔离方案](dify-execution-engine-isolation-plan.md)，不再迁移旧公司统一准入、Job / Lease、Managed Scheduler、Managed Worker、任务中心及调度专用监控。直接复用 Dify 1.17.1 官方执行机制，仅为 **Workflow / Chatflow 异步执行**增加应用级执行池、Celery Queue 路由和独立 Priority Worker。
 
-因此阶段三不默认全量迁移，而是先重新评估每项能力的实际业务价值和迁移成本，再决定 **完整迁移、基于 1.17.1 重写、部分保留，或直接使用官方能力**。
+### 5.1 方案架构
 
-### 5.1 高工作量迁移项
+![Dify 执行引擎隔离架构](assets/dify-execution-isolation/execution-engine-isolation-architecture-v2.svg)
 
-以下工作量表示：**如果决定继续保留对应公司能力，在 1.17.1 上完成适配或重写所需的主要开发成本**。各项存在公共执行链路，预计时间不能直接逐行相加。
+```text
+Workflow / Chatflow App
+         │ apps.execution_pool
+         ▼
+   ExecutionQueueRouter
+         ├─ default  → workflow_based_app_execution          → Default Worker ─┐
+         └─ priority → workflow_based_app_execution_priority → Priority Worker ─┤
+                                                                            ▼
+                                                               Dify 1.17.1 官方执行引擎
+```
 
-| 能力方向 | 高工作量项 | 主要改造内容 | 工作量 | 预计时间 |
-| --- | --- | --- | --- | --- |
-| 托管执行引擎 | Managed Worker 与 1.17.1 Runtime 对接 | 重写 Worker 执行入口，接入 1.17.1 官方执行服务，同时保留 Job、Lease、容量和 Standard / Critical 调度 | 高 | **3～5 天** |
-| Workflow / Chatflow | 正式执行链路迁移 | 重做公司 Job 与 workflow_run_id / task_id 映射，接入新版执行任务、事件、失败终态和结果回写 | 高 | **3～4 天** |
-| Chat / Completion / Agent | 多应用类型托管执行 | 分应用适配新版 Generator / Service、Session、Message / Conversation、Streaming / Blocking 和终态提取 | 高 | **4～6 天** |
-| 结果交付 | Streaming / Blocking / Result | 重新建立 Job 与官方执行标识映射，适配排队、运行、失败、停止、断线重连和最终结果查询 | 高 | **2～3 天** |
-| 任务控制 | Stop / Cancel / Retry | queued 与 running 分别对接公司 Job 和官方停止；Retry 使用新 generation，避免旧结果覆盖 | 高 | **2～3 天** |
-| Console 调试 | Draft、Single Node、Iteration、Loop | 重新接新版调试执行入口，并恢复排队、停止、结果查询、SSE 和前端状态隔离 | 高 | **4～6 天** |
-| Human Input | Pause / Resume / Retry | 将公司 generation / fence 与 1.17.1 WorkflowPause、ResumptionContext、resume_app_execution 重新串联 | 高 | **3～5 天** |
-| API / WebApp 入口 | 托管路由接入 | 在新版 Controller / Service 上增加托管判断，并重新适配 Streaming / Blocking / Stop 协议 | 中到高 | **2～3 天** |
-| Schedule | 正式与草稿定时触发 | 基于 1.17.1 Trigger / Schedule 重新接入公司准入，避免旧轮询与官方链路重复执行 | 中到高 | **2～4 天** |
+隔离范围是 **Queue 和 Worker 计算资源**，不是部署两套 Dify。API、PostgreSQL、Redis Broker、Plugin Daemon、Sandbox 和官方 Runtime 继续共享。
 
-按公共执行链路合并计算，如果上述调度能力大部分继续保留，整体开发量约 **15～22 个工作日**；若 Agent、Human Input 或官方 Runtime 接入还需要额外抽象，预留 **20～25 个工作日**。
+### 5.2 执行池与隔离范围
 
-### 5.2 评审结果
+| 项目 | Default Pool | Priority Pool |
+| --- | --- | --- |
+| App 配置 | `apps.execution_pool = default`（默认） | `apps.execution_pool = priority` |
+| 执行 Queue | `workflow_based_app_execution` | `workflow_based_app_execution_priority` |
+| Worker | 现有 General Worker | 新增独立 Priority Worker |
+| 计算资源 | 现有 CPU / Memory / replicas | 独立配置 CPU / Memory / replicas |
+| 官方执行代码 | 共享 1.17.1 Workflow / Chatflow Runtime | 与默认池使用同一份代码 |
+| Human Input 恢复 | Resume 再进入 Default Queue | Resume 再进入 Priority Queue |
 
-评审后每项能力只保留一种处理方式：
+本阶段只隔离经 Celery 异步投递的 Workflow / Chatflow 任务及其恢复任务。官方同步 Blocking 路径、Chat / Completion / Agent 的直接 Generator 路径保持原样，不纳入本阶段隔离。
 
-| 处理方式 | 适用情况 |
+### 5.3 代码改造
+
+| 改动位置 | 具体处理 |
 | --- | --- |
-| 完整迁移 | 公司能力仍有明确业务价值，且原设计与 1.17.1 变化较小 |
-| 基于 1.17.1 重写 | 能力需要保留，但旧实现与新版 Runtime / Worker / Session / Trigger 等接口已经不兼容 |
-| 部分保留 | 只保留准入、优先级、容量、资源池等仍有价值的治理能力，具体执行继续使用官方链路 |
-| 使用官方能力 | 1.17.1 已覆盖需求，原公司实现没有继续维护的必要 |
+| App Model / Migration | 在 `apps` 增加 `execution_pool varchar(32)`，默认 `default`，取值 `default / priority`；历史应用保持默认池 |
+| App 配置接口 | 支持查询和修改 `execution_pool` |
+| ExecutionQueueRouter | 固定映射到 Default / Priority Queue；不做任务调度、优先级计算或状态管理 |
+| `api/services/app_generate_service.py` | Workflow / Chatflow 异步投递改由 Router 选择 `queue`，使用官方 Task 的 `apply_async` |
+| `api/services/human_input_service.py` | `resume_app_execution` 投递前按所属 App 重新选择执行池，恢复后仍进入对应 Worker |
+| AppGenerator / GraphEngine / WorkflowRun / SSE | 复用 1.17.1 官方实现，不恢复旧公司 Generator 接管与结果协议 |
 
-阶段三最终固定：**保留功能、删除功能、需要重写的连接层、最终运行组件、数据库表与 Migration、Redis 队列与频道，以及 DevOps 应用和启动角色**。
+Queue Router 映射：
+
+```python
+DEFAULT_QUEUE = "workflow_based_app_execution"
+PRIORITY_QUEUE = "workflow_based_app_execution_priority"
+
+class ExecutionQueueRouter:
+    @staticmethod
+    def resolve(app) -> str:
+        return PRIORITY_QUEUE if app.execution_pool == "priority" else DEFAULT_QUEUE
+```
+
+首次执行使用 `workflow_based_app_execution_task.apply_async(args=[payload_json], queue=queue)`；Human Input 恢复调用官方 `resume_app_execution.apply_async(..., queue=queue)`。两处共用 Router，任务内部执行链路不改。
+
+### 5.4 Worker 与部署
+
+![执行隔离部署架构](assets/dify-execution-isolation/execution-engine-isolation-deployment-v2.svg)
+
+| 组件 | 改造 |
+| --- | --- |
+| Dify API / Web | 沿用现有部署，API 增加入队 Queue 路由 |
+| Default Worker（`dify-worker`） | 继续监听现有其他队列和 `workflow_based_app_execution`，不监听 Priority Queue |
+| Priority Worker | 同一 1.17.1 后端镜像新增独立 Deployment，仅监听 `workflow_based_app_execution_priority` |
+| Redis / Celery | 复用阶段一已经隔离的 1.17.1 Broker，新增 Queue 名，不新建 Broker |
+| PostgreSQL / Plugin Daemon / Sandbox | 继续共享，不为执行池另部署一套 |
+
+Priority Worker 启动命令：
+
+```bash
+cp .env.test .env && \
+uv run celery -A app.celery worker \
+  -P gevent -c 1 --loglevel INFO \
+  -Q workflow_based_app_execution_priority
+```
+
+Default / Priority Worker 分别配置 CPU、Memory 和 replicas；新增 Worker 只消费 Priority Queue，不监听其他普通业务队列。
+
+### 5.5 原公司调度能力处理
+
+| 旧能力 | 处理 |
+| --- | --- |
+| Policy / Admission / 优先级排队 | 不迁入运行链路；改为 App 选择 Default / Priority 执行池 |
+| Job / Lease / Outbox / Scheduler / 容量调度 | 不迁、不启动旧专用服务 |
+| 旧 Standard / Critical Managed Worker | 不复制旧 Worker 实现；统一用 Dify 1.17.1 官方 Worker 制品，部署两组实例 |
+| 任务中心、公司 Streaming / Blocking / Result 协议 | 不迁；使用官方 WorkflowRun、Message、SSE 和任务控制能力 |
+| Console Debug / Human Input / Schedule 的托管接入 | 不迁旧接管层；继续使用官方功能，仅为 Human Input Resume 增加队列路由 |
+| 调度监控、审计及历史数据 | 不恢复旧调度专用页面；历史表和记录保留在旧库及备份，不作为新版运行依赖 |
+
+### 5.6 实施安排
+
+| 顺序 | 工作内容 | 产出 | 预计 |
+| --- | --- | --- | --- |
+| 1 | 梳理 Workflow / Chatflow 异步投递及 Human Input Resume 入口 | 入队改动位置 | 0.5 天 |
+| 2 | 增加 `execution_pool`、Migration、配置接口及 Queue Router | App 执行池配置与固定路由 | 1 天 |
+| 3 | 首次执行、Resume 按 App 选择 Queue | 两条入队链路 | 0.5 天 |
+| 4 | 新增 Priority Worker Deployment、启动命令与独立资源 | Priority 执行池 | 0.5 天 |
+| 5 | 整合部署及发布配置 | 双 Worker 部署清单 | 0.5 天 |
+
+此表只列**实施工作**，不包含测试内容。详细实现参考[执行引擎隔离方案](dify-execution-engine-isolation-plan.md)。
 
 ---
 
@@ -549,13 +617,13 @@ ai_studio_1171_dev
 | 对象 | 最终处理 |
 | --- | --- |
 | `dify-api` | 原应用切换为最终 1.17.1 API 制品和配置 |
-| `dify-worker` | 原应用切换为最终 1.17.1 Worker 制品和队列配置 |
+| `dify-worker` | 切换为 1.17.1 Default Worker，继续消费原有业务队列和 `workflow_based_app_execution`，不监听 Priority Queue |
 | `dify-worker-beat` | 原应用切换为最终 1.17.1 Beat |
 | `dify-web` | 原应用切换为最终 1.17.1 Web |
 | `dify-plugin-daemon` | 切换到最终 1.17.1 对应版本 |
 | `dify-sandbox` | 切换到最终 1.17.1 对应版本 |
 | 阶段二新增组件 | 只保留已确定启用能力需要的 Agent Backend / Local Sandbox / WebSocket / Proxy 等组件 |
-| 阶段三调度组件 | 按阶段三最终方案保留、重写或下线 |
+| Priority Worker（新增） | 使用与 Default Worker 相同的 1.17.1 镜像，独立 Deployment、计算资源及 replicas，仅监听 `workflow_based_app_execution_priority` |
 | 临时升级部署 | 原组件切换完成后下线 `test-upgrade-1.17.1` |
 
 ### 6.2 分支与流水线收束
@@ -575,8 +643,8 @@ ai_studio_1171_dev
 | 数据类型 | 最终处理 |
 | --- | --- |
 | PostgreSQL | 备份正式 1.14.2 数据后，执行最终 1.17.1 官方 Migration + 三阶段最终保留的公司 Migration |
-| 账号 / Workspace | 保留账号 ID、成员关系、默认空间和归档状态 |
-| 调度数据 | 根据阶段三最终结论继续使用、只读保留或停止新增 |
+| 账号 / Workspace / App | 保留账号 ID、成员关系、默认空间和归档状态；新 App 执行池字段 `execution_pool` 默认为 `default` |
+| 旧公司调度数据 | 不导入新版执行池；旧 Job、Lease、Scheduler 和任务中心数据在旧库及备份中保留，新版不依赖这些运行表 |
 | Redis Cache | 不搬迁旧缓存，最终 1.17.1 使用新的命名空间 |
 | Celery Broker / Result | 不迁旧队列和 Result，切换前停止旧任务入口后从新队列启动 |
 | S3 | 优先保持对象不动并兼容历史 Key；只有最终路径方案明确需要时才搬对象 |
@@ -602,8 +670,8 @@ ai_studio_1171_dev
 | 09.28 起 | 阶段一：线上完整验证 | 在升级部署上完整验证登录、账号与 Workspace、邀请、管理员初始化、S3/KMS、文件、私钥、Workflow / SSE、Socket.IO 等实际链路 | 🟡 |
 | 阶段一线上验证完成后 | 阶段二：新功能升级 | 确定并接入实际需要的 Workflow / Human Input / Agent / WebApp / Tracing / Knowledge / 多模态等 1.17.1 新能力 | ⬜ |
 | 阶段二功能范围确定后 | 阶段二：组件与部署 | 根据已选功能增加 Agent Backend、Local Sandbox、Agent SSRF Proxy、API WebSocket 等必要运行组件和流水线 | ⬜ |
-| 阶段二完成后 | 阶段三：执行调度评审 | 重新评估原公司调度能力，确定完整迁移、基于 1.17.1 重写、部分保留或直接使用官方能力 | ⬜ |
-| 调度评审完成后 | 阶段三：调度能力处理 | 按第五章评审结论实施最终保留的调度、Worker、任务管理和治理能力 | ⬜ |
+| 阶段二完成后 | 阶段三：执行池路由 | 增加 `apps.execution_pool`、配置接口、ExecutionQueueRouter 和 Default / Priority Queue | ⬜ |
+| 执行池路由完成后 | 阶段三：Priority Worker | 首次执行与 Human Input Resume 按池入队，新增独立 Priority Worker Deployment 和计算资源 | ⬜ |
 | 三个阶段完成后 | 最终收束 | 固定最终组件和配置，执行正式数据迁移，收束 release / 流水线和原 DevOps 组件，并下线平行升级环境 | ⬜ |
 
 阶段一当前完成条件只剩：**线上完整功能链路验证通过**。完成后，后续开发统一基于已经形成的 1.17.1 环境继续推进。
