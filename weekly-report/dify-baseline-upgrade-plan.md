@@ -2,7 +2,7 @@
 
 ## 一、升级目标
 
-当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分三个阶段完成现有能力迁移、新版本能力升级和执行引擎隔离。数据库升级按“最新备份本地验证 → 线上原 `ai_studio` 就地升级”执行，无需额外安排后续数据搬迁或部署切换。
+当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分三个阶段完成现有能力迁移、新版本能力升级和执行引擎隔离。底层沿用现有 PostgreSQL、Redis、S3 等组件；数据库按“最新备份本地验证 → 线上原 `ai_studio` 就地升级”执行，Redis 和 S3 仅清理升级测试数据并恢复原配置。
 
 | 目标 | 内容 |
 | --- | --- |
@@ -10,7 +10,7 @@
 | 现有能力迁移 | 将 SkyOA、工作空间、S3/KMS、文件与私钥等现有公司能力适配到 1.17.1 |
 | 新能力升级 | 在阶段一形成的 1.17.1 版本上增加确定要启用的新功能及对应运行组件 |
 | 执行引擎隔离 | 不迁原公司托管调度；以 1.17.1 官方 Workflow / Chatflow 异步执行为基础，增加应用执行池、Queue Router 和独立 Priority Worker |
-| 数据库升级 | 从线上原测试库 `ai_studio` 获取最新备份做本地演练，完成兼容迁移后在线上原库就地升级到 1.17.1，不以本地开发库覆盖线上库 |
+| 数据库与资源更新 | 使用最新 `ai_studio` 备份先做本地演练，再在线上原库完成 1.17.1 Schema 升级；Redis / S3 清理升级测试数据后恢复原有连接与存储配置 |
 
 ---
 
@@ -20,9 +20,9 @@
 
 ![当前架构 vs Dify 1.17.1 官方架构](assets/dify-baseline-upgrade/current-vs-dify-1.17.1-official-v11.svg)
 
-### 2.2 数据库升级路径
+### 2.2 数据库升级及 Redis / S3 清理
 
-![Dify 1.17.1 数据库本地验证与线上原库升级](assets/dify-baseline-upgrade/dify-1.17.1-database-local-online-v19.svg)
+![Dify 1.17.1 数据库升级及 Redis S3 测试数据清理](assets/dify-baseline-upgrade/dify-1.17.1-database-redis-s3-update-v20.svg)
 
 ---
 
@@ -94,7 +94,7 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 | 私钥缓存 | 按 Tenant 缓存私钥 | 新版缓存键不同 | 使用公司最终缓存键规则，只影响私钥缓存 |
 | 密钥操作 | 创建空间时分步生成、保存和失败清理 | 新版通过 Provider 统一生成 | 在新版 Provider 上保留生成、保存、删除的分步能力，供 Workspace Provisioning 使用 |
 | 数据结构 | Tenant 保存私钥路径 | 1.17.1 无公司字段 | 在当前 1.17.1 Migration Head 后增加私钥字段及所需结构 |
-| 历史数据 | 旧文件和私钥已有真实对象 | 新路径结构不同 | 阶段一只建立新结构；旧对象和旧私钥引用统一在 3.3 数据导入时处理 |
+| 历史数据 | 旧文件和私钥已有真实对象 | 新路径结构不同 | 不搬迁历史对象，沿用原 S3 对象与私钥引用；升级时仅清理测试对象并恢复原存储配置（见 3.3.7） |
 
 #### 3.1.4 默认工作空间与自动注册
 
@@ -179,18 +179,17 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 | 父消息 ID | 与会话 ID 使用同一规范化 | 新版未加入同一处理 | 使用相同 trim / None 规则 |
 | 调度调试代码 | 同一提交包含公司 Console 调度修改 | 阶段一不迁公司调度 | 只迁请求模型处理，调度服务及对应测试排除 |
 
-### 3.2 独立 1.17.1 基线与组件部署
+### 3.2 1.17.1 基线与组件部署
 
 #### 3.2.1 分支、流水线与 DevOps 部署
 
-| 对象 | 1.14.2 环境 | 独立 1.17.1 环境 | 阶段一处理 |
-| --- | --- | --- | --- |
-| 基线分支 | `release/1.14.2` | `release/1.17.1` | 1.17.1 官方基线独立维护 |
-| 迁移开发分支 | 1.14.2 开发线 | `feature/20260920_1.17.1_UPGRADE` | 阶段一能力统一在独立 1.17.1 分支迁移 |
-| 测试发布分支 | `test` | `test_1.17.1_UPGRADE` | 两套测试分支互不覆盖 |
-| 流水线 | 1.14.2 test 流水线 | 1.17.1 独立流水线 | 分别绑定对应分支、Commit 和制品 |
-| 部署 | 当前 test 部署 | `test-upgrade-1.17.1` | 在现有应用下增加隔离部署，原 test 保持不动 |
-| 配置 | 1.14.2 test 配置 | 1.17.1 upgrade 配置 | 数据库、Redis、Secret、服务地址和前端构建参数独立 |
+| 对象 | 升级处理 |
+| --- | --- |
+| 基线分支 | 以 `release/1.17.1` 为新基线，迁移开发使用 `feature/20260920_1.17.1_UPGRADE` |
+| 测试发布 | 使用 `test_1.17.1_UPGRADE` 及对应流水线构建 1.17.1 制品 |
+| DevOps 部署 | 沿用现有 `dify-api`、`dify-web`、`dify-worker`、`dify-worker-beat` 等应用及按需新增的运行角色 |
+| 底层组件 | 统一使用公司现有 PostgreSQL、Redis 和 S3 / KMS 服务，不为版本升级新建底层存储实例 |
+| 配置 | 以现有数据库、Redis、S3 / KMS 配置为准，适配 1.17.1 参数；升级测试数据在 3.3 中清理后恢复原配置 |
 
 #### 3.2.2 平台构建与启动
 
@@ -209,26 +208,29 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 
 #### 3.2.3 基础运行组件
 
-| 组件 | 阶段一部署 |
+| 组件 | 升级处理 |
 | --- | --- |
-| API | 现有 `dify-api` 应用增加 1.17.1 upgrade 部署 |
-| General Worker | 现有 `dify-worker` 应用增加 1.17.1 upgrade 部署，只运行官方 Worker |
-| Beat | 现有 `dify-worker-beat` 应用增加 1.17.1 upgrade 部署 |
-| Web | 现有 `dify-web` 应用增加 1.17.1 upgrade 部署 |
-| Plugin Daemon | 沿用现有应用，部署 1.17.1 对应版本 |
-| Sandbox | 沿用现有应用，部署 1.17.1 对应版本 |
+| API | 现有 `dify-api` 应用运行 1.17.1 API 制品 |
+| General Worker | 现有 `dify-worker` 运行 1.17.1 官方 Worker |
+| Beat | 现有 `dify-worker-beat` 运行 1.17.1 Beat |
+| Web | 现有 `dify-web` 应用运行 1.17.1 Web |
+| Plugin Daemon | 沿用现有服务和配置，适配 1.17.1 对应版本 |
+| Sandbox | 沿用现有服务和配置，适配 1.17.1 对应版本 |
 
-#### 3.2.4 PostgreSQL、Redis 与 Celery 隔离
+#### 3.2.4 PostgreSQL、Redis、Celery 与 S3 配置
 
-开发与验证阶段，1.14.2 与独立 1.17.1 升级部署共用 PostgreSQL / Redis 基础设施，但通过独立数据库、Redis DB、Prefix、队列和频道隔离。**这些隔离配置属于升级期间的环境配置，不代表最终要把旧库数据导入开发库；线上升级以原测试库 `ai_studio` 就地 Schema Migration 为准。**
+所有升级工作基于**公司现有的 PostgreSQL、Redis、S3 / KMS 服务**。数据库在原 `ai_studio` 上执行 Schema Migration；Redis 和 S3 恢复现有配置，不复制底层资源或将开发数据覆盖原业务数据。执行引擎的 Default / Priority 仅通过 **Queue + Worker** 区分，不依赖部署两套 Redis。
 
-| 资源 | 1.17.1 隔离方案 |
+| 组件 | 更新方式 |
 | --- | --- |
-| PostgreSQL | 使用独立数据库 `ai_studio_1171_dev` |
-| Redis Cache | 使用 Redis DB 2，Key Prefix 为 `dify_1171_dev` |
-| Celery Broker / Result | 使用 Redis DB 3，Key Prefix 为 `dify_1171_dev` |
-| Redis Pub/Sub | 使用 `dify_1171_dev` Channel Prefix，不依赖 Redis DB 隔离 |
-| Plugin Daemon | 使用独立插件数据库与 Redis 空间，不与 Dify 主库和主缓存混用 |
+| PostgreSQL | 原 `ai_studio` 按 3.3 完成本地演练及线上就地升级；1.17.1 使用升级后的原库 |
+| Redis Cache / Session | 恢复现有 Redis / Sentinel 地址、认证、DB 和 Key Prefix 的 1.17.1 对应配置，仅清理升级期间产生的测试 Key |
+| Celery Broker / Result | 沿用现有 Redis Broker 连接；保留官方 Queue 及执行隔离的 Default / Priority Queue，清除明确归属的测试消息和 Result |
+| Redis Pub/Sub | 沿用原有 Event Bus / Socket.IO 连接和频道前缀；频道不通过 Redis DB 隔离 |
+| S3 / KMS | 恢复原 Endpoint、Bucket、Region、Key Prefix 和 KMS 凭据来源，历史对象不搬迁，只删除明确归属升级测试的对象 |
+| Plugin Daemon | 沿用现有服务及相关配置，按 1.17.1 运行协议适配 |
+
+具体数据清理、配置恢复和检查项统一放在 **3.3.6 Redis** 与 **3.3.7 S3**。
 
 #### 3.2.5 Event Bus、Socket.IO 与 WebSocket 地址适配
 
@@ -237,15 +239,15 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 | Event Bus | 开启 Sentinel 时仍可能按空 Event Bus URL 建立本机连接 | Sentinel 模式复用已初始化的远程 Redis Client；非 Sentinel 使用显式 Event Bus URL |
 | Socket.IO Redis | 新增独立 `RedisManager`，不复用 Event Bus Client | 使用 Sentinel 节点、Service Name、DB 和认证构造 `redis+sentinel://` |
 | Client 边界 | Event Bus 与 Socket.IO 是两套 Redis Client | 共用同一 Sentinel 基础设施，但保持独立 Client |
-| Channel | Redis Pub/Sub 不按逻辑 DB 隔离 | 发布和订阅统一使用 `dify_1171_dev` 前缀 |
+| Channel | Redis Pub/Sub 不按逻辑 DB 隔离 | 发布和订阅使用当前环境的既有频道前缀，按 1.17.1 客户端配置统一 |
 | Socket 地址 | 未显式配置时官方可回退到 localhost | 优先使用显式 `SOCKET_URL`；未配置时从 API 地址推导 ws/wss，并去掉路径、查询串和 fragment；解析失败再回退 localhost |
 | 新版协作逻辑 | 新版客户端根据最终 Socket 地址判断草稿回退 | 保留 1.17.1 客户端判断，只替换地址推导逻辑 |
 
 ### 3.3 数据库迁移：本地验证 → 线上原库升级
 
-数据库升级对象是**原测试环境的 PostgreSQL 数据库 `ai_studio`**，从 Dify 1.14.2 升到 1.17.1。使用原库最新备份在本地独立数据库演练，再将同一套经过验证的官方及公司兼容 Migration 应用到线上原库。**不使用本地测试库或 `ai_studio_1171_dev` 的内容覆盖远程 `ai_studio`，也不再安排两次业务快照搬迁。**
+本节统一处理 PostgreSQL、Redis 和 S3：先用原测试库 `ai_studio` 的最新备份在本地验证，再将已验证的官方与公司兼容 Migration 应用于线上**原 `ai_studio`**；随后清理 Redis、S3 在升级调试期间产生的测试数据，恢复现有连接与存储配置。**不以本地演练数据覆盖原库，也不再执行第二次数据搬迁。**
 
-根据 2026-10-07 整理的数据库迁移方案，历史备份的本地演练已经完成，**远程原库升级尚未执行**。现有 1.17.1 升级环境继续保持独立，直到原库升级准备完毕。
+根据 2026-10-07 整理的数据库迁移方案，历史备份的本地演练已经完成，**远程原库升级尚未执行**。升级期间统一复用现有底层服务；Redis、S3 的测试数据清理与配置恢复作为本次更新的收尾操作。
 
 #### 3.3.1 本地验证
 
@@ -266,7 +268,7 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 | 2. 全库备份 | 对线上原库执行完整 `pg_dump`，恢复到另一独立库，核对数据**及应用账号权限** | 确认备份可实际恢复，而不仅是文件存在 |
 | 3. 清理旧调度 | 只处理 **3.3.3** 中列明的 14 张公司调度表及指定列、索引、序列 | 保留官方 Trigger / Schedule 和业务数据；禁止扩大删除范围 |
 | 4. 原库升级 | 由**单个迁移进程**在原 `ai_studio` 运行已复验的官方及公司兼容 Migration | 不能让多个应用实例启动时同时执行 Migration |
-| 5. 核对并启动 | 先核对数据与新版 Schema，再启用 1.17.1 API、Web、Default Worker 和按需启用的 Priority Worker；验收后恢复**单实例 Beat** | 旧 Scheduler、旧 Managed Worker 不再启动 |
+| 5. 清理并启动 | 核对数据和新版 Schema，按 **3.3.6 / 3.3.7** 清理 Redis、S3 测试数据并恢复原配置，再启用 1.17.1 API、Web、Default / Priority Worker；验收后恢复**单实例 Beat** | 旧 Scheduler、旧 Managed Worker 不再启动 |
 
 整个过程是**原库就地升级**，不是清空原库后导入开发库。线上若出现新备份与历史演练不一致、预期外删重或字段冲突，先排查并重新演练，不继续执行。
 
@@ -301,7 +303,7 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 | `ux_workflow_trigger_logs_schedule_occurrence` | 删除相应唯一索引 |
 | `app_execution_enqueue_sequence_seq` | 删除旧调度入队序列 |
 
-两列在历史演练中各有 741 个非空值，**不等于额外删除 1,482 行**。`workflow_trigger_logs` 官方表仍保留（历史演练 2,011 行），包括 `queue_name`。保留账号、Workspace、邀请、应用、官方 Workflow、官方 Trigger / Schedule、会话消息、凭据和私钥引用。**不清 Redis，不删除 S3 对象、私钥实体、插件数据**；遇到清单之外的依赖应停止处理，不能用宽泛 `CASCADE` 扩大删除。
+两列在历史演练中各有 741 个非空值，**不等于额外删除 1,482 行**。`workflow_trigger_logs` 官方表仍保留（历史演练 2,011 行），包括 `queue_name`。保留账号、Workspace、邀请、应用、官方 Workflow、官方 Trigger / Schedule、会话消息、凭据和私钥引用。**本步骤不处理 Redis、S3 或私钥实体**；后续仅按 3.3.6 / 3.3.7 清理已确认的升级测试数据，保留真实业务 Key、S3 对象、私钥和插件数据。遇到清单之外的依赖应停止处理，不能用宽泛 `CASCADE` 扩大删除。
 
 #### 3.3.4 官方与公司兼容 Migration
 
@@ -324,11 +326,38 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 
 失败时按 **停止新版服务 → 用线上升级前备份恢复 `ai_studio` → 核对数据与权限 → 恢复匹配的旧版本服务**执行。只回退镜像无法恢复已删除调度数据；恢复前保留失败现场和日志。恢复会失去备份时间点之后的新写入。
 
+
+#### 3.3.6 Redis：清理测试数据并恢复原配置
+
+不做 Redis 数据迁移，也不重新部署 Redis。停止升级测试产生消息的 API、Worker、Beat 等写入方后，按测试时使用的 Redis DB、Key Prefix、Queue 名称列出待删 Key，只清理**能明确归属本次升级测试**的缓存、Session、Celery 测试任务、Result 等数据。
+
+| 操作 | 处理 |
+| --- | --- |
+| 清理测试数据 | 先核对 Key / Queue 清单与是否仍有消费端，仅删除测试 Key、已确认可丢弃的测试任务和 Result；不执行 `FLUSHDB` / `FLUSHALL` |
+| 恢复原配置 | 1.17.1 的 Cache、Celery Broker / Result、Event Bus、Socket.IO 重新使用原有 Redis / Sentinel 地址、认证、DB、Key Prefix 与频道配置，并按新版参数格式配置 |
+| 保留运行队列 | 保留官方普通队列，以及 `workflow_based_app_execution` 和 `workflow_based_app_execution_priority`；不删除仍在运行的任务和其他应用的数据 |
+| 确认结果 | 新请求使用恢复后的 Redis 连接，Default / Priority Queue 仍各自被对应 Worker 消费 |
+
+Redis Pub/Sub 频道本身无需搬迁或清除；恢复原连接及前缀即可。**不能按整个 DB 清空**，也不能以测试 Key 前缀推断其他业务 Key 可删除。
+
+#### 3.3.7 S3：清理测试对象并恢复原配置
+
+S3 保持原存储服务、Bucket、KMS 体系，不搬迁历史对象。先核对升级调试期间实际写入的对象清单（Bucket、完整 Key、测试前缀），仅删除已确认属于升级测试的数据，再恢复原有 S3 / KMS 配置。
+
+| 操作 | 处理 |
+| --- | --- |
+| 清理测试对象 | 按明确的测试 Bucket / Key 清单删除新增测试文件；若与业务对象共用 Bucket，必须逐项核对，不能按 `Dify/` 等通用业务前缀整批删除 |
+| 恢复原配置 | 按 1.17.1 配置格式恢复原 Endpoint、Bucket、Region、寻址方式、对象 Key Prefix、KMS 凭据来源和密钥路径 |
+| 保留历史内容 | 不删除原账号、Workspace、应用、知识库和历史文件所引用的 S3 对象，不删除 Tenant RSA 私钥，也不重新生成历史密钥 |
+| 确认结果 | 使用原有数据库文件引用核对历史对象可读、可下载，既有私钥能够正常解密 |
+
+Redis、S3 完成测试数据清理与配置恢复后，后续新功能升级和执行引擎隔离都直接使用**统一的现有底层组件**，不再安排单独的数据或资源切换阶段。
+
 ---
 
 ## 四、阶段二：1.17.1 新能力升级
 
-阶段二直接基于阶段一形成的独立 1.17.1 版本继续升级，不再新建第二套基线。功能层只选择需要启用的 1.17.1 新能力；部署层只增加这些能力实际需要的运行组件。
+阶段二基于阶段一形成的 1.17.1 基线继续升级。功能层只启用确定需要的新能力；新增运行组件继续使用现有 PostgreSQL、Redis、S3 等底层服务。
 
 ### 4.1 功能升级
 
@@ -358,7 +387,7 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 | 知识库与检索增强 | Plugin / Vector Store 依赖 | 复用 Plugin Daemon、Worker 和现有向量数据库；仅增加对应 Provider 配置 | 不额外复制核心服务 |
 | difyctl / WebApp / 多模态与 Tool 增强 | 无 | 不新增长期运行组件 | 直接使用阶段一现有组件 |
 
-新增应用继续使用独立 1.17.1 分支和流水线体系，和阶段一组件使用同一版本基线；新增组件的 Redis、Secret、内部服务地址和网络策略随对应应用单独配置。
+新增应用与现有组件使用统一 1.17.1 代码基线和底层 PostgreSQL、Redis、S3 / KMS；组件仍按各自角色维护 Secret、内部服务地址和网络策略。
 
 ---
 
@@ -419,7 +448,7 @@ class ExecutionQueueRouter:
 | Dify API / Web | 沿用现有部署，API 增加入队 Queue 路由 |
 | Default Worker（`dify-worker`） | 继续监听现有其他队列和 `workflow_based_app_execution`，不监听 Priority Queue |
 | Priority Worker | 同一 1.17.1 后端镜像新增独立 Deployment，仅监听 `workflow_based_app_execution_priority` |
-| Redis / Celery | 复用阶段一已经隔离的 1.17.1 Broker，新增 Queue 名，不新建 Broker |
+| Redis / Celery | 复用公司现有 Redis / Celery Broker 连接，新增 Priority Queue，不新建 Redis 实例 |
 | PostgreSQL / Plugin Daemon / Sandbox | 继续共享，不为执行池另部署一套 |
 
 Priority Worker 启动命令：
