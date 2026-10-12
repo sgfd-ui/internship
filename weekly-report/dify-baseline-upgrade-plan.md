@@ -2,7 +2,7 @@
 
 ## 一、升级目标
 
-当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分三个阶段完成现有能力迁移、新版本能力升级和执行引擎隔离，最终以本地迁移演练为前提升级线上原数据库，并仅收束 PostgreSQL 与 Redis 数据资源；既有 1.17.1 应用和 DevOps 部署不在最终收束范围内。
+当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分三个阶段完成现有能力迁移、新版本能力升级和执行引擎隔离。数据库升级按“最新备份本地验证 → 线上原 `ai_studio` 就地升级”执行，无需额外安排后续数据搬迁或部署切换。
 
 | 目标 | 内容 |
 | --- | --- |
@@ -11,7 +11,6 @@
 | 新能力升级 | 在阶段一形成的 1.17.1 版本上增加确定要启用的新功能及对应运行组件 |
 | 执行引擎隔离 | 不迁原公司托管调度；以 1.17.1 官方 Workflow / Chatflow 异步执行为基础，增加应用执行池、Queue Router 和独立 Priority Worker |
 | 数据库升级 | 从线上原测试库 `ai_studio` 获取最新备份做本地演练，完成兼容迁移后在线上原库就地升级到 1.17.1，不以本地开发库覆盖线上库 |
-| 最终收束 | 仅整理 PostgreSQL、Redis 的数据连接与运行命名空间；不合并或替换原 DevOps 应用、流水线及 Worker 部署 |
 
 ---
 
@@ -21,9 +20,9 @@
 
 ![当前架构 vs Dify 1.17.1 官方架构](assets/dify-baseline-upgrade/current-vs-dify-1.17.1-official-v11.svg)
 
-### 2.2 数据迁移与最终收束路径
+### 2.2 数据库升级路径
 
-![Dify 1.17.1 本地验证、线上原库升级与数据库 Redis 收束](assets/dify-baseline-upgrade/dify-1.17.1-local-to-online-db-redis-v18.svg)
+![Dify 1.17.1 数据库本地验证与线上原库升级](assets/dify-baseline-upgrade/dify-1.17.1-database-local-online-v19.svg)
 
 ---
 
@@ -444,30 +443,3 @@ Default / Priority Worker 分别配置 CPU、Memory 和 replicas；新增 Worker
 | 任务中心、公司 Streaming / Blocking / Result 协议 | 不迁；使用官方 WorkflowRun、Message、SSE 和任务控制能力 |
 | Console Debug / Human Input / Schedule 的托管接入 | 不迁旧接管层；继续使用官方功能，仅为 Human Input Resume 增加队列路由 |
 | 调度监控、审计及历史数据 | 不恢复旧调度专用页面；历史表和记录保留在旧库及备份，不作为新版运行依赖 |
-
-## 六、最终收束：仅 PostgreSQL 与 Redis
-
-三个功能阶段继续沿用现有 1.17.1 升级分支和部署。**最终收束只涉及 PostgreSQL 和 Redis**，不再包含 API / Web / Worker / Beat 等应用回迁、DevOps 应用替换、流水线合并或下线升级部署。线上数据库升级的具体步骤见 **3.3**，无需在收束阶段再进行第二次业务数据搬迁。
-
-### 6.1 PostgreSQL：收束到升级后的原库
-
-| 对象 | 最终处理 |
-| --- | --- |
-| 原测试库 `ai_studio` | 用最新备份完成本地演练后，停止相关写入服务，**直接在该原库**运行清理与 1.17.1 Schema Migration |
-| `ai_studio_1171_dev` | 作为升级阶段隔离使用的开发/演练数据库；**不将其业务数据覆盖** `ai_studio` |
-| 1.17.1 数据库连接 | 线上原库完成升级且数据核对通过后，将现有 1.17.1 应用数据库连接指向升级后的 `ai_studio` |
-| 历史数据 | 保留账号、Workspace、应用、Workflow、消息、文件和凭据引用；只按明确清单删除旧公司调度结构 |
-| 旧版本回退 | 保留升级前可恢复备份；回退时数据库与旧版本代码必须成套恢复 |
-
-### 6.2 Redis：统一连接和隔离命名空间
-
-| 项目 | 最终处理 |
-| --- | --- |
-| Cache / Session | 核对现有 1.17.1 Redis DB 与 Key Prefix；收束后继续使用明确的 1.17.1 命名空间，避免与旧版本 Key 冲突 |
-| Celery Broker / Result | 统一 1.17.1 Broker 连接，保留 `workflow_based_app_execution` 和 `workflow_based_app_execution_priority` 两个执行队列及其他官方队列；不迁移旧任务和 Result |
-| Pub/Sub / Event Bus / Socket.IO | 统一远程 Redis / Sentinel 连接与 Channel Prefix；Pub/Sub 不依赖 Redis 逻辑 DB 隔离 |
-| 历史 Redis 数据 | **不清空 Redis**，不复制原 1.14.2 的缓存、Session、旧 Broker 待消费任务到新版本；切换前明确停止旧写入方 |
-
-两者的最终关系是：**现有 1.17.1 部署 → 已升级的 `ai_studio` + 统一配置的 Redis**。S3、Plugin Daemon、Sandbox、向量库及 DevOps 部署不在本次最终收束范围内，沿用各自现有方案。
-
----
