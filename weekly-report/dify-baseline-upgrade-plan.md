@@ -410,7 +410,7 @@ WebSocket 可参考官方的 `API_WEBSOCKET_WORKER_CLASS`、`API_WEBSOCKET_WORKE
 
 ### 5.2 方案架构
 
-![Dify 执行引擎隔离架构](assets/dify-baseline-upgrade/dify-execution-isolation-architecture-v4.svg)
+![Dify 执行引擎隔离架构](assets/dify-execution-isolation/execution-engine-isolation-architecture-v2.svg)
 
 隔离范围是 **Queue 和 Worker 计算资源**，不是部署两套 Dify。API、PostgreSQL、Redis Broker、Plugin Daemon、Sandbox 和官方 Runtime 继续共享。
 
@@ -454,7 +454,7 @@ class ExecutionQueueRouter:
 
 ### 5.5 Worker 与部署
 
-![执行隔离部署架构](assets/dify-baseline-upgrade/dify-execution-isolation-deployment-v4.svg)
+![执行隔离部署架构](assets/dify-execution-isolation/execution-engine-isolation-deployment-v2.svg)
 
 | 组件 | 改造 |
 | --- | --- |
