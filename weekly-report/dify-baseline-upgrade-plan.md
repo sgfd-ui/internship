@@ -243,38 +243,35 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 | Socket 地址 | 未显式配置时官方可回退到 localhost | 优先使用显式 `SOCKET_URL`；未配置时从 API 地址推导 ws/wss，并去掉路径、查询串和 fragment；解析失败再回退 localhost |
 | 新版协作逻辑 | 新版客户端根据最终 Socket 地址判断草稿回退 | 保留 1.17.1 客户端判断，只替换地址推导逻辑 |
 
+
 ### 3.3 数据库迁移：本地验证 → 线上原库升级
 
-本节统一处理 PostgreSQL、Redis 和 S3：先用原测试库 `ai_studio` 的最新备份在本地验证，再将已验证的官方与公司兼容 Migration 应用于线上**原 `ai_studio`**；随后清理 Redis、S3 在升级调试期间产生的测试数据，恢复现有连接与存储配置。**不以本地演练数据覆盖原库，也不再执行第二次数据搬迁。**
-
-根据 2026-10-07 整理的数据库迁移方案，历史备份的本地演练已经完成，**远程原库升级尚未执行**。升级期间统一复用现有底层服务；Redis、S3 的测试数据清理与配置恢复作为本次更新的收尾操作。
+PostgreSQL 直接升级原测试库 `ai_studio`；Redis、S3 清理升级测试数据并恢复原配置。2026-10-07 的历史备份已完成本地演练，**线上原库尚未升级**。
 
 #### 3.3.1 本地验证
 
-| 顺序 | 操作 | 产出 |
-| --- | --- | --- |
-| 1 | 获取线上 `ai_studio` **最新备份**，恢复到本地独立演练库，核对表、字段、历史 Migration 版本及账号权限 | 可重复使用的真实数据演练环境 |
-| 2 | 整理正式的“**Dify 1.17.1 官方 Migration + 公司兼容 Migration**”，检查旧版分叉历史和重复字段，不通过改 `alembic_version` 跳过迁移 | 随应用代码发布的正式迁移链 |
-| 3 | 按 **3.3.3 旧公司调度清理清单**清除旧调度结构，再运行新版 Schema / 必要数据转换 | 原数据库结构升级到 1.17.1 |
-| 4 | 对账保留的业务数据、关系、权限与迁移版本；再次运行迁移确认无新变更，并在独立库实际演练备份恢复 | 可执行迁移包与演练结论 |
+使用最新 `ai_studio` 备份恢复本地演练库，按以下流程复验：
 
-已有历史演练表明：备份恢复、清理旧调度、Schema 升级、数据对账、重复升级及残留引用检查均已通过；密码登录、原应用读取、新文件上传下载和无模型 Workflow 已完成本地验证。**仍需用最新备份复验，并把本地演练脚本整理为正式可执行版本**；不能只修改演练脚本的连接地址便直接操作线上库。
+1. 整理 Dify 1.17.1 官方 Migration 与公司兼容 Migration，衔接旧版迁移历史。
+2. 清理旧公司调度结构，执行 Schema 升级及必要字段转换。
+3. 对账业务数据和权限，验证重复执行 Migration、原业务功能及备份恢复。
+
+演练通过后，将迁移脚本纳入正式 1.17.1 代码。
 
 #### 3.3.2 线上更新
 
-| 顺序 | 操作 | 要求 |
-| --- | --- | --- |
-| 1. 停服务 | 核对远程实例与库名 `ai_studio`；停止连接该库的新旧 API、Worker、Beat、旧 Scheduler 等写入进程 | 即使测试环境暂时无人使用，也要避免后台任务继续写入 |
-| 2. 全库备份 | 对线上原库执行完整 `pg_dump`，恢复到另一独立库，核对数据**及应用账号权限** | 确认备份可实际恢复，而不仅是文件存在 |
-| 3. 清理旧调度 | 只处理 **3.3.3** 中列明的 14 张公司调度表及指定列、索引、序列 | 保留官方 Trigger / Schedule 和业务数据；禁止扩大删除范围 |
-| 4. 原库升级 | 由**单个迁移进程**在原 `ai_studio` 运行已复验的官方及公司兼容 Migration | 不能让多个应用实例启动时同时执行 Migration |
-| 5. 清理并启动 | 核对数据和新版 Schema，按 **3.3.6 / 3.3.7** 清理 Redis、S3 测试数据并恢复原配置，再启用 1.17.1 API、Web、Default / Priority Worker；验收后恢复**单实例 Beat** | 旧 Scheduler、旧 Managed Worker 不再启动 |
-
-整个过程是**原库就地升级**，不是清空原库后导入开发库。线上若出现新备份与历史演练不一致、预期外删重或字段冲突，先排查并重新演练，不继续执行。
+| 顺序 | 操作 |
+| --- | --- |
+| 1 | 停止连接 `ai_studio` 的 API、Worker、Beat、旧 Scheduler 等写入进程 |
+| 2 | 完整备份 `ai_studio`，恢复到独立库确认备份可用 |
+| 3 | 按 3.3.3 清理旧公司调度结构 |
+| 4 | 在 `ai_studio` 运行单实例官方 + 公司兼容 Migration |
+| 5 | 核对数据与新版 Schema，按 3.3.6、3.3.7 清理 Redis/S3 测试数据并恢复原配置 |
+| 6 | 启动 1.17.1 API、Web、Default/Priority Worker，恢复单实例 Beat；旧公司 Scheduler 和 Managed Worker 不再启动 |
 
 #### 3.3.3 旧公司调度清理范围
 
-仅删除旧公司托管执行留下的专用结构，新执行隔离仍走 Dify 1.17.1 官方 Runtime。以下行数来自 **2026-10-01 备份的本地演练**，不代表当前线上数量，线上执行前需重新统计。
+清理旧公司托管调度结构。下表行数来自 2026-10-01 本地演练，线上以最新备份为准。
 
 | 旧公司专用表 | 历史演练行数 |
 | --- | ---: |
@@ -303,8 +300,6 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 | `ux_workflow_trigger_logs_schedule_occurrence` | 删除相应唯一索引 |
 | `app_execution_enqueue_sequence_seq` | 删除旧调度入队序列 |
 
-两列在历史演练中各有 741 个非空值，**不等于额外删除 1,482 行**。`workflow_trigger_logs` 官方表仍保留（历史演练 2,011 行），包括 `queue_name`。保留账号、Workspace、邀请、应用、官方 Workflow、官方 Trigger / Schedule、会话消息、凭据和私钥引用。**本步骤不处理 Redis、S3 或私钥实体**；后续仅按 3.3.6 / 3.3.7 清理已确认的升级测试数据，保留真实业务 Key、S3 对象、私钥和插件数据。遇到清单之外的依赖应停止处理，不能用宽泛 `CASCADE` 扩大删除。
-
 #### 3.3.4 官方与公司兼容 Migration
 
 | 类型 | 迁移处理 |
@@ -320,38 +315,30 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 
 历史备份演练为：清理后 122 张表，升级后 146 张表，原表新增 24 列；数据总行数 **16,694 → 10,860 → 10,860**，减少的 5,834 行均来自明确列出的旧公司调度表。这些数字只用作**历史演练参考**，不能当作最新线上预期值。
 
+
 #### 3.3.5 迁移核对与恢复
 
-数据核对先于产生新记录的功能操作，至少核对：保留表的逐表逐字段差异、账号与 Workspace 关系、应用/Workflow/历史运行记录、文件引用及私钥解密、列与索引、序列、Migration Head；重复运行迁移应无待执行变更。之后核对 OA 登录、空间切换、历史文件访问、插件和必要模型调用，这些依赖远程环境的项目**不能被本地结果替代**。
+核对账号、Workspace、应用、Workflow、历史运行记录、文件与私钥引用、Schema、序列和 Migration Head；确认再次运行迁移无变化。随后检查 OA 登录、文件访问、插件和模型调用。
 
-失败时按 **停止新版服务 → 用线上升级前备份恢复 `ai_studio` → 核对数据与权限 → 恢复匹配的旧版本服务**执行。只回退镜像无法恢复已删除调度数据；恢复前保留失败现场和日志。恢复会失去备份时间点之后的新写入。
-
+迁移失败时停止新版服务，使用升级前备份恢复 `ai_studio`，再启动对应的旧版本服务。
 
 #### 3.3.6 Redis：清理测试数据并恢复原配置
 
-不做 Redis 数据迁移，也不重新部署 Redis。停止升级测试产生消息的 API、Worker、Beat 等写入方后，按测试时使用的 Redis DB、Key Prefix、Queue 名称列出待删 Key，只清理**能明确归属本次升级测试**的缓存、Session、Celery 测试任务、Result 等数据。
-
 | 操作 | 处理 |
 | --- | --- |
-| 清理测试数据 | 先核对 Key / Queue 清单与是否仍有消费端，仅删除测试 Key、已确认可丢弃的测试任务和 Result；不执行 `FLUSHDB` / `FLUSHALL` |
-| 恢复原配置 | 1.17.1 的 Cache、Celery Broker / Result、Event Bus、Socket.IO 重新使用原有 Redis / Sentinel 地址、认证、DB、Key Prefix 与频道配置，并按新版参数格式配置 |
-| 保留运行队列 | 保留官方普通队列，以及 `workflow_based_app_execution` 和 `workflow_based_app_execution_priority`；不删除仍在运行的任务和其他应用的数据 |
-| 确认结果 | 新请求使用恢复后的 Redis 连接，Default / Priority Queue 仍各自被对应 Worker 消费 |
-
-Redis Pub/Sub 频道本身无需搬迁或清除；恢复原连接及前缀即可。**不能按整个 DB 清空**，也不能以测试 Key 前缀推断其他业务 Key 可删除。
+| 清理 | 根据升级测试的 DB、Key Prefix 和 Queue 清单，删除对应测试缓存、Session、任务和 Result |
+| 配置 | 恢复原 Redis / Sentinel 连接、认证、DB、Key Prefix，以及 Event Bus / Socket.IO 频道配置 |
+| 执行队列 | 沿用官方 Queue，保留 `workflow_based_app_execution` 和 `workflow_based_app_execution_priority` |
 
 #### 3.3.7 S3：清理测试对象并恢复原配置
 
-S3 保持原存储服务、Bucket、KMS 体系，不搬迁历史对象。先核对升级调试期间实际写入的对象清单（Bucket、完整 Key、测试前缀），仅删除已确认属于升级测试的数据，再恢复原有 S3 / KMS 配置。
-
 | 操作 | 处理 |
 | --- | --- |
-| 清理测试对象 | 按明确的测试 Bucket / Key 清单删除新增测试文件；若与业务对象共用 Bucket，必须逐项核对，不能按 `Dify/` 等通用业务前缀整批删除 |
-| 恢复原配置 | 按 1.17.1 配置格式恢复原 Endpoint、Bucket、Region、寻址方式、对象 Key Prefix、KMS 凭据来源和密钥路径 |
-| 保留历史内容 | 不删除原账号、Workspace、应用、知识库和历史文件所引用的 S3 对象，不删除 Tenant RSA 私钥，也不重新生成历史密钥 |
-| 确认结果 | 使用原有数据库文件引用核对历史对象可读、可下载，既有私钥能够正常解密 |
+| 清理 | 删除升级测试期间创建的 S3 对象，保留历史业务文件和租户私钥 |
+| 配置 | 恢复原 Endpoint、Bucket、Region、Key Prefix、寻址方式及 KMS 凭据 |
+| 核对 | 检查历史文件访问与既有私钥解密 |
 
-Redis、S3 完成测试数据清理与配置恢复后，后续新功能升级和执行引擎隔离都直接使用**统一的现有底层组件**，不再安排单独的数据或资源切换阶段。
+后续新功能和执行隔离直接复用现有 PostgreSQL、Redis、S3 / KMS。
 
 ---
 
@@ -363,18 +350,18 @@ Redis、S3 完成测试数据清理与配置恢复后，后续新功能升级和
 
 | 功能 | 启用原因与架构变化 | 配置或依赖 | 启用条件 |
 | --- | --- | --- | --- |
-| **新 Agent App（Agent V2）** | 新版 Agent App 的执行由 Agent Backend 提供运行能力，不能仅启动旧版 API / Worker 就认为新版 Agent 可用 | Web 的 \`NEXT_PUBLIC_ENABLE_AGENT_V2\`；API / Worker 的 \`AGENT_BACKEND_BASE_URL\`、\`AGENT_BACKEND_API_TOKEN\`；Agent Backend 的 Redis、Plugin Daemon、内部 API、Runtime 与鉴权配置 | **使用新 Agent App 时启用** |
+| **新 Agent App（Agent V2）** | 新版 Agent App 的执行由 Agent Backend 提供运行能力，不能仅启动旧版 API / Worker 就认为新版 Agent 可用 | Web 的 `NEXT_PUBLIC_ENABLE_AGENT_V2`；API / Worker 的 `AGENT_BACKEND_BASE_URL`、`AGENT_BACKEND_API_TOKEN`；Agent Backend 的 Redis、Plugin Daemon、内部 API、Runtime 与鉴权配置 | **使用新 Agent App 时启用** |
 | **Workflow 中的 Agent 节点** | 节点可以依赖模型、Tool / Skill 及其执行策略；应与独立的 Agent App 区分，不能把“出现 Agent 节点”直接等同于“必须部署全部 Agent 服务” | 配置节点使用的模型、工具/插件与执行策略；若所选实现走 Agent V2 Runtime，再补齐对应 Agent Backend 配置 | **使用该节点时按实际执行模式配置** |
-| Agent Skills / Home Snapshot / Shell | Agent 需要访问技能、保存 Home 状态或执行 Shell 时，依赖具体的 Runtime 后端和工作区；这不是仅打开 Web 开关即可完成的能力 | \`DIFY_AGENT_RUNTIME_BACKEND\`；选 Local Runtime 时配置 Local Sandbox 地址、鉴权、工作区持久化、文件访问地址和出网代理 | **需要这些 Agent Runtime 能力时启用** |
-| Workflow / Chatflow 实时协作 | 编辑器实时协作需要独立的 WebSocket 长连接，不是普通 API 请求 | \`api_websocket\` 的启动方式与代理路由、\`NEXT_PUBLIC_SOCKET_URL\`、Socket.IO / Redis Sentinel 连接；沿用阶段一已适配的客户端地址规则 | **使用实时协作时启用** |
-| Unified / Knowledge Tracing | 新版内部追踪与对外 OpenTelemetry 导出是两类配置，不应混为一个开关 | 内部统一追踪按 \`OPS_TRACE_UNIFIED_ENABLED\` 配置；需要外送 Trace 时配置 \`ENABLE_OTEL\`、\`OTLP_TRACE_ENDPOINT\`、导出协议和采样率 | **需要对应追踪能力时启用** |
+| Agent Skills / Home Snapshot / Shell | Agent 需要访问技能、保存 Home 状态或执行 Shell 时，依赖具体的 Runtime 后端和工作区；这不是仅打开 Web 开关即可完成的能力 | `DIFY_AGENT_RUNTIME_BACKEND`；选 Local Runtime 时配置 Local Sandbox 地址、鉴权、工作区持久化、文件访问地址和出网代理 | **需要这些 Agent Runtime 能力时启用** |
+| Workflow / Chatflow 实时协作 | 编辑器实时协作需要独立的 WebSocket 长连接，不是普通 API 请求 | `api_websocket` 的启动方式与代理路由、`NEXT_PUBLIC_SOCKET_URL`、Socket.IO / Redis Sentinel 连接；沿用阶段一已适配的客户端地址规则 | **使用实时协作时启用** |
+| Unified / Knowledge Tracing | 新版内部追踪与对外 OpenTelemetry 导出是两类配置，不应混为一个开关 | 内部统一追踪按 `OPS_TRACE_UNIFIED_ENABLED` 配置；需要外送 Trace 时配置 `ENABLE_OTEL`、`OTLP_TRACE_ENDPOINT`、导出协议和采样率 | **需要对应追踪能力时启用** |
 | Knowledge / 检索增强 | Excel 图片、ODT、混合检索等需要对应解析、模型或向量存储 Provider 支持 | 检查 Plugin Daemon、文档解析器、Embedding / Vision 模型与 Vector Store；TiDB 混合检索仅在采用该后端时配置 | **按使用的数据源和检索后端启用** |
 | Workflow 生成、LLM Environment、节点定位与运行导出 | 主要是 1.17.1 已提供的 API / Web / Worker 功能，不应额外搭一套执行服务 | 复用官方功能，按实际调用配置模型、模型凭据和必要的 LLM 环境变量 | **使用对应功能时配置** |
 | WebApp / 多模态 / Tool 增强 | 主要依赖现有页面、模型、插件与文件链路 | 复用 Web / API、Plugin Daemon 和阶段一 S3 / KMS；多模态模型能力、工具参数按具体 Provider 配置 | **使用对应模型或工具时配置** |
 | Human Input（富表单、Loop / Iteration） | 依赖官方 Workflow 暂停、表单和恢复执行链路 | 使用官方 Workflow Runtime 与任务恢复配置；不重建公司原有 Human Input 调度层 | **在 Workflow 使用 Human Input 时启用** |
-| 外部 KMS、会话治理、difyctl | 属于既有服务配置复用或命令行运维能力，不需要为它们常驻部署新 Agent 组件 | KMS 沿用阶段一配置；会话治理复用既有定时任务；\`difyctl\` 按需运行 | **按运维与治理需求使用** |
+| 外部 KMS、会话治理、difyctl | 属于既有服务配置复用或命令行运维能力，不需要为它们常驻部署新 Agent 组件 | KMS 沿用阶段一配置；会话治理复用既有定时任务；`difyctl` 按需运行 | **按运维与治理需求使用** |
 
-这里的 **Agent App、Workflow Agent 节点、Agent Local Runtime 是三个不同层次**。是否部署 \`agent_backend\`、\`local_sandbox\`、\`agent_ssrf_proxy\`，以实际开启的 Agent 执行方式为准；不能把三者当作统一的必选套餐。
+这里的 **Agent App、Workflow Agent 节点、Agent Local Runtime 是三个不同层次**。是否部署 `agent_backend`、`local_sandbox`、`agent_ssrf_proxy`，以实际开启的 Agent 执行方式为准；不能把三者当作统一的必选套餐。
 
 ### 4.2 具体配置与组件部署
 
@@ -382,27 +369,27 @@ Redis、S3 完成测试数据清理与配置恢复后，后续新功能升级和
 
 | 配置位置 | 关键配置 | 作用 |
 | --- | --- | --- |
-| Web | \`NEXT_PUBLIC_ENABLE_AGENT_V2\` | 控制新版 Agent V2 页面/入口功能开关；仅有开关不等于后端可执行 |
-| API / General Worker | \`AGENT_BACKEND_BASE_URL\`、\`AGENT_BACKEND_API_TOKEN\` | 调用 Agent Backend；后者必须与 Agent Backend 的 \`DIFY_AGENT_API_TOKEN\` 一致 |
-| Agent Backend | \`DIFY_AGENT_REDIS_URL\`、\`DIFY_AGENT_PLUGIN_DAEMON_URL\`、\`DIFY_AGENT_PLUGIN_DAEMON_API_KEY\` | 接入现有 Redis 与 Plugin Daemon |
-| Agent Backend | \`DIFY_AGENT_INNER_API_URL\`、\`DIFY_AGENT_INNER_API_KEY\` | 与 Dify API 内部通信；内部 Key 应按官方要求与 API / Worker 的 \`INNER_API_KEY_FOR_PLUGIN\` 对齐 |
-| Agent Backend | \`DIFY_AGENT_RUNTIME_BACKEND\`、\`DIFY_AGENT_SERVER_SECRET_KEY\`、\`DIFY_AGENT_API_TOKEN\` | 选择 Agent Runtime，配置服务认证和令牌加密密钥；生产环境不能沿用示例密钥 |
-| Local Runtime（按需） | \`DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT\`、\`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN\`、\`DIFY_AGENT_SANDBOX_FILES_BASE_URL\` | Agent Backend 访问 Shell Workspace、控制 Sandbox 和交换文件 |
+| Web | `NEXT_PUBLIC_ENABLE_AGENT_V2` | 控制新版 Agent V2 页面/入口功能开关；仅有开关不等于后端可执行 |
+| API / General Worker | `AGENT_BACKEND_BASE_URL`、`AGENT_BACKEND_API_TOKEN` | 调用 Agent Backend；后者必须与 Agent Backend 的 `DIFY_AGENT_API_TOKEN` 一致 |
+| Agent Backend | `DIFY_AGENT_REDIS_URL`、`DIFY_AGENT_PLUGIN_DAEMON_URL`、`DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | 接入现有 Redis 与 Plugin Daemon |
+| Agent Backend | `DIFY_AGENT_INNER_API_URL`、`DIFY_AGENT_INNER_API_KEY` | 与 Dify API 内部通信；内部 Key 应按官方要求与 API / Worker 的 `INNER_API_KEY_FOR_PLUGIN` 对齐 |
+| Agent Backend | `DIFY_AGENT_RUNTIME_BACKEND`、`DIFY_AGENT_SERVER_SECRET_KEY`、`DIFY_AGENT_API_TOKEN` | 选择 Agent Runtime，配置服务认证和令牌加密密钥；生产环境不能沿用示例密钥 |
+| Local Runtime（按需） | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT`、`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`、`DIFY_AGENT_SANDBOX_FILES_BASE_URL` | Agent Backend 访问 Shell Workspace、控制 Sandbox 和交换文件 |
 
-上述变量名按 **Dify 1.17.1 官方 \`docker/.env.example\`、\`api/.env.example\` 与 \`docker/docker-compose.yaml\`** 整理。具体地址、鉴权和秘钥通过现有 DevOps 配置注入，不将本地 Compose 的默认地址或开发密钥直接用于公司环境。
+上述变量名按 **Dify 1.17.1 官方 `docker/.env.example`、`api/.env.example` 与 `docker/docker-compose.yaml`** 整理。具体地址、鉴权和秘钥通过现有 DevOps 配置注入，不将本地 Compose 的默认地址或开发密钥直接用于公司环境。
 
 #### 新运行组件及启用条件
 
 | 组件 | 为什么需要 | 何时部署 | 部署方式 |
 | --- | --- | --- | --- |
-| \`agent_backend\` | 新 Agent App 的独立控制与运行服务 | **启用新 Agent App** | 新增 \`dify-agent-backend\`，连接统一 API、Redis、Plugin Daemon |
-| \`local_sandbox\` | 为 Agent Local Runtime 提供 Shell Workspace 和持久化 Home / 工作目录 | \`DIFY_AGENT_RUNTIME_BACKEND=local\` 且使用对应能力 | 新增 \`dify-agent-local-sandbox\`，配置持久化存储、内部 Endpoint 和认证；不替换现有 \`dify-sandbox\` |
-| \`agent_ssrf_proxy\` | 控制 Agent Local Sandbox 的出网访问和 API / 文件访问边界 | **使用 Local Sandbox 网络隔离方案** | 配套新增代理组件，并设置 Sandbox 网络、代理地址和允许访问范围 |
-| \`api_websocket\` | 承载 Workflow 实时协作的 WebSocket 连接 | **启用实时协作** | 复用 Dify API 镜像，配置 WebSocket Worker、Socket.IO 路由与 \`NEXT_PUBLIC_SOCKET_URL\` |
+| `agent_backend` | 新 Agent App 的独立控制与运行服务 | **启用新 Agent App** | 新增 `dify-agent-backend`，连接统一 API、Redis、Plugin Daemon |
+| `local_sandbox` | 为 Agent Local Runtime 提供 Shell Workspace 和持久化 Home / 工作目录 | `DIFY_AGENT_RUNTIME_BACKEND=local` 且使用对应能力 | 新增 `dify-agent-local-sandbox`，配置持久化存储、内部 Endpoint 和认证；不替换现有 `dify-sandbox` |
+| `agent_ssrf_proxy` | 控制 Agent Local Sandbox 的出网访问和 API / 文件访问边界 | **使用 Local Sandbox 网络隔离方案** | 配套新增代理组件，并设置 Sandbox 网络、代理地址和允许访问范围 |
+| `api_websocket` | 承载 Workflow 实时协作的 WebSocket 连接 | **启用实时协作** | 复用 Dify API 镜像，配置 WebSocket Worker、Socket.IO 路由与 `NEXT_PUBLIC_SOCKET_URL` |
 | Trace 后端 | 接收或检索新版追踪数据 | 使用外部 Trace 服务时 | 复用公司现有 Trace 系统，配置 OTel 导出端点；不新增 Dify 核心执行服务 |
 | Plugin / Vector Store | 为新解析、检索模型和知识库能力提供实际 Provider | 选用对应模型/数据源时 | 沿用 Plugin Daemon 与现有存储，补齐 Provider 配置，不复制基础服务 |
 
-WebSocket 可参考官方的 \`API_WEBSOCKET_WORKER_CLASS\`、\`API_WEBSOCKET_WORKER_AMOUNT\` 和 \`NGINX_SOCKET_IO_UPSTREAM\` 配置。Agent Local Sandbox 的网络及文件可达性需与现有网关策略一致，不能直接照搬 Docker Compose 的服务名。
+WebSocket 可参考官方的 `API_WEBSOCKET_WORKER_CLASS`、`API_WEBSOCKET_WORKER_AMOUNT` 和 `NGINX_SOCKET_IO_UPSTREAM` 配置。Agent Local Sandbox 的网络及文件可达性需与现有网关策略一致，不能直接照搬 Docker Compose 的服务名。
 
 **落地顺序：** 先确定要开放的 Agent / Collaboration / Tracing 功能，再配置入口和相关 Provider；只有真正依赖独立 Runtime 的能力才增加相应 Deployment。所有新增运行角色继续使用已升级的原数据库和现有 Redis、S3 / KMS；第五章的 Default / Priority Worker 隔离方案保持不变。
 
@@ -412,17 +399,18 @@ WebSocket 可参考官方的 \`API_WEBSOCKET_WORKER_CLASS\`、\`API_WEBSOCKET_WO
 
 本阶段参考已重写的[执行引擎隔离方案](dify-execution-engine-isolation-plan.md)，在 Dify 1.17.1 官方执行链路上实现应用级执行资源隔离。
 
-### 5.1 背景与设计原因
 
-Dify 1.17.1 的 Workflow / Chatflow 异步执行任务默认进入 `workflow_based_app_execution` Queue，由共享 Worker 消费。**普通应用与核心应用使用同一执行通道**：普通应用批量提交任务或运行较长的工作流时，会占用队列与 Worker 资源，核心应用也需要等待。
+### 5.1 为什么重写执行隔离
 
-| 当前问题 | 影响 | 本次解决方式 |
+公司原来基于 Dify 1.14.2 扩展了 Policy、Admission、Job、Lease、Scheduler、Managed Worker 等完整托管调度链路。升级到 1.17.1 后，Workflow / Chatflow 已有官方异步执行、WorkflowRun 状态管理、SSE 和 Human Input 暂停恢复机制；如果直接迁移旧调度，需要把公司执行入口、任务状态、停止恢复及结果协议重新接到官方 Runtime，改动范围大，后续 Dify 升级仍需持续适配。
+
+| 原有方案 | 1.17.1 下的处理原因 | 重写方案 |
 | --- | --- | --- |
-| 普通应用与核心应用共用 Queue、Worker | 普通任务积压会影响核心任务的执行时机 | 按 App 执行池路由到 Default / Priority Queue |
-| 核心应用无法独立配置计算资源 | 不能单独为关键任务分配 Worker 数量、CPU 和内存 | 单独部署 Priority Worker，独立配置资源和副本 |
-| 旧公司托管调度深度接管执行链路 | 迁移 Job / Lease / Scheduler / Managed Worker 需要重新适配新版 Runtime，改动与维护成本较高 | 不迁移旧调度体系；仅增加 App 配置、Queue Router 和独立 Worker |
+| 公司 Job / Scheduler / Lease 管理任务生命周期 | 官方已有执行任务、WorkflowRun 与恢复机制，重复维护两套执行状态 | 取消旧调度中心，复用官方执行生命周期 |
+| Managed Worker 接管 AppGenerator 与执行结果 | 需重新适配新版 Workflow / Chatflow 执行链路与 SSE 协议 | Worker 直接执行 1.17.1 官方任务 |
+| Policy / Admission / Priority 控制资源 | 实际仍需解决核心应用与普通应用争用 Worker 的问题 | App 指定执行池，使用独立 Queue 和 Worker |
 
-**设计选择**：保留 Dify 1.17.1 原生 AppGenerator、GraphEngine、WorkflowRun、SSE 和任务执行机制，只调整任务进入哪个 Queue、由哪组 Worker 消费。Human Input 恢复任务也按原 App 的执行池路由，避免核心工作流恢复时回到默认池。隔离范围仅限 **Workflow / Chatflow 的异步执行及恢复任务**，不是对 PostgreSQL、Redis、Plugin Daemon 等共享组件做完全资源隔离。
+**因此不做旧调度代码的直接迁移，而是保留“核心应用执行资源隔离”这一目标，基于 1.17.1 重写为 `execution_pool` + Queue Router + Priority Worker。** 这样只修改入队路由和 Worker 部署，不接管官方执行引擎。
 
 ### 5.2 方案架构
 
