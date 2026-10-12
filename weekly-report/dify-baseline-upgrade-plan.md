@@ -410,9 +410,9 @@ WebSocket 可参考官方的 `API_WEBSOCKET_WORKER_CLASS`、`API_WEBSOCKET_WORKE
 
 ### 5.2 方案架构
 
-![Dify 执行引擎隔离架构](assets/dify-execution-isolation/execution-engine-isolation-architecture-v2.svg)
+![Dify 执行引擎隔离架构](assets/dify-execution-isolation/execution-engine-isolation-architecture-v3.svg)
 
-隔离范围是 **Queue 和 Worker 计算资源**，不是部署两套 Dify。API、PostgreSQL、Redis Broker、Plugin Daemon、Sandbox 和官方 Runtime 继续共享。
+API 按应用执行池配置将 Workflow / Chatflow 异步任务分流到普通或核心 Queue；各自 Worker 复用官方执行引擎，执行结果经事件通道（流式）或结果存储（阻塞）返回 API，再由 API 响应客户端。PostgreSQL、Redis、Plugin Daemon 与 Sandbox 沿用现有服务。
 
 ### 5.3 执行池与隔离范围
 
@@ -453,8 +453,6 @@ class ExecutionQueueRouter:
 首次执行使用 `workflow_based_app_execution_task.apply_async(args=[payload_json], queue=queue)`；Human Input 恢复调用官方 `resume_app_execution.apply_async(..., queue=queue)`。两处共用 Router，任务内部执行链路不改。
 
 ### 5.5 Worker 与部署
-
-![执行隔离部署架构](assets/dify-execution-isolation/execution-engine-isolation-deployment-v2.svg)
 
 | 组件 | 改造 |
 | --- | --- |
