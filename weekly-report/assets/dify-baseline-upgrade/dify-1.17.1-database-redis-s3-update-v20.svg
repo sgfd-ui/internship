@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="845" viewBox="0 0 1540 845" role="img" aria-label="Dify 1.17.1 数据库就地升级，Redis 和 S3 测试数据清理与配置恢复">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#F3F7FE"/></linearGradient>
+<linearGradient id="blue" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F4F9FF"/><stop offset="1" stop-color="#E4EFFF"/></linearGradient>
+<linearGradient id="purple" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FBF9FF"/><stop offset="1" stop-color="#EAE3FF"/></linearGradient>
+<linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F7FEFA"/><stop offset="1" stop-color="#DEF5E7"/></linearGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFFDF7"/><stop offset="1" stop-color="#FFF0D1"/></linearGradient>
+<filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#203B62" flood-opacity=".12"/></filter>
+<marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1L9 5L1 9" stroke="#677A98" fill="none" stroke-width="2.2" stroke-linejoin="round"/></marker>
+<style>
+text{font-family:Inter,'PingFang SC','Microsoft YaHei',Arial,sans-serif;fill:#1B3151}
+.title{font-size:32px;font-weight:760}.sub{font-size:16px;fill:#6B7A90}.head{font-size:23px;font-weight:750}.name{font-size:18px;font-weight:720}.body{font-size:15px;fill:#62738B}.small{font-size:13px;fill:#697B93}
+.arrow{stroke:#677A98;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#ar)}
+</style>
+<symbol id="db" viewBox="0 0 48 48"><ellipse cx="24" cy="10" rx="16" ry="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M8 10v12c0 4 7 7 16 7s16-3 16-7V10M8 22v12c0 4 7 7 16 7s16-3 16-7V22" fill="none" stroke="currentColor" stroke-width="3"/></symbol>
+<symbol id="restore" viewBox="0 0 48 48"><path d="M12 16h23M12 16l8-8M12 16l8 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M12 31a14 14 0 102-14" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="redis" viewBox="0 0 48 48"><path d="M6 15l18-9 18 9-18 9zM6 25l18 8 18-8M6 35l18 8 18-8" stroke="currentColor" stroke-width="3" fill="none" stroke-linejoin="round"/></symbol>
+<symbol id="bucket" viewBox="0 0 48 48"><path d="M8 13h32l-4 28H12z" stroke="currentColor" stroke-width="3" fill="none" stroke-linejoin="round"/><path d="M16 13V9a8 8 0 0116 0v4M16 25c4-7 12-7 16 0" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="check" viewBox="0 0 48 48"><rect x="7" y="7" width="34" height="34" rx="8" stroke="currentColor" stroke-width="3" fill="none"/><path d="M14 24l8 8 13-16" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+</defs>
+<rect width="1540" height="845" fill="url(#bg)"/>
+<text x="60" y="55" class="title">Dify 1.17.1 · 数据库与底层数据更新</text>
+<text x="60" y="83" class="sub">统一使用现有 PostgreSQL、Redis、S3；数据库先本地验证再原库升级，Redis / S3 只清理测试数据并恢复原配置</text>
+<g filter="url(#shadow)"><rect x="62" y="139" width="660" height="236" rx="25" fill="url(#blue)" stroke="#A8C9F5" stroke-width="2"/><path d="M82 375l15 12h605l16-12z" fill="#A8C9F5" opacity=".5"/></g>
+<rect x="97" y="176" width="78" height="78" rx="20" fill="#DCEBFF"/>
+<use href="#restore" x="111" y="191" width="49" height="49" style="color:#317ED8"/>
+<text x="197" y="198" class="head">01  本地验证</text>
+<text x="197" y="229" class="body">最新 ai_studio 备份恢复到本地演练库</text>
+<rect x="101" y="283" width="582" height="58" rx="15" fill="white" stroke="#B8D5F8"/>
+<use href="#db" x="118" y="293" width="41" height="41" style="color:#317ED8"/>
+<text x="173" y="307" class="name">清理旧调度 → 官方及公司兼容 Migration</text>
+<text x="173" y="328" class="small">数据对账 · 重复运行 · 备份恢复校验</text>
+<path d="M743 253H794" class="arrow"/>
+<g filter="url(#shadow)"><rect x="814" y="139" width="660" height="236" rx="25" fill="url(#purple)" stroke="#C3B5F0" stroke-width="2"/><path d="M834 375l15 12h605l16-12z" fill="#C3B5F0" opacity=".5"/></g>
+<rect x="849" y="176" width="78" height="78" rx="20" fill="#E7DDFC"/>
+<use href="#db" x="863" y="191" width="49" height="49" style="color:#805ECE"/>
+<text x="949" y="198" class="head">02  线上原库升级</text>
+<text x="949" y="229" class="body">停写入 → 备份并复验 → 原 ai_studio 运行 Migration</text>
+<rect x="853" y="283" width="582" height="58" rx="15" fill="white" stroke="#D8C9F4"/>
+<use href="#check" x="870" y="293" width="41" height="41" style="color:#805ECE"/>
+<text x="925" y="307" class="name">核对 Schema、业务数据与历史引用</text>
+<text x="925" y="328" class="small">成功后按恢复的配置启动 Dify 1.17.1</text>
+<path d="M1144 393V419H770V445" class="arrow"/>
+<text x="770" y="478" class="head" text-anchor="middle">底层数据清理与配置恢复</text>
+<path d="M770 493V516H381V544" class="arrow"/>
+<path d="M770 516H1159V544" class="arrow"/>
+<g filter="url(#shadow)"><rect x="62" y="557" width="660" height="175" rx="24" fill="url(#green)" stroke="#A1D9B4" stroke-width="2"/></g>
+<rect x="95" y="582" width="72" height="72" rx="18" fill="#D9F4E4"/>
+<use href="#redis" x="109" y="596" width="44" height="44" style="color:#269665"/>
+<text x="194" y="602" class="head">Redis</text>
+<text x="194" y="636" class="name">删除明确归属升级测试的 Key / Result</text>
+<text x="194" y="663" class="body">恢复现有 Redis / Sentinel、DB、Prefix 配置</text>
+<text x="194" y="693" class="small">不清整个 DB，保留 Default / Priority Queue</text>
+<g filter="url(#shadow)"><rect x="814" y="557" width="660" height="175" rx="24" fill="url(#gold)" stroke="#E6C684" stroke-width="2"/></g>
+<rect x="847" y="582" width="72" height="72" rx="18" fill="#FFF0CD"/>
+<use href="#bucket" x="861" y="596" width="44" height="44" style="color:#B8862C"/>
+<text x="946" y="602" class="head">S3 / KMS</text>
+<text x="946" y="636" class="name">只删除明确归属升级测试的对象</text>
+<text x="946" y="663" class="body">恢复原 Bucket、Endpoint、前缀与 KMS 配置</text>
+<text x="946" y="693" class="small">不删除历史文件及租户私钥</text>
+<text x="770" y="801" text-anchor="middle" class="sub">线上数据库升级尚未执行 · 测试数据清理先确认范围 · 不搬迁原业务对象</text>
+</svg>
