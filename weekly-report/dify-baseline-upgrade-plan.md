@@ -2,7 +2,7 @@
 
 ## 一、升级目标
 
-当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分三个阶段完成现有能力迁移、新版本能力升级和执行引擎隔离，最终将成熟的 1.17.1 版本收束到原有 DevOps 组件。
+当前平台基于 Dify 1.14.2，并扩展了 SkyOA、工作空间治理、S3/KMS、文件与租户私钥、托管执行调度等公司能力。本次升级以 Dify 1.17.1 为新基线，分三个阶段完成现有能力迁移、新版本能力升级和执行引擎隔离，最终以本地迁移演练为前提升级线上原数据库，并仅收束 PostgreSQL 与 Redis 数据资源；既有 1.17.1 应用和 DevOps 部署不在最终收束范围内。
 
 | 目标 | 内容 |
 | --- | --- |
@@ -10,8 +10,8 @@
 | 现有能力迁移 | 将 SkyOA、工作空间、S3/KMS、文件与私钥等现有公司能力适配到 1.17.1 |
 | 新能力升级 | 在阶段一形成的 1.17.1 版本上增加确定要启用的新功能及对应运行组件 |
 | 执行引擎隔离 | 不迁原公司托管调度；以 1.17.1 官方 Workflow / Chatflow 异步执行为基础，增加应用执行池、Queue Router 和独立 Priority Worker |
-| 数据迁移 | 阶段一完成后先将数据迁到独立 1.17.1 数据空间，三阶段完成后再执行最终正式数据迁移 |
-| 最终收束 | 用最终 1.17.1 制品替换原有组件部署，并下线临时升级环境 |
+| 数据库升级 | 从线上原测试库 `ai_studio` 获取最新备份做本地演练，完成兼容迁移后在线上原库就地升级到 1.17.1，不以本地开发库覆盖线上库 |
+| 最终收束 | 仅整理 PostgreSQL、Redis 的数据连接与运行命名空间；不合并或替换原 DevOps 应用、流水线及 Worker 部署 |
 
 ---
 
@@ -21,9 +21,9 @@
 
 ![当前架构 vs Dify 1.17.1 官方架构](assets/dify-baseline-upgrade/current-vs-dify-1.17.1-official-v11.svg)
 
-### 2.2 本次迁移架构
+### 2.2 数据迁移与最终收束路径
 
-![Dify 1.17.1 升级实施路径](assets/dify-baseline-upgrade/dify-1.17.1-migration-scope-v16.svg)
+![Dify 1.17.1 本地验证、线上原库升级与数据库 Redis 收束](assets/dify-baseline-upgrade/dify-1.17.1-local-to-online-db-redis-v17.svg)
 
 ---
 
@@ -221,7 +221,7 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 
 #### 3.2.4 PostgreSQL、Redis 与 Celery 隔离
 
-1.14.2 与 1.17.1 共用同一套 PostgreSQL / Redis 基础设施，通过独立数据库、Redis DB、Prefix、队列和频道完成版本隔离。
+开发与验证阶段，1.14.2 与独立 1.17.1 升级部署共用 PostgreSQL / Redis 基础设施，但通过独立数据库、Redis DB、Prefix、队列和频道隔离。**这些隔离配置属于升级期间的环境配置，不代表最终要把旧库数据导入开发库；线上升级以原测试库 `ai_studio` 就地 Schema Migration 为准。**
 
 | 资源 | 1.17.1 隔离方案 |
 | --- | --- |
@@ -242,226 +242,88 @@ SkyOA 新用户建号和默认空间加入统一由 3.1.4 处理，不在登录�
 | Socket 地址 | 未显式配置时官方可回退到 localhost | 优先使用显式 `SOCKET_URL`；未配置时从 API 地址推导 ws/wss，并去掉路径、查询串和 fragment；解析失败再回退 localhost |
 | 新版协作逻辑 | 新版客户端根据最终 Socket 地址判断草稿回退 | 保留 1.17.1 客户端判断，只替换地址推导逻辑 |
 
-### 3.3 阶段一完成后的数据迁移
+### 3.3 数据库迁移：本地验证 → 线上原库升级
 
-阶段一功能和数据库结构完成后，将 1.14.2 在同一时间点的 PostgreSQL 业务快照一次性导入当前 1.17.1 开发库 `ai_studio_1171_dev`。目标库保留已经建立的 1.17.1 Schema 和当前 `alembic_version`，不重新执行旧库 Migration，也不覆盖目标库的版本记录。
+数据库升级对象是**原测试环境的 PostgreSQL 数据库 `ai_studio`**，从 Dify 1.14.2 升到 1.17.1。使用原库最新备份在本地独立数据库演练，再将同一套经过验证的官方及公司兼容 Migration 应用到线上原库。**不使用本地测试库或 `ai_studio_1171_dev` 的内容覆盖远程 `ai_studio`，也不再安排两次业务快照搬迁。**
 
-本次只迁 PostgreSQL 业务数据。旧 1.14.2 环境继续运行，快照之后的新数据不自动同步；S3 对象、Redis、向量库、Plugin Daemon 数据库和私钥文件不由迁移脚本搬运，只在数据导入后核对数据库引用。
+根据 2026-10-07 整理的[数据库迁移方案](#331-本地验证)，历史备份的本地演练已经完成，**远程原库升级尚未执行**。现有 1.17.1 升级环境继续保持独立，直到原库升级准备完毕。
 
-#### 3.3.1 执行步骤
+#### 3.3.1 本地验证
 
-| 步骤 | 操作 | 主要处理 | 输出 |
-| --- | --- | --- | --- |
-| 1 | `inspect` | 读取源库和 `ai_studio_1171_dev` 的表、字段、主外键、唯一约束、索引和 `alembic_version`；生成字段映射并检查类型兼容 | Schema、版本、表数量和 Mapping 清单 |
-| 2 | `export` | 在源库开启 `REPEATABLE READ` 一致性事务，逐表导出业务快照 | 每表 JSONL、行数、SHA-256 校验值和快照元数据 |
-| 3 | `backup-target` | 在写入前对 `ai_studio_1171_dev` 执行完整 `pg_dump` | `target-before.dump` |
-| 4 | `apply` | 再次检查目标 Schema 未变化；按外键依赖倒序清理核准的目标测试数据，再按正序写入转换后的旧数据 | 单事务导入结果及序列恢复 |
-| 5 | `verify` | 对比导入前快照与目标库行数，并输出差异报告 | `counts-after.json`、`differences.json`、`report.json` |
-| 6 | 业务核对 | 检查账号/OA、默认 Workspace、owner/current、应用、Workflow、知识库、历史文件引用和旧密钥可读性 | 阶段二继续使用的 1.17.1 开发数据 |
+| 顺序 | 操作 | 产出 |
+| --- | --- | --- |
+| 1 | 获取线上 `ai_studio` **最新备份**，恢复到本地独立演练库，核对表、字段、历史 Migration 版本及账号权限 | 可重复使用的真实数据演练环境 |
+| 2 | 整理正式的“**Dify 1.17.1 官方 Migration + 公司兼容 Migration**”，检查旧版分叉历史和重复字段，不通过改 `alembic_version` 跳过迁移 | 随应用代码发布的正式迁移链 |
+| 3 | 按 **3.3.3 旧公司调度清理清单**清除旧调度结构，再运行新版 Schema / 必要数据转换 | 原数据库结构升级到 1.17.1 |
+| 4 | 对账保留的业务数据、关系、权限与迁移版本；再次运行迁移确认无新变更，并在独立库实际演练备份恢复 | 可执行迁移包与演练结论 |
 
-执行命令固定为：
+已有历史演练表明：备份恢复、清理旧调度、Schema 升级、数据对账、重复升级及残留引用检查均已通过；密码登录、原应用读取、新文件上传下载和无模型 Workflow 已完成本地验证。**仍需用最新备份复验，并把本地演练脚本整理为正式可执行版本**；不能只修改演练脚本的连接地址便直接操作线上库。
 
-```bash
-cd api
+#### 3.3.2 线上更新
 
-export SOURCE_DB_HOST=...
-export SOURCE_DB_PORT=5432
-export SOURCE_DB_USERNAME=...
-export SOURCE_DB_PASSWORD=...
-export SOURCE_DB_DATABASE=...
+| 顺序 | 操作 | 要求 |
+| --- | --- | --- |
+| 1. 停服务 | 核对远程实例与库名 `ai_studio`；停止连接该库的新旧 API、Worker、Beat、旧 Scheduler 等写入进程 | 即使测试环境暂时无人使用，也要避免后台任务继续写入 |
+| 2. 全库备份 | 对线上原库执行完整 `pg_dump`，恢复到另一独立库，核对数据**及应用账号权限** | 确认备份可实际恢复，而不仅是文件存在 |
+| 3. 清理旧调度 | 只处理 **3.3.3** 中列明的 14 张公司调度表及指定列、索引、序列 | 保留官方 Trigger / Schedule 和业务数据；禁止扩大删除范围 |
+| 4. 原库升级 | 由**单个迁移进程**在原 `ai_studio` 运行已复验的官方及公司兼容 Migration | 不能让多个应用实例启动时同时执行 Migration |
+| 5. 核对并启动 | 先核对数据与新版 Schema，再启用 1.17.1 API、Web、Default Worker 和按需启用的 Priority Worker；验收后恢复**单实例 Beat** | 旧 Scheduler、旧 Managed Worker 不再启动 |
 
-export TARGET_DB_HOST=...
-export TARGET_DB_PORT=...
-export TARGET_DB_USERNAME=...
-export TARGET_DB_PASSWORD=...
-export TARGET_DB_DATABASE=ai_studio_1171_dev
+整个过程是**原库就地升级**，不是清空原库后导入开发库。线上若出现新备份与历史演练不一致、预期外删重或字段冲突，先排查并重新演练，不继续执行。
 
-export MIGRATION_WORK_DIR=/data/dify-migration/$(date +%Y%m%d_%H%M%S)
+#### 3.3.3 旧公司调度清理范围
 
-uv run python scripts/migrate_snapshot.py inspect
-uv run python scripts/migrate_snapshot.py export
-uv run python scripts/migrate_snapshot.py backup-target
-uv run python scripts/migrate_snapshot.py apply
-uv run python scripts/migrate_snapshot.py verify
-```
+仅删除旧公司托管执行留下的专用结构，新执行隔离仍走 Dify 1.17.1 官方 Runtime。以下行数来自 **2026-10-01 备份的本地演练**，不代表当前线上数量，线上执行前需重新统计。
 
-连接密码只通过环境变量提供，不写入脚本参数、日志和迁移产物；`MIGRATION_WORK_DIR` 放在 Git 工作区之外，快照、备份和报告文件不提交仓库。
+| 旧公司专用表 | 历史演练行数 |
+| --- | ---: |
+| `app_execution_console_debug_idempotency` | 11 |
+| `app_execution_generations` | 1,178 |
+| `app_execution_input_snapshots` | 1,178 |
+| `app_execution_jobs` | 1,178 |
+| `app_execution_outbox` | 1,227 |
+| `app_execution_policies` | 1 |
+| `app_execution_policy_audits` | 1 |
+| `app_execution_priority_overrides` | 0 |
+| `app_execution_resource_slots` | 2 |
+| `app_execution_results` | 1,054 |
+| `app_execution_scheduler_leases` | 1 |
+| `app_execution_scheduling_audits` | 1 |
+| `app_execution_worker_config_audits` | 0 |
+| `app_execution_worker_configs` | 2 |
+| **合计 14 张表** | **5,834** |
 
-#### 3.3.2 Inspect：先确定哪些数据可以迁
+同时删除如下旧公司结构：
 
-`inspect` 不写数据，先完成三件事：
-
-1. 确认源库和目标库不是同一个数据库，且目标数据库固定为 `ai_studio_1171_dev`。
-2. 比较两边表和字段，源字段在新版没有对应字段、字段类型不兼容、或目标新增必填字段没有默认值时直接停止。
-3. 生成明确的迁移清单。只有显式列入排除范围的表或字段才跳过，不通过名称猜测“执行相关数据”。
-
-关键保护：
-
-```python
-TARGET_DATABASE = "ai_studio_1171_dev"
-
-EXCLUDED_TABLES = {
-    "alembic_version",
-}
-
-EXCLUDED_COLUMNS: dict[str, set[str]] = {}
-```
-
-字段映射采用“能明确转换才迁”的规则。例如账号补齐新版 `normalized_email`，模型类型按 1.17.1 名称转换：
-
-```python
-MODEL_TYPE_RENAMES = {
-    "text-generation": "llm",
-    "embeddings": "text-embedding",
-    "reranking": "rerank",
-}
-
-def normalize_email(value):
-    return value.strip().lower() if value is not None else None
-```
-
-旧 `alembic_version` 不导入，目标库继续使用阶段一当前 Migration Head。
-
-#### 3.3.3 Export：生成一致性业务快照
-
-源库全程只读，在同一个 `REPEATABLE READ` 事务中逐表读取，避免导出过程中各表对应到不同时间点。
-
-每张表输出一个 JSONL 文件，同时记录：
-
-- 表行数；
-- SHA-256；
-- 源数据库名；
-- 源库 `alembic_version`。
-
-导出的日期、UUID、bytes 等类型使用显式编码，导入时按原类型恢复，不统一转成普通字符串。
-
-#### 3.3.4 Backup：写入前先备份目标库
-
-在修改 `ai_studio_1171_dev` 前执行一次完整备份：
-
-```bash
-pg_dump \
-  --format=custom \
-  --no-owner \
-  --no-privileges \
-  --host "$TARGET_DB_HOST" \
-  --port "$TARGET_DB_PORT" \
-  --username "$TARGET_DB_USERNAME" \
-  --dbname "ai_studio_1171_dev" \
-  --file "$MIGRATION_WORK_DIR/target-before.dump"
-```
-
-`apply` 只有在 `target-before.dump` 已存在时才允许执行。
-
-#### 3.3.5 Apply：单事务替换业务数据
-
-正式写入前重新读取目标 Schema；如果目标结构与 `inspect` 时不一致，停止导入并重新执行 `inspect`。
-
-写入顺序由外键关系自动计算：
-
-```text
-父表 → 子表       导入顺序
-子表 → 父表       清理顺序
-```
-
-核心写入必须处于同一个数据库事务中：
-
-```python
-with target.begin() as conn:
-    for table in reversed(order):
-        conn.execute(text(f'DELETE FROM "{table}"'))
-
-    for table in order:
-        for row in snapshot_rows(table):
-            mapped = map_row(table, row, target_schema[table])
-            conn.execute(metadata.tables[table].insert().values(**mapped))
-
-    reset_sequences(conn, order)
-```
-
-其中：
-
-- 只清理 Mapping 中明确标记为 `copy` 的目标业务表；
-- 不执行无范围清库或 `CASCADE`；
-- 保留原业务 ID 和外键关系；
-- 新版新增字段使用明确的转换值、数据库默认值或可空值；
-- 任意表写入失败时整个事务回滚；
-- `alembic_version`、S3、Redis、向量库、插件库和私钥文件都不在这个事务中修改。
-
-#### 3.3.6 数据范围
-
-| 数据范围 | 迁移处理 |
+| 对象 | 处理 |
 | --- | --- |
-| 账号与 OA 身份 | 保留 account_id、状态、邮箱和 OA open_id；按新版规则生成 `normalized_email`，不自动合并冲突账号 |
-| Workspace 与成员 | 保留 Tenant ID、owner、成员角色、默认空间、归档状态和 current 关系 |
-| 邀请与创建记录 | 保留邀请 Token 摘要、状态、有效期、角色和 Workspace 创建幂等记录 |
-| 应用与 Workflow | 保留应用、Workflow 定义及版本信息，按字段 Mapping 写入新版结构 |
-| 知识库与文件记录 | 导入知识库、文档、分段和文件数据库记录，不移动真实对象 |
-| 会话与运行历史 | 保留会话、消息、运行和节点历史，不重新执行历史任务 |
-| 模型及工具凭据 | 保留加密内容和 Tenant 密钥引用，按新版模型类型和引用结构转换 |
-| 安装记录 | 保留原安装状态，不重新执行管理员初始化 |
-| 新版新增表 | 无旧数据来源的表保留阶段一现有结构和必要初始化值 |
-| 旧公司调度数据 | 不导入新执行隔离链路，旧 Job / Lease / Scheduler 等历史数据保留在旧库及备份 |
+| `workflow_trigger_logs.schedule_id` | 删除旧调度关联列 |
+| `workflow_trigger_logs.scheduled_for` | 删除旧计划时间列 |
+| `ux_workflow_trigger_logs_schedule_occurrence` | 删除相应唯一索引 |
+| `app_execution_enqueue_sequence_seq` | 删除旧调度入队序列 |
 
-不迁移以下内容：
+两列在历史演练中各有 741 个非空值，**不等于额外删除 1,482 行**。`workflow_trigger_logs` 官方表仍保留（历史演练 2,011 行），包括 `queue_name`。保留账号、Workspace、邀请、应用、官方 Workflow、官方 Trigger / Schedule、会话消息、凭据和私钥引用。**不清 Redis，不删除 S3 对象、私钥实体、插件数据**；遇到清单之外的依赖应停止处理，不能用宽泛 `CASCADE` 扩大删除。
 
-- 旧 Redis Cache、登录 Session、Celery 队列和 Result；
-- S3 文件对象；
-- 向量库集合；
-- Plugin Daemon 数据库和插件文件；
-- 公司调度专用数据；
-- 旧 `alembic_version`。
+#### 3.3.4 官方与公司兼容 Migration
 
-#### 3.3.7 Verify：迁移结果校验
-
-脚本先做逐表行数对比：
-
-```python
-differences = {
-    table: {
-        "source": source_count,
-        "target": target_count,
-    }
-    for table in migrated_tables
-    if source_count != target_count
-}
-
-if differences:
-    raise RuntimeError("行数校验存在差异，停止后续使用")
-```
-
-行数一致后再做业务级检查：
-
-| 检查项 | 校验内容 |
+| 类型 | 迁移处理 |
 | --- | --- |
-| 账号 / OA | account_id、邮箱、状态、open_id 绑定和 `normalized_email` |
-| Workspace | 默认空间唯一、owner 正确、成员角色正确、current 唯一且不指向归档空间 |
-| 邀请 | Token 摘要、状态、有效期和角色保持一致 |
-| 应用 / Workflow | 原应用和 Workflow 能正常打开，定义和历史记录仍关联原 ID |
-| 知识库 | Dataset、Document、Segment 关联完整，原向量引用仍能对应 |
-| 文件 | 数据库中的历史 Key 能访问现有 S3 对象 |
-| 私钥 | 历史 Tenant 继续使用原私钥解密已有加密数据 |
+| 官方 Schema | 执行 1.14.2 → 1.17.1 官方结构变更，新增必要的表、字段、索引和函数 |
+| 历史公司字段 | 如私钥路径字段已存在，先比对类型、约束和定义；一致则保留，缺失才补齐，定义冲突则停止 |
+| Migration 衔接 | 正确连接旧公司历史与 1.17.1 新迁移链，迁移文件纳入新版代码；不得仅修改 `alembic_version` |
+| 邮箱 | 补齐 `accounts.normalized_email`，不修改原 `email` |
+| 维护人 | `apps.maintainer` / `datasets.maintainer` 按 `created_by` 回填 |
+| 终端用户类型 | `end_users.type` 中 `service_api` 转为 `service-api` |
+| 模型类型 | 根据官方新枚举映射（例如 `text-generation` → `llm`），不做无依据的数据转换 |
+| 执行隔离 | 增加 `apps.execution_pool` 等本次确定保留的公司字段，历史 App 默认 `default` |
 
-迁移完成后的数据链路为：
+历史备份演练为：清理后 122 张表，升级后 146 张表，原表新增 24 列；数据总行数 **16,694 → 10,860 → 10,860**，减少的 5,834 行均来自明确列出的旧公司调度表。这些数字只用作**历史演练参考**，不能当作最新线上预期值。
 
-```text
-1.14.2 PostgreSQL
-      │
-      ├─ inspect
-      ├─ 一致性快照 export
-      ▼
-迁移数据包
-      │
-      ├─ backup ai_studio_1171_dev
-      ├─ Mapping / 数据转换
-      ▼
-ai_studio_1171_dev
-      │
-      ├─ 单事务 apply
-      └─ verify + 业务核对
-      ▼
-阶段二 / 阶段三继续开发
-```
+#### 3.3.5 迁移核对与恢复
+
+数据核对先于产生新记录的功能操作，至少核对：保留表的逐表逐字段差异、账号与 Workspace 关系、应用/Workflow/历史运行记录、文件引用及私钥解密、列与索引、序列、Migration Head；重复运行迁移应无待执行变更。之后核对 OA 登录、空间切换、历史文件访问、插件和必要模型调用，这些依赖远程环境的项目**不能被本地结果替代**。
+
+失败时按 **停止新版服务 → 用线上升级前备份恢复 `ai_studio` → 核对数据与权限 → 恢复匹配的旧版本服务**执行。只回退镜像无法恢复已删除调度数据；恢复前保留失败现场和日志。恢复会失去备份时间点之后的新写入。
 
 ---
 
@@ -583,49 +445,29 @@ Default / Priority Worker 分别配置 CPU、Memory 和 replicas；新增 Worker
 | Console Debug / Human Input / Schedule 的托管接入 | 不迁旧接管层；继续使用官方功能，仅为 Human Input Resume 增加队列路由 |
 | 调度监控、审计及历史数据 | 不恢复旧调度专用页面；历史表和记录保留在旧库及备份，不作为新版运行依赖 |
 
-## 六、最终收束
+## 六、最终收束：仅 PostgreSQL 与 Redis
 
-最终收束不再长期保留 `test-upgrade-1.17.1` 这套平行环境，而是将三个阶段形成的最终 1.17.1 版本覆盖到原有 DevOps 应用和正式数据链路。
+三个功能阶段继续沿用现有 1.17.1 升级分支和部署。**最终收束只涉及 PostgreSQL 和 Redis**，不再包含 API / Web / Worker / Beat 等应用回迁、DevOps 应用替换、流水线合并或下线升级部署。线上数据库升级的具体步骤见 **3.3**，无需在收束阶段再进行第二次业务数据搬迁。
 
-### 6.1 原有组件收束
+### 6.1 PostgreSQL：收束到升级后的原库
 
 | 对象 | 最终处理 |
 | --- | --- |
-| `dify-api` | 原应用切换为最终 1.17.1 API 制品和配置 |
-| `dify-worker` | 切换为 1.17.1 Default Worker，继续消费原有业务队列和 `workflow_based_app_execution`，不监听 Priority Queue |
-| `dify-worker-beat` | 原应用切换为最终 1.17.1 Beat |
-| `dify-web` | 原应用切换为最终 1.17.1 Web |
-| `dify-plugin-daemon` | 切换到最终 1.17.1 对应版本 |
-| `dify-sandbox` | 切换到最终 1.17.1 对应版本 |
-| 阶段二新增组件 | 只保留已确定启用能力需要的 Agent Backend / Local Sandbox / WebSocket / Proxy 等组件 |
-| Priority Worker（新增） | 使用与 Default Worker 相同的 1.17.1 镜像，独立 Deployment、计算资源及 replicas，仅监听 `workflow_based_app_execution_priority` |
-| 临时升级部署 | 原组件切换完成后下线 `test-upgrade-1.17.1` |
+| 原测试库 `ai_studio` | 用最新备份完成本地演练后，停止相关写入服务，**直接在该原库**运行清理与 1.17.1 Schema Migration |
+| `ai_studio_1171_dev` | 作为升级阶段隔离使用的开发/演练数据库；**不将其业务数据覆盖** `ai_studio` |
+| 1.17.1 数据库连接 | 线上原库完成升级且数据核对通过后，将现有 1.17.1 应用数据库连接指向升级后的 `ai_studio` |
+| 历史数据 | 保留账号、Workspace、应用、Workflow、消息、文件和凭据引用；只按明确清单删除旧公司调度结构 |
+| 旧版本回退 | 保留升级前可恢复备份；回退时数据库与旧版本代码必须成套恢复 |
 
-### 6.2 分支与流水线收束
+### 6.2 Redis：统一连接和隔离命名空间
 
 | 项目 | 最终处理 |
 | --- | --- |
-| `release/1.17.1` | 收束为最终 1.17.1 公司基线 |
-| `feature/20260920_1.17.1_UPGRADE` | 阶段一到阶段三的最终代码合入 release 后结束长期开发职责 |
-| `test_1.17.1_UPGRADE` | 用于最终发布前测试，正式切换后按发布流程维护或清理 |
-| 基础组件流水线 | 原有 API / Web / Worker 等流水线改为构建最终 1.17.1 基线 |
-| 新增组件流水线 | 仅为阶段二、三最终保留的新应用建立正式流水线 |
+| Cache / Session | 核对现有 1.17.1 Redis DB 与 Key Prefix；收束后继续使用明确的 1.17.1 命名空间，避免与旧版本 Key 冲突 |
+| Celery Broker / Result | 统一 1.17.1 Broker 连接，保留 `workflow_based_app_execution` 和 `workflow_based_app_execution_priority` 两个执行队列及其他官方队列；不迁移旧任务和 Result |
+| Pub/Sub / Event Bus / Socket.IO | 统一远程 Redis / Sentinel 连接与 Channel Prefix；Pub/Sub 不依赖 Redis 逻辑 DB 隔离 |
+| 历史 Redis 数据 | **不清空 Redis**，不复制原 1.14.2 的缓存、Session、旧 Broker 待消费任务到新版本；切换前明确停止旧写入方 |
 
-### 6.3 最终数据迁移
-
-阶段一后的独立 1.17.1 数据用于阶段二、三持续开发；最终收束时仍以正式 1.14.2 数据的最新快照作为迁移源，再执行一次最终 Migration。
-
-| 数据类型 | 最终处理 |
-| --- | --- |
-| PostgreSQL | 备份正式 1.14.2 数据后，执行最终 1.17.1 官方 Migration + 三阶段最终保留的公司 Migration |
-| 账号 / Workspace / App | 保留账号 ID、成员关系、默认空间和归档状态；新 App 执行池字段 `execution_pool` 默认为 `default` |
-| 旧公司调度数据 | 不导入新版执行池；旧 Job、Lease、Scheduler 和任务中心数据在旧库及备份中保留，新版不依赖这些运行表 |
-| Redis Cache | 不搬迁旧缓存，最终 1.17.1 使用新的命名空间 |
-| Celery Broker / Result | 不迁旧队列和 Result，切换前停止旧任务入口后从新队列启动 |
-| S3 | 优先保持对象不动并兼容历史 Key；只有最终路径方案明确需要时才搬对象 |
-| 租户私钥 | 保留既有对象和引用，不重新生成历史 Tenant 私钥 |
-
-最终流程为：**独立 1.17.1 升级线完成三个阶段 → 固定最终组件清单 → 收束 release / 流水线 → 迁移正式数据 → 原有 DevOps 组件切换到最终 1.17.1 → 下线平行升级环境。**
-
+两者的最终关系是：**现有 1.17.1 部署 → 已升级的 `ai_studio` + 统一配置的 Redis**。S3、Plugin Daemon、Sandbox、向量库及 DevOps 部署不在本次最终收束范围内，沿用各自现有方案。
 
 ---
